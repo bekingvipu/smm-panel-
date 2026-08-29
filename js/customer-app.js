@@ -2,6 +2,8 @@ const CustomerApp = {
   currentPlatform: 'instagram',
   currentCategory: 'Instagram Followers [Guaranteed]',
   searchQuery: '',
+  ordersFilter: 'all',
+  ordersSearch: '',
 
   render(container) {
     const store = window.store;
@@ -16,7 +18,7 @@ const CustomerApp = {
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
 
     container.innerHTML = `
-      <!-- Desktop Production Header (Screens >= 768px) -->
+      <!-- Desktop Header (Screens >= 768px) -->
       <nav class="desktop-navbar">
         <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')">
           <span style="background: var(--primary); color: white; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">⚡</span>
@@ -34,7 +36,7 @@ const CustomerApp = {
           </a>
           <a class="desktop-nav-link ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
             <span>⏱️</span>
-            <span>Orders</span>
+            <span>Orders History</span>
           </a>
           <a class="desktop-nav-link ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
             <span>💳</span>
@@ -76,7 +78,7 @@ const CustomerApp = {
         </div>
       </nav>
 
-      <!-- Mobile Production Header (Screens < 768px) -->
+      <!-- Mobile Header (Screens < 768px) -->
       <header class="customer-header">
         <div class="customer-brand-group" onclick="store.setCustomerTab('new_order')">
           ${isLoggedIn ? `
@@ -106,38 +108,62 @@ const CustomerApp = {
         </div>
       </header>
 
-      <!-- Public Catalog Banner for Guests -->
-      ${!isLoggedIn ? `
-        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1)); border-bottom: 1px solid var(--border-color); padding: 10px 16px; text-align: center; font-size: 13px; color: var(--text-main);">
-          <span>👀 <strong>Public Catalog Active (5,803 Services):</strong> Browse all live packages and prices freely. Login required only when placing an order.</span>
-        </div>
-      ` : ''}
-
       <!-- Content Container -->
       <div class="customer-desktop-container">
         ${contentHtml}
       </div>
 
-      <!-- Permanently Fixed Mobile Bottom Navigation Bar (Screens < 768px) -->
+      <!-- Clean Centered Mobile Bottom Navigation Bar (Screens < 768px) -->
       <nav class="customer-bottom-nav">
         <div class="bottom-nav-item ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
-          <div class="nav-icon ${tab === 'new_order' ? 'nav-icon-bg' : ''}"><span>🛒</span></div>
+          <div class="nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+          </div>
           <span>New Order</span>
         </div>
+
         <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
-          <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}"><span>⊞</span></div>
+          <div class="nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+          </div>
           <span>Dashboard</span>
         </div>
+
         <div class="bottom-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
-          <div class="nav-icon ${tab === 'orders' ? 'nav-icon-bg' : ''}"><span>⏱️</span></div>
+          <div class="nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
           <span>Orders</span>
         </div>
+
         <div class="bottom-nav-item ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
-          <div class="nav-icon ${tab === 'wallet' ? 'nav-icon-bg' : ''}"><span>💳</span></div>
+          <div class="nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+              <line x1="2" y1="10" x2="22" y2="10"></line>
+            </svg>
+          </div>
           <span>Wallet</span>
         </div>
+
         <div class="bottom-nav-item ${tab === 'support' ? 'active' : ''}" onclick="store.setCustomerTab('support')">
-          <div class="nav-icon ${tab === 'support' ? 'nav-icon-bg' : ''}"><span>💬</span></div>
+          <div class="nav-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
           <span>Support</span>
         </div>
       </nav>
@@ -146,13 +172,270 @@ const CustomerApp = {
     this.bindEvents();
   },
 
-  // 2-LEVEL CASCADING DROPDOWNS OVER ALL 5,803 SERVICES
+  // 1. DASHBOARD WITH CRISP, HIGH-CONTRAST ICONS
+  renderHomeTab(store) {
+    const recentOrders = store.data.orders.slice(0, 4);
+
+    return `
+      <!-- Balance Hero Card -->
+      <div class="balance-hero-card">
+        <div class="balance-hero-header">
+          <div>
+            <div class="balance-label">CURRENT WALLET BALANCE</div>
+            <div class="balance-amount" style="font-size: 36px; font-weight: 800; letter-spacing: -0.02em;">
+              ${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : '₹0'}
+            </div>
+          </div>
+          <div style="background: rgba(99, 102, 241, 0.12); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2">
+              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+              <line x1="2" y1="10" x2="22" y2="10"></line>
+            </svg>
+          </div>
+        </div>
+        ${store.data.isLoggedIn ? `
+          <button class="btn btn-primary btn-block btn-lg" onclick="store.setCustomerTab('wallet')">
+            <span>+ Add Funds</span>
+          </button>
+        ` : `
+          <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.openAuthModal('login')">
+            <span>🔑 Sign In / Register Account</span>
+          </button>
+        `}
+      </div>
+
+      <!-- Quick Actions Grid with High Contrast Crisp Icons -->
+      <div class="quick-actions-grid" style="margin-top: 18px;">
+        <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
+          <div class="action-icon-circle" style="background: #5B48EE; box-shadow: 0 4px 12px rgba(91, 72, 238, 0.35);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="20" cy="21" r="1"></circle>
+              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+            </svg>
+          </div>
+          <div class="action-card-title" style="font-weight: 700;">New Order</div>
+        </div>
+
+        <div class="quick-action-card" onclick="store.setCustomerTab('orders')">
+          <div class="action-icon-circle" style="background: #3B82F6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+          </div>
+          <div class="action-card-title" style="font-weight: 700;">Refill Request</div>
+        </div>
+
+        <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
+          <div class="action-icon-circle" style="background: #10B981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+            </svg>
+          </div>
+          <div class="action-card-title" style="font-weight: 700;">Add Funds</div>
+        </div>
+
+        <div class="quick-action-card" onclick="store.setCustomerTab('support')">
+          <div class="action-icon-circle" style="background: #8B5CF6; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </div>
+          <div class="action-card-title" style="font-weight: 700;">Support Desk</div>
+        </div>
+      </div>
+
+      <!-- Recent Orders Section -->
+      <div class="section-header-row" style="margin-top: 24px;">
+        <div class="section-title">Recent Orders</div>
+        <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
+      </div>
+
+      <div class="mobile-orders-list">
+        ${recentOrders.map(order => this.renderHistoryCard(order, store)).join('')}
+      </div>
+    `;
+  },
+
+  // 3. ORDERS HISTORY TAB (MATCHING USER SCREENSHOT EXACTLY)
+  renderOrdersTab(store) {
+    if (!store.data.isLoggedIn) {
+      return `
+        <div class="card" style="text-align: center; padding: 40px 20px; max-width: 500px; margin: 40px auto;">
+          <span style="font-size: 48px;">🔒</span>
+          <h3 style="font-size: 20px; font-weight: 800; margin-top: 14px;">Sign In to View Orders</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px;">
+            Your past order history and refill warranties are secured with your account.
+          </p>
+          <button class="btn btn-primary btn-block" style="margin-top: 20px;" onclick="CustomerApp.openAuthModal('login')">
+            🔑 Sign In / Create Account
+          </button>
+        </div>
+      `;
+    }
+
+    const allOrders = store.data.orders;
+    const filter = this.ordersFilter || 'all';
+    const query = (this.ordersSearch || '').trim().toLowerCase();
+
+    let filtered = allOrders;
+    if (filter !== 'all') {
+      filtered = filtered.filter(o => o.status.toLowerCase().replace(' ', '_') === filter.toLowerCase());
+    }
+    if (query) {
+      filtered = filtered.filter(o => 
+        String(o.id).includes(query) || 
+        o.serviceName.toLowerCase().includes(query) ||
+        o.status.toLowerCase().includes(query)
+      );
+    }
+
+    return `
+      <div style="display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; width: 100%;">
+        <!-- Header Row -->
+        <div class="orders-history-header">
+          <h1 class="orders-history-title">Orders History</h1>
+          <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px; border-radius: 9999px;">
+            ${allOrders.length} Total Orders
+          </span>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="orders-search-bar">
+          <span class="orders-search-icon">🔍</span>
+          <input 
+            type="text" 
+            class="orders-search-input" 
+            placeholder="Search by ID, Service, or Status" 
+            value="${this.ordersSearch}" 
+            oninput="CustomerApp.handleOrdersSearch(this.value)" 
+          />
+        </div>
+
+        <!-- Status Filter Chips -->
+        <div class="orders-filter-chips">
+          <button class="orders-filter-pill ${filter === 'all' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('all')">
+            All
+          </button>
+          <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('completed')">
+            Completed
+          </button>
+          <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('processing')">
+            Processing
+          </button>
+          <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('in_progress')">
+            In Progress
+          </button>
+        </div>
+
+        <!-- Order Cards Stream -->
+        <div style="display: flex; flex-direction: column; gap: 4px;">
+          ${filtered.length === 0 ? `
+            <div class="card" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+              No orders found matching your search.
+            </div>
+          ` : filtered.map(order => this.renderHistoryCard(order, store)).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  renderHistoryCard(order, store) {
+    let badgeBg = '#E0F2FE';
+    let badgeColor = '#0369A1';
+    let badgeText = order.status;
+
+    if (order.status === 'Completed') {
+      badgeBg = '#DCFCE7';
+      badgeColor = '#15803D';
+    } else if (order.status === 'Processing') {
+      badgeBg = '#D1FAE5';
+      badgeColor = '#047857';
+    }
+
+    const startCount = Number(order.startCount || 0).toLocaleString();
+    const currentCount = Number(order.currentCount || 0).toLocaleString();
+    const remains = Number(order.remains || 0).toLocaleString();
+    const canRefill = order.status === 'Completed';
+
+    return `
+      <div class="order-history-card">
+        <!-- Top Row: #ID + Status Badge + Date -->
+        <div class="order-history-top">
+          <div class="order-history-id-group">
+            <span class="order-history-id">#${order.id}</span>
+            <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 5px;">
+              <span style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor};"></span>
+              ${badgeText}
+            </span>
+          </div>
+          <span class="order-history-date">${order.date || 'Today'}</span>
+        </div>
+
+        <!-- Title -->
+        <div class="order-history-title-text">${order.serviceName}</div>
+
+        <!-- Qty & Charge Row -->
+        <div class="order-history-pricing-row">
+          <span class="order-history-qty">Qty: <strong>${Number(order.quantity).toLocaleString()}</strong></span>
+          <span class="order-history-price">${store.formatMoney(order.amount)}</span>
+        </div>
+
+        <!-- 3-Column Metrics Box -->
+        <div class="order-stats-trio">
+          <div class="stat-trio-col">
+            <span class="stat-trio-label">Start Count</span>
+            <span class="stat-trio-val">${startCount}</span>
+          </div>
+          <div class="stat-trio-col">
+            <span class="stat-trio-label">Current Count</span>
+            <span class="stat-trio-val">${currentCount}</span>
+          </div>
+          <div class="stat-trio-col">
+            <span class="stat-trio-label">Remains</span>
+            <span class="stat-trio-val">${remains}</span>
+          </div>
+        </div>
+
+        <!-- Full-Width Vibrant Purple Button -->
+        ${canRefill ? `
+          <button class="btn-refill-full" onclick="CustomerApp.promptRefill('${order.id}')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+            </svg>
+            <span>Request Refill</span>
+          </button>
+        ` : `
+          <div style="text-align: center; padding: 6px 0; font-size: 12.5px; color: var(--text-secondary);">
+            Order in progress • Refill warranty activates upon completion
+          </div>
+        `}
+      </div>
+    `;
+  },
+
+  setOrdersFilter(filter) {
+    this.ordersFilter = filter;
+    const screenContainer = document.getElementById('screen-container');
+    this.render(screenContainer);
+  },
+
+  handleOrdersSearch(val) {
+    this.ordersSearch = val;
+    clearTimeout(this._orderSearchDebounce);
+    this._orderSearchDebounce = setTimeout(() => {
+      const screenContainer = document.getElementById('screen-container');
+      this.render(screenContainer);
+    }, 200);
+  },
+
+  // 2. NEW ORDER TAB WITH CASCADING DROPDOWNS OVER 5,803 SERVICES
   renderNewOrderTab(store) {
     const rawServices = window.JAP_SERVICES || [];
     const plat = this.currentPlatform || 'instagram';
     const query = (this.searchQuery || '').trim().toLowerCase();
 
-    // 1. Filter services by platform or search query
     let filteredServices = rawServices;
     if (query) {
       filteredServices = rawServices.filter(s => 
@@ -164,13 +447,11 @@ const CustomerApp = {
       filteredServices = rawServices.filter(s => s.platform === plat);
     }
 
-    // 2. Get unique categories
     const categories = [...new Set(filteredServices.map(s => s.category))];
     if (!categories.includes(this.currentCategory) && categories.length > 0) {
       this.currentCategory = categories[0];
     }
 
-    // 3. Get packages under active category
     let activePackages = filteredServices.filter(s => s.category === this.currentCategory);
     if (activePackages.length === 0 && filteredServices.length > 0) {
       activePackages = filteredServices;
@@ -184,7 +465,7 @@ const CustomerApp = {
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
           <div>
             <h2 style="font-size: 24px; font-weight: 800;">Place New Order</h2>
-            <p style="font-size: 14px;">Instant automated delivery across 5,803 live services.</p>
+            <p style="font-size: 14px;">Instant automated delivery across 5,803 live wholesale services.</p>
           </div>
           <span class="badge badge-primary" style="font-size: 13px; padding: 6px 12px;">
             5,803 Services Active
@@ -354,7 +635,6 @@ const CustomerApp = {
 
   handleSearch(val) {
     this.searchQuery = val;
-    // Don't fully rerender whole DOM on each keystroke, update smoothly
     clearTimeout(this._searchDebounce);
     this._searchDebounce = setTimeout(() => {
       const screenContainer = document.getElementById('screen-container');
@@ -485,166 +765,13 @@ const CustomerApp = {
     window.store.setCustomerTab('wallet');
   },
 
-  // 1. HOME TAB
-  renderHomeTab(store) {
-    const recentOrders = store.data.orders.slice(0, 5);
+  promptRefill(orderId) {
+    const order = window.store.data.orders.find(o => String(o.id) === String(orderId));
+    if (!order) return;
 
-    return `
-      <div class="balance-hero-card">
-        <div class="balance-hero-header">
-          <div>
-            <div class="balance-label">${store.data.isLoggedIn ? 'Current Wallet Balance' : 'Guest Visitor'}</div>
-            <div class="balance-amount">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Browse Mode'}</div>
-          </div>
-          <div class="balance-icon-pill"><span>💳</span></div>
-        </div>
-        ${store.data.isLoggedIn ? `
-          <button class="btn btn-primary" onclick="store.setCustomerTab('wallet')">
-            <span>＋ Add Funds</span>
-          </button>
-        ` : `
-          <button class="btn btn-primary" onclick="CustomerApp.openAuthModal('login')">
-            <span>🔑 Sign In / Register Account</span>
-          </button>
-        `}
-      </div>
-
-      <div class="quick-actions-grid">
-        <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
-          <div class="action-icon-circle"><span>🛒</span></div>
-          <div class="action-card-title">New Order</div>
-        </div>
-        <div class="quick-action-card" onclick="CustomerApp.quickRefillFilter()">
-          <div class="action-icon-circle"><span>🔄</span></div>
-          <div class="action-card-title">Refill Request</div>
-        </div>
-        <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
-          <div class="action-icon-circle" style="background: #10B981;"><span>💰</span></div>
-          <div class="action-card-title">Add Funds</div>
-        </div>
-        <div class="quick-action-card" onclick="store.setCustomerTab('support')">
-          <div class="action-icon-circle" style="background: #3B82F6;"><span>💬</span></div>
-          <div class="action-card-title">Support Desk</div>
-        </div>
-      </div>
-
-      <div class="section-header-row">
-        <div class="section-title">Recent Orders</div>
-        <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
-      </div>
-
-      <div class="mobile-orders-list">
-        ${recentOrders.map(order => this.renderOrderCard(order, store)).join('')}
-      </div>
-    `;
-  },
-
-  renderOrderCard(order, store) {
-    let badgeClass = 'badge-primary';
-    if (order.status === 'Processing') badgeClass = 'badge-success';
-    if (order.status === 'In Progress') badgeClass = 'badge-info';
-    if (order.status === 'Completed') badgeClass = 'badge-neutral';
-
-    return `
-      <div class="mobile-order-card" onclick="CustomerApp.openOrderDetails('${order.id}')">
-        <div class="order-card-top">
-          <div class="order-platform-icon">⚡</div>
-          <div class="order-card-info">
-            <div class="order-service-title">${order.serviceName}</div>
-            <div class="order-id-sub">ID: #${order.id}</div>
-          </div>
-          <div class="order-card-price">${store.formatMoney(order.amount)}</div>
-        </div>
-        <div class="order-card-bottom">
-          <span class="badge ${badgeClass}"><span class="badge-dot"></span>${order.status}</span>
-          <span class="order-qty-label">Qty: ${Number(order.quantity).toLocaleString()}</span>
-        </div>
-      </div>
-    `;
-  },
-
-  // 3. ORDERS TAB
-  renderOrdersTab(store) {
-    if (!store.data.isLoggedIn) {
-      return `
-        <div class="card" style="text-align: center; padding: 40px 20px; max-width: 500px; margin: 40px auto;">
-          <span style="font-size: 48px;">🔒</span>
-          <h3 style="font-size: 20px; font-weight: 800; margin-top: 14px;">Sign In to View Orders</h3>
-          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px;">
-            Your past order history and refill warranties are secured with your account.
-          </p>
-          <button class="btn btn-primary btn-block" style="margin-top: 20px;" onclick="CustomerApp.openAuthModal('login')">
-            🔑 Sign In / Create Account
-          </button>
-        </div>
-      `;
+    if (confirm(`Request automatic refill for Order #${order.id} (${order.serviceName})?\n\nCurrent count: ${order.currentCount || 0} / Target: ${(order.startCount || 0) + order.quantity}`)) {
+      window.store.requestRefill(orderId);
     }
-
-    const orders = store.data.orders;
-    return `
-      <div style="display: flex; flex-direction: column; gap: 20px;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h2 style="font-size: 24px; font-weight: 800;">My Orders</h2>
-            <p style="font-size: 13.5px;">Track delivery progress and refill warranties.</p>
-          </div>
-          <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px;">${orders.length} Total Orders</span>
-        </div>
-
-        <div class="mobile-orders-list" id="customer-orders-container">
-          ${orders.map(order => this.renderDetailedOrderCard(order, store)).join('')}
-        </div>
-      </div>
-    `;
-  },
-
-  renderDetailedOrderCard(order, store) {
-    let badgeClass = 'badge-primary';
-    if (order.status === 'Processing') badgeClass = 'badge-success';
-    if (order.status === 'In Progress') badgeClass = 'badge-info';
-    if (order.status === 'Completed') badgeClass = 'badge-neutral';
-
-    return `
-      <div class="card" style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <div>
-            <div style="font-size: 15.5px; font-weight: 700; color: var(--text-main);">${order.serviceName}</div>
-            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
-              Order #${order.id} • ${order.date}
-            </div>
-          </div>
-          <span class="badge ${badgeClass}"><span class="badge-dot"></span>${order.status}</span>
-        </div>
-
-        <div style="background: var(--bg-subtle); padding: 12px 14px; border-radius: var(--radius-md); font-size: 13px;">
-          <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700;">Target Link / Handle</div>
-          <div style="font-family: var(--font-mono); color: var(--text-main); word-break: break-all; margin-top: 2px;">
-            ${order.target}
-          </div>
-        </div>
-
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; text-align: center; background: var(--bg-surface); padding: 8px 0;">
-          <div>
-            <div style="color: var(--text-muted); font-size: 11.5px;">Quantity</div>
-            <strong style="color: var(--text-main); font-size: 15px;">${Number(order.quantity).toLocaleString()}</strong>
-          </div>
-          <div>
-            <div style="color: var(--text-muted); font-size: 11.5px;">Remains</div>
-            <strong style="color: var(--text-main); font-size: 15px;">${Number(order.remains).toLocaleString()}</strong>
-          </div>
-          <div>
-            <div style="color: var(--text-muted); font-size: 11.5px;">Charge</div>
-            <strong style="color: var(--primary); font-size: 15px;">${store.formatMoney(order.amount)}</strong>
-          </div>
-        </div>
-
-        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-color);">
-          <button class="btn btn-sm btn-secondary" onclick="CustomerApp.openOrderDetails('${order.id}')">
-            View Details
-          </button>
-        </div>
-      </div>
-    `;
   },
 
   // 4. WALLET TAB
@@ -670,7 +797,7 @@ const CustomerApp = {
         <div class="balance-hero-card">
           <div class="balance-hero-header">
             <div>
-              <div class="balance-label">Wallet Balance</div>
+              <div class="balance-label">WALLET BALANCE</div>
               <div class="balance-amount">${store.formatMoney(store.data.customer.balance)}</div>
             </div>
             <div class="balance-icon-pill"><span>💰</span></div>
@@ -1016,10 +1143,6 @@ const CustomerApp = {
     `;
 
     modal.classList.add('active');
-  },
-
-  quickRefillFilter() {
-    window.store.setCustomerTab('orders');
   },
 
   closeModal() {
