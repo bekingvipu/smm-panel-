@@ -1,9 +1,11 @@
 const CustomerApp = {
-  currentCategory: 'all',
+  currentPlatform: 'instagram',
+  currentSubcategory: 'Instagram Followers [Guaranteed / Refill 30D - 365D]',
 
   render(container) {
     const store = window.store;
     const tab = store.customerTab;
+    const isLoggedIn = store.data.isLoggedIn;
 
     let contentHtml = '';
     if (tab === 'home') contentHtml = this.renderHomeTab(store);
@@ -15,19 +17,19 @@ const CustomerApp = {
     container.innerHTML = `
       <!-- Desktop Production Header (Screens >= 768px) -->
       <nav class="desktop-navbar">
-        <div class="desktop-nav-brand" onclick="store.setCustomerTab('home')">
+        <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')">
           <span style="background: var(--primary); color: white; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">⚡</span>
           <span>SMM Pro</span>
         </div>
 
         <div class="desktop-nav-links">
+          <a class="desktop-nav-link ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
+            <span>🛒</span>
+            <span>Services & Order</span>
+          </a>
           <a class="desktop-nav-link ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
             <span>⊞</span>
             <span>Dashboard</span>
-          </a>
-          <a class="desktop-nav-link ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
-            <span>🛒</span>
-            <span>New Order</span>
           </a>
           <a class="desktop-nav-link ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
             <span>⏱️</span>
@@ -44,15 +46,6 @@ const CustomerApp = {
         </div>
 
         <div class="desktop-nav-actions">
-          <div class="nav-balance-pill">
-            <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Balance:</span>
-            <span class="nav-balance-amount">${store.formatMoney(store.data.customer.balance)}</span>
-          </div>
-
-          <button class="btn btn-primary btn-sm" onclick="store.setCustomerTab('wallet')">
-            ＋ Add Funds
-          </button>
-
           <button class="btn btn-sm btn-secondary" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
             ${store.currency === 'USD' ? '💵 USD' : '₹ INR'}
           </button>
@@ -61,19 +54,35 @@ const CustomerApp = {
             <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
           </button>
 
-          <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" title="Notifications">
-            <span>🔔</span>
-            <span class="notification-dot"></span>
-          </button>
-
-          <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="Account Profile" />
+          ${isLoggedIn ? `
+            <div class="nav-balance-pill">
+              <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Balance:</span>
+              <span class="nav-balance-amount">${store.formatMoney(store.data.customer.balance)}</span>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="store.setCustomerTab('wallet')">
+              ＋ Add Funds
+            </button>
+            <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" title="Notifications">
+              <span>🔔</span>
+              <span class="notification-dot"></span>
+            </button>
+            <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="Account Profile" />
+          ` : `
+            <button class="btn btn-primary btn-sm" onclick="CustomerApp.openAuthModal('login')">
+              🔑 Sign In / Register
+            </button>
+          `}
         </div>
       </nav>
 
       <!-- Mobile Production Header (Screens < 768px) -->
       <header class="customer-header">
         <div class="customer-brand-group">
-          <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="View Profile" />
+          ${isLoggedIn ? `
+            <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="View Profile" />
+          ` : `
+            <span style="background: var(--primary); color: white; width: 34px; height: 34px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">⚡</span>
+          `}
           <div class="customer-brand-name">SMM Pro</div>
         </div>
         <div class="customer-header-actions">
@@ -83,12 +92,25 @@ const CustomerApp = {
           <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')">
             <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
           </button>
-          <button class="header-icon-btn" onclick="CustomerApp.openNotifications()">
-            <span>🔔</span>
-            <span class="notification-dot"></span>
-          </button>
+          ${isLoggedIn ? `
+            <button class="header-icon-btn" onclick="CustomerApp.openNotifications()">
+              <span>🔔</span>
+              <span class="notification-dot"></span>
+            </button>
+          ` : `
+            <button class="btn btn-primary btn-sm" style="padding: 4px 10px; font-size: 12px;" onclick="CustomerApp.openAuthModal('login')">
+              Sign In
+            </button>
+          `}
         </div>
       </header>
+
+      <!-- Public Catalog Banner for Guests -->
+      ${!isLoggedIn ? `
+        <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1)); border-bottom: 1px solid var(--border-color); padding: 10px 16px; text-align: center; font-size: 13px; color: var(--text-main);">
+          <span>👀 <strong>Public Catalog Active:</strong> Browse all live packages and prices freely. Login required only when placing an order.</span>
+        </div>
+      ` : ''}
 
       <!-- Content Container -->
       <div class="customer-desktop-container">
@@ -97,18 +119,18 @@ const CustomerApp = {
 
       <!-- Permanently Fixed Mobile Bottom Navigation Bar (Screens < 768px) -->
       <nav class="customer-bottom-nav">
-        <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
-          <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}">
-            <span>⊞</span>
-          </div>
-          <span>Home</span>
-        </div>
-
         <div class="bottom-nav-item ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
           <div class="nav-icon ${tab === 'new_order' ? 'nav-icon-bg' : ''}">
             <span>🛒</span>
           </div>
           <span>New Order</span>
+        </div>
+
+        <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
+          <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}">
+            <span>⊞</span>
+          </div>
+          <span>Dashboard</span>
         </div>
 
         <div class="bottom-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
@@ -146,45 +168,43 @@ const CustomerApp = {
       <div class="balance-hero-card">
         <div class="balance-hero-header">
           <div>
-            <div class="balance-label">Current Balance</div>
-            <div class="balance-amount">${store.formatMoney(store.data.customer.balance)}</div>
+            <div class="balance-label">${store.data.isLoggedIn ? 'Current Wallet Balance' : 'Guest Visitor'}</div>
+            <div class="balance-amount">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Browse Mode'}</div>
           </div>
           <div class="balance-icon-pill">
             <span>💳</span>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="store.setCustomerTab('wallet')">
-          <span>＋ Add Funds</span>
-        </button>
+        ${store.data.isLoggedIn ? `
+          <button class="btn btn-primary" onclick="store.setCustomerTab('wallet')">
+            <span>＋ Add Funds</span>
+          </button>
+        ` : `
+          <button class="btn btn-primary" onclick="CustomerApp.openAuthModal('login')">
+            <span>🔑 Sign In / Register Account</span>
+          </button>
+        `}
       </div>
 
       <!-- Quick Actions Grid -->
       <div class="quick-actions-grid">
         <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
-          <div class="action-icon-circle">
-            <span>🛒</span>
-          </div>
+          <div class="action-icon-circle"><span>🛒</span></div>
           <div class="action-card-title">New Order</div>
         </div>
 
         <div class="quick-action-card" onclick="CustomerApp.quickRefillFilter()">
-          <div class="action-icon-circle">
-            <span>🔄</span>
-          </div>
+          <div class="action-icon-circle"><span>🔄</span></div>
           <div class="action-card-title">Refill Request</div>
         </div>
 
         <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
-          <div class="action-icon-circle" style="background: #10B981;">
-            <span>💰</span>
-          </div>
+          <div class="action-icon-circle" style="background: #10B981;"><span>💰</span></div>
           <div class="action-card-title">Add Funds</div>
         </div>
 
         <div class="quick-action-card" onclick="store.setCustomerTab('support')">
-          <div class="action-icon-circle" style="background: #3B82F6;">
-            <span>💬</span>
-          </div>
+          <div class="action-icon-circle" style="background: #3B82F6;"><span>💬</span></div>
           <div class="action-card-title">Support Desk</div>
         </div>
       </div>
@@ -195,7 +215,6 @@ const CustomerApp = {
         <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
       </div>
 
-      <!-- Recent Orders List Cards -->
       <div class="mobile-orders-list">
         ${recentOrders.map(order => this.renderOrderCard(order, store)).join('')}
       </div>
@@ -215,18 +234,13 @@ const CustomerApp = {
     if (order.status === 'In Progress') badgeClass = 'badge-info';
     if (order.status === 'Completed') badgeClass = 'badge-neutral';
 
-    let refillBadge = '';
-    if (order.refillStatus && order.refillStatus.includes('Refill')) {
-      refillBadge = `<span class="badge badge-warning" style="margin-left: 6px;"><span class="badge-dot"></span>${order.refillStatus}</span>`;
-    }
-
     return `
       <div class="mobile-order-card" onclick="CustomerApp.openOrderDetails('${order.id}')">
         <div class="order-card-top">
           <div class="order-platform-icon">${icon}</div>
           <div class="order-card-info">
             <div class="order-service-title">${order.serviceName}</div>
-            <div class="order-id-sub">ID: #${order.id} ${refillBadge}</div>
+            <div class="order-id-sub">ID: #${order.id}</div>
           </div>
           <div class="order-card-price">${store.formatMoney(order.amount)}</div>
         </div>
@@ -242,43 +256,71 @@ const CustomerApp = {
     `;
   },
 
-  // 2. NEW ORDER TAB WITH WORKING CATEGORY FILTER
+  // 2. NEW ORDER TAB WITH 2-LEVEL CASCADING DROPDOWNS (JAP STYLE)
   renderNewOrderTab(store) {
     const allServices = store.data.customerServices;
-    const cat = this.currentCategory || 'all';
+    const plat = this.currentPlatform || 'instagram';
 
-    const filteredServices = cat === 'all' 
+    // Step A: Filter by Platform
+    const platformServices = plat === 'all' 
       ? allServices 
-      : allServices.filter(s => s.platform.toLowerCase() === cat.toLowerCase());
+      : allServices.filter(s => s.platform.toLowerCase() === plat.toLowerCase());
 
-    const activeService = filteredServices[0] || allServices[0] || {};
+    // Step B: Get unique subcategories under this platform
+    const subcategories = [...new Set(platformServices.map(s => s.subcategory))];
+    
+    if (!subcategories.includes(this.currentSubcategory) && subcategories.length > 0) {
+      this.currentSubcategory = subcategories[0];
+    }
+
+    // Step C: Filter packages under the active subcategory
+    const activePackages = platformServices.filter(s => s.subcategory === this.currentSubcategory);
+    const activeService = activePackages[0] || platformServices[0] || allServices[0] || {};
 
     return `
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
         <div>
           <h2 style="font-size: 24px; font-weight: 800;">Place New Order</h2>
-          <p style="font-size: 14px;">Select an SMM service and enter your target link.</p>
+          <p style="font-size: 14px;">Select platform category, package tier, and enter your target link.</p>
         </div>
 
-        <!-- Step 1: Category Filter Chips (Working) -->
+        <!-- Platform Tabs -->
         <div class="form-group" style="margin-bottom: 4px;">
-          <label class="form-label">Category / Platform</label>
-          <div class="platform-chips-scroll" id="new-order-category-chips">
-            <button class="platform-chip ${cat === 'all' ? 'active' : ''}" onclick="CustomerApp.filterCategory('all')">All Services</button>
-            <button class="platform-chip ${cat === 'instagram' ? 'active' : ''}" onclick="CustomerApp.filterCategory('instagram')">Instagram</button>
-            <button class="platform-chip ${cat === 'facebook' ? 'active' : ''}" onclick="CustomerApp.filterCategory('facebook')">Facebook</button>
-            <button class="platform-chip ${cat === 'youtube' ? 'active' : ''}" onclick="CustomerApp.filterCategory('youtube')">YouTube</button>
-            <button class="platform-chip ${cat === 'tiktok' ? 'active' : ''}" onclick="CustomerApp.filterCategory('tiktok')">TikTok</button>
-            <button class="platform-chip ${cat === 'telegram' ? 'active' : ''}" onclick="CustomerApp.filterCategory('telegram')">Telegram</button>
-            <button class="platform-chip ${cat === 'twitter' ? 'active' : ''}" onclick="CustomerApp.filterCategory('twitter')">Twitter / X</button>
+          <label class="form-label">Platform</label>
+          <div class="platform-chips-scroll" id="new-order-platform-chips">
+            <button class="platform-chip ${plat === 'all' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('all')">All</button>
+            <button class="platform-chip ${plat === 'instagram' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('instagram')">Instagram</button>
+            <button class="platform-chip ${plat === 'facebook' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('facebook')">Facebook</button>
+            <button class="platform-chip ${plat === 'youtube' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('youtube')">YouTube</button>
+            <button class="platform-chip ${plat === 'tiktok' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('tiktok')">TikTok</button>
+            <button class="platform-chip ${plat === 'telegram' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('telegram')">Telegram</button>
+            <button class="platform-chip ${plat === 'twitter' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('twitter')">Twitter / X</button>
           </div>
         </div>
 
-        <!-- Step 2: Service Selector -->
+        <!-- 1st Box: Sub-Category Dropdown (e.g. Guaranteed Followers, Likes, Reels) -->
         <div class="form-group">
-          <label class="form-label">Service (${filteredServices.length} available)</label>
+          <label class="form-label">
+            <span>1. Sub-Category</span>
+            <span class="form-label-hint">${subcategories.length} Categories available</span>
+          </label>
+          <select class="form-select" id="new-order-category-select" onchange="CustomerApp.handleSubcategoryChange(this.value)">
+            ${subcategories.map(sub => `
+              <option value="${sub}" ${sub === this.currentSubcategory ? 'selected' : ''}>
+                ${sub}
+              </option>
+            `).join('')}
+          </select>
+        </div>
+
+        <!-- 2nd Box: Specific Service Package (Tiered Rates e.g. ₹25, ₹50, ₹90 VIP) -->
+        <div class="form-group">
+          <label class="form-label">
+            <span>2. Service Package & Rates</span>
+            <span class="form-label-hint">${activePackages.length} Packages</span>
+          </label>
           <select class="form-select" id="new-order-service-select">
-            ${filteredServices.map(s => `
+            ${activePackages.map(s => `
               <option value="${s.id}" data-price="${s.pricePer1k}" data-min="${s.min}" data-max="${s.max}">
                 ${s.customerName} — ${store.formatMoney(s.pricePer1k)}/1K
               </option>
@@ -286,15 +328,15 @@ const CustomerApp = {
           </select>
         </div>
 
-        <!-- Step 3: Service Details Card -->
+        <!-- Service Specification Details Box -->
         <div class="service-details-card" id="service-details-box">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: var(--primary); font-size: 14px;">Service Specification</strong>
+            <strong style="color: var(--primary); font-size: 14px;">Package Specification</strong>
             <span class="badge ${activeService.refillSupported ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge">
-              ${activeService.refillSupported ? `🛡️ ${activeService.refillPeriod} Refill` : 'No Refill'}
+              ${activeService.refillSupported ? `🛡️ ${activeService.refillPeriod} Refill Guarantee` : 'No Refill Warranty'}
             </span>
           </div>
-          <p id="service-detail-desc" style="font-size: 13px; color: var(--text-secondary);">
+          <p id="service-detail-desc" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
             ${activeService.description || ''}
           </p>
           <div class="service-meta-grid" style="margin-top: 8px;">
@@ -317,10 +359,10 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Step 4: Target Link / Username -->
+        <!-- Target Link / Username -->
         <div class="form-group">
           <label class="form-label">
-            <span>Target Link / Profile</span>
+            <span>Target Link / Username</span>
             <span class="form-label-hint">Public accounts only</span>
           </label>
           <div style="position: relative;">
@@ -331,7 +373,7 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Step 5: Quantity -->
+        <!-- Quantity -->
         <div class="form-group">
           <label class="form-label">
             <span>Quantity</span>
@@ -346,43 +388,67 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Step 6: Live Price Calculation Box -->
+        <!-- Live Price Calculation Box -->
         <div class="calculation-summary-card">
           <div class="calc-row">
             <span>Unit Rate (per 1,000):</span>
-            <strong id="calc-rate-label">${store.formatMoney(activeService.pricePer1k || 0.71)}</strong>
+            <strong id="calc-rate-label">${store.formatMoney(activeService.pricePer1k || 0.30)}</strong>
           </div>
           <div class="calc-row">
             <span>Current Wallet Balance:</span>
-            <span>${store.formatMoney(store.data.customer.balance)}</span>
+            <span>${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Guest Mode (Sign in to view balance)'}</span>
           </div>
           <div class="calc-row total-row">
             <span>Total Charge:</span>
-            <span id="calc-total-label">${store.formatMoney(((activeService.pricePer1k || 0.71) / 1000) * 1000)}</span>
+            <span id="calc-total-label">${store.formatMoney(((activeService.pricePer1k || 0.30) / 1000) * 1000)}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 4px;">
-            <span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>
+            ${store.data.isLoggedIn ? `
+              <span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>
+            ` : `
+              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary);">ℹ️ Sign in required to complete order</span>
+            `}
           </div>
         </div>
 
-        <!-- Step 7: Submit Button -->
+        <!-- Submit Button -->
         <button class="btn btn-primary btn-lg btn-block" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()">
-          <span>Confirm & Place Order</span>
+          <span>${store.data.isLoggedIn ? 'Confirm & Place Order' : '🔑 Sign In to Place Order'}</span>
         </button>
       </div>
     `;
   },
 
-  filterCategory(cat) {
-    this.currentCategory = cat;
+  selectPlatform(plat) {
+    this.currentPlatform = plat;
+    const screenContainer = document.getElementById('screen-container');
+    this.render(screenContainer);
+  },
+
+  handleSubcategoryChange(sub) {
+    this.currentSubcategory = sub;
     const screenContainer = document.getElementById('screen-container');
     this.render(screenContainer);
   },
 
   // 3. ORDERS TAB
   renderOrdersTab(store) {
-    const orders = store.data.orders;
+    if (!store.data.isLoggedIn) {
+      return `
+        <div class="card" style="text-align: center; padding: 40px 20px; max-width: 500px; margin: 40px auto;">
+          <span style="font-size: 48px;">🔒</span>
+          <h3 style="font-size: 20px; font-weight: 800; margin-top: 14px;">Sign In to View Orders</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px;">
+            Your past order history and refill warranties are secured with your account.
+          </p>
+          <button class="btn btn-primary btn-block" style="margin-top: 20px;" onclick="CustomerApp.openAuthModal('login')">
+            🔑 Sign In / Create Account
+          </button>
+        </div>
+      `;
+    }
 
+    const orders = store.data.orders;
     return `
       <div style="display: flex; flex-direction: column; gap: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -393,7 +459,6 @@ const CustomerApp = {
           <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px;">${orders.length} Total Orders</span>
         </div>
 
-        <!-- Orders List -->
         <div class="mobile-orders-list" id="customer-orders-container">
           ${orders.map(order => this.renderDetailedOrderCard(order, store)).join('')}
         </div>
@@ -443,15 +508,6 @@ const CustomerApp = {
           </div>
         </div>
 
-        ${order.refillStatus && order.refillStatus.includes('Refill') ? `
-          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--warning-light); padding: 10px 14px; border-radius: var(--radius-md);">
-            <span style="font-size: 13px; font-weight: 700; color: var(--warning);">
-              🔄 ${order.refillStatus}
-            </span>
-            <span style="font-size: 12px; color: var(--text-secondary);">Provider Sync Active</span>
-          </div>
-        ` : ''}
-
         <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-color);">
           <button class="btn btn-sm btn-secondary" onclick="CustomerApp.openOrderDetails('${order.id}')">
             View Details
@@ -461,9 +517,7 @@ const CustomerApp = {
             <button class="btn-refill" onclick="CustomerApp.promptRefill('${order.id}')">
               <span>🔄 Request Refill</span>
             </button>
-          ` : (order.status === 'Completed' && !order.refillEligible && !order.refillStatus ? `
-            <span style="font-size: 12px; color: var(--text-muted);">Refill Guarantee Expired</span>
-          ` : '')}
+          ` : ''}
         </div>
       </div>
     `;
@@ -471,8 +525,22 @@ const CustomerApp = {
 
   // 4. WALLET TAB
   renderWalletTab(store) {
-    const transactions = store.data.transactions;
+    if (!store.data.isLoggedIn) {
+      return `
+        <div class="card" style="text-align: center; padding: 40px 20px; max-width: 500px; margin: 40px auto;">
+          <span style="font-size: 48px;">💳</span>
+          <h3 style="font-size: 20px; font-weight: 800; margin-top: 14px;">Sign In to Manage Wallet</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px;">
+            Add funds via UPI, Card, or Crypto and get instant credits to place orders.
+          </p>
+          <button class="btn btn-primary btn-block" style="margin-top: 20px;" onclick="CustomerApp.openAuthModal('login')">
+            🔑 Sign In / Register Account
+          </button>
+        </div>
+      `;
+    }
 
+    const transactions = store.data.transactions;
     return `
       <div style="display: flex; flex-direction: column; gap: 24px; max-width: 800px; margin: 0 auto; width: 100%;">
         <div class="balance-hero-card">
@@ -484,7 +552,7 @@ const CustomerApp = {
             <div class="balance-icon-pill"><span>💰</span></div>
           </div>
           <p style="font-size: 13px; color: var(--text-secondary); max-width: 320px;">
-            Instant auto-deposit. Funds are credited immediately upon transaction confirmation.
+            Instant auto-deposit via UPI / QR. Funds are credited immediately upon confirmation.
           </p>
         </div>
 
@@ -509,7 +577,6 @@ const CustomerApp = {
               <option value="UPI / Instant QR (0% Fee)">UPI / Instant QR (Google Pay, PhonePe, Paytm)</option>
               <option value="Credit / Debit Card (Stripe)">Credit / Debit Card (Visa, Mastercard)</option>
               <option value="Cryptocurrency (USDT TRC20 / BTC)">Crypto (USDT TRC20 / BTC / ETH)</option>
-              <option value="Net Banking / IMPS">Net Banking / IMPS Bank Transfer</option>
             </select>
           </div>
 
@@ -549,8 +616,22 @@ const CustomerApp = {
 
   // 5. SUPPORT TAB
   renderSupportTab(store) {
-    const tickets = store.data.supportTickets;
+    if (!store.data.isLoggedIn) {
+      return `
+        <div class="card" style="text-align: center; padding: 40px 20px; max-width: 500px; margin: 40px auto;">
+          <span style="font-size: 48px;">💬</span>
+          <h3 style="font-size: 20px; font-weight: 800; margin-top: 14px;">Sign In for Support</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px;">
+            Submit support tickets and chat with our 24/7 team.
+          </p>
+          <button class="btn btn-primary btn-block" style="margin-top: 20px;" onclick="CustomerApp.openAuthModal('login')">
+            🔑 Sign In / Create Account
+          </button>
+        </div>
+      `;
+    }
 
+    const tickets = store.data.supportTickets;
     return `
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -574,9 +655,6 @@ const CustomerApp = {
               </div>
               <div style="font-size: 12.5px; color: var(--text-secondary);">
                 Ticket #${ticket.id} ${ticket.linkedOrderId ? `• Linked to Order #${ticket.linkedOrderId}` : ''}
-              </div>
-              <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 8px;">
-                Last message ${ticket.updatedAt} • Click to open conversation thread
               </div>
             </div>
           `).join('')}
@@ -605,7 +683,7 @@ const CustomerApp = {
         const badge = document.getElementById('service-detail-refill-badge');
         if (badge) {
           badge.className = `badge ${service.refillSupported ? 'badge-success' : 'badge-neutral'}`;
-          badge.textContent = service.refillSupported ? `🛡️ ${service.refillPeriod} Refill` : 'No Refill';
+          badge.textContent = service.refillSupported ? `🛡️ ${service.refillPeriod} Refill Guarantee` : 'No Refill Warranty';
         }
 
         document.getElementById('calc-rate-label').textContent = store.formatMoney(service.pricePer1k);
@@ -615,10 +693,12 @@ const CustomerApp = {
         document.getElementById('calc-total-label').textContent = store.formatMoney(total);
 
         const statusBox = document.getElementById('balance-check-status');
-        if (store.data.customer.balance >= total) {
-          statusBox.innerHTML = '<span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>';
-        } else {
-          statusBox.innerHTML = '<span class="balance-status-pill badge-error">⚠️ Insufficient Balance - Add funds before placing order</span>';
+        if (store.data.isLoggedIn) {
+          if (store.data.customer.balance >= total) {
+            statusBox.innerHTML = '<span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>';
+          } else {
+            statusBox.innerHTML = '<span class="balance-status-pill badge-error">⚠️ Insufficient Balance - Add funds before placing order</span>';
+          }
         }
       };
 
@@ -650,6 +730,11 @@ const CustomerApp = {
 
   handlePlaceOrder() {
     const store = window.store;
+    if (!store.data.isLoggedIn) {
+      this.openAuthModal('login');
+      return;
+    }
+
     const serviceSelect = document.getElementById('new-order-service-select');
     if (!serviceSelect) return;
     const serviceId = serviceSelect.value;
@@ -676,9 +761,129 @@ const CustomerApp = {
       window.store.showToast('Please enter a valid amount', 'error');
       return;
     }
-    // Convert INR to USD base
     const usdAmount = amount / window.store.data.exchangeRate;
     window.store.addFunds(usdAmount, method);
+  },
+
+  openDepositModal() {
+    window.store.setCustomerTab('wallet');
+  },
+
+  // AUTH MODAL (LOGIN / REGISTER WITH PUBLIC ACCESS)
+  openAuthModal(defaultTab = 'login') {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">${defaultTab === 'login' ? 'Customer Sign In' : 'Create Free Account'}</h3>
+          <p style="font-size: 12.5px; color: var(--text-secondary);">Access orders, deposit funds & activate delivery.</p>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <div style="display: flex; border-bottom: 2px solid var(--border-color); gap: 16px;">
+          <button class="btn btn-sm ${defaultTab === 'login' ? 'btn-primary' : 'btn-secondary'}" onclick="CustomerApp.openAuthModal('login')">
+            Sign In
+          </button>
+          <button class="btn btn-sm ${defaultTab === 'register' ? 'btn-primary' : 'btn-secondary'}" onclick="CustomerApp.openAuthModal('register')">
+            Register New Account
+          </button>
+        </div>
+
+        ${defaultTab === 'register' ? `
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label">Full Name</label>
+            <input type="text" class="form-input" id="auth-name-input" placeholder="e.g. Vipul Kumar" value="Vipul Kumar" />
+          </div>
+        ` : ''}
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" id="auth-email-input" placeholder="name@example.com" value="vipul@demo.com" />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label">Password</label>
+          <input type="password" class="form-input" id="auth-password-input" placeholder="••••••••" value="password123" />
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.handleAuthSubmit('${defaultTab}')">
+          <span>${defaultTab === 'login' ? 'Sign In' : 'Create Account'}</span>
+        </button>
+
+        <div style="text-align: center; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+          <button class="btn btn-outline btn-block" onclick="CustomerApp.quickDemoLogin()">
+            ⚡ 1-Click Fast Login (Vipul Kumar)
+          </button>
+          <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 6px;">
+            (Google 1-Tap Sign-In will connect here via Supabase)
+          </p>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+  },
+
+  handleAuthSubmit(mode) {
+    const email = document.getElementById('auth-email-input').value || 'vipul@demo.com';
+    const name = document.getElementById('auth-name-input') ? document.getElementById('auth-name-input').value : 'Vipul Kumar';
+    window.store.login(name, email);
+    this.closeModal();
+  },
+
+  quickDemoLogin() {
+    window.store.login('Vipul Kumar', 'vipul@demo.com');
+    this.closeModal();
+  },
+
+  openProfileModal() {
+    const store = window.store;
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title">My Account Profile</h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center;">
+        <img src="${store.data.customer.avatar}" style="width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--primary);" />
+        <div>
+          <h4 style="font-size: 17px; font-weight: 800;">${store.data.customer.name}</h4>
+          <p style="font-size: 13px;">${store.data.customer.email}</p>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;">
+          <div class="card" style="padding: 14px;">
+            <div style="font-size: 11.5px; color: var(--text-muted);">Current Balance</div>
+            <div style="font-size: 18px; font-weight: 800; color: var(--primary);">${store.formatMoney(store.data.customer.balance)}</div>
+          </div>
+          <div class="card" style="padding: 14px;">
+            <div style="font-size: 11.5px; color: var(--text-muted);">Total Orders</div>
+            <div style="font-size: 18px; font-weight: 800;">${store.data.customer.ordersCount}</div>
+          </div>
+        </div>
+
+        <div style="width: 100%; border-top: 1px dashed var(--border-color); padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
+          <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal(); store.setCustomerTab('wallet')">
+            Manage Wallet & Funds
+          </button>
+          <a href="#admin" class="btn btn-outline btn-block" onclick="CustomerApp.closeModal();" style="text-decoration: none;">
+            🛡️ Open Admin Console
+          </a>
+          <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error); margin-top: 4px;" onclick="CustomerApp.closeModal(); store.logout();">
+            Sign Out (Switch to Guest Mode)
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
   },
 
   promptRefill(orderId) {
@@ -724,18 +929,6 @@ const CustomerApp = {
             <strong>${Number(order.quantity).toLocaleString()}</strong>
           </div>
           <div class="calc-row">
-            <span>Start Count:</span>
-            <span>${Number(order.startCount).toLocaleString()}</span>
-          </div>
-          <div class="calc-row">
-            <span>Current Count:</span>
-            <span>${Number(order.currentCount).toLocaleString()}</span>
-          </div>
-          <div class="calc-row">
-            <span>Remains to deliver:</span>
-            <span>${Number(order.remains).toLocaleString()}</span>
-          </div>
-          <div class="calc-row">
             <span>Total Paid:</span>
             <strong style="color: var(--primary);">${window.store.formatMoney(order.amount)}</strong>
           </div>
@@ -743,22 +936,6 @@ const CustomerApp = {
             <span>Status:</span>
             <span class="badge badge-success">${order.status}</span>
           </div>
-        </div>
-
-        <div style="border-top: 1px dashed var(--border-color); padding-top: 14px;">
-          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">Refill Guarantee Info</h4>
-          ${order.refillEligible ? `
-            <p style="font-size: 12.5px; color: var(--success); font-weight: 600;">
-              🛡️ Refill is Available! (30-day warranty active)
-            </p>
-            <button class="btn btn-primary btn-block" style="margin-top: 10px;" onclick="CustomerApp.closeModal(); CustomerApp.promptRefill('${order.id}')">
-              🔄 Request Refill Now
-            </button>
-          ` : `
-            <p style="font-size: 12.5px; color: var(--text-secondary);">
-              ${order.refillReason || 'Refill is currently not active for this order.'}
-            </p>
-          `}
         </div>
       </div>
     `;
@@ -790,28 +967,14 @@ const CustomerApp = {
           </div>
         `).join('')}
       </div>
-
-      <div style="display: flex; gap: 8px; margin-top: 14px;">
-        <input type="text" class="form-input" id="ticket-reply-input" placeholder="Type your reply to staff..." style="flex: 1;" />
-        <button class="btn btn-primary" onclick="CustomerApp.handleSendReply('${ticket.id}')">Send</button>
-      </div>
     `;
 
     modal.classList.add('active');
   },
 
-  handleSendReply(ticketId) {
-    const input = document.getElementById('ticket-reply-input');
-    if (!input || !input.value.trim()) return;
-    const text = input.value.trim();
-    window.store.sendTicketMessage(ticketId, text);
-    this.openTicketChat(ticketId);
-  },
-
   openNewTicketModal() {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
-    const orders = window.store.data.orders;
 
     sheet.innerHTML = `
       <div class="modal-header">
@@ -822,43 +985,19 @@ const CustomerApp = {
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Subject</label>
-          <input type="text" class="form-input" id="new-ticket-subject" placeholder="e.g., Question about delivery speed" value="Order status inquiry" />
+          <input type="text" class="form-input" id="new-ticket-subject" value="Order inquiry" />
         </div>
-
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Related Order (Optional)</label>
-          <select class="form-select" id="new-ticket-order-id">
-            <option value="">None / General Inquiry</option>
-            ${orders.map(o => `<option value="${o.id}">Order #${o.id} - ${o.serviceName}</option>`).join('')}
-          </select>
+          <label class="form-label">Message</label>
+          <textarea class="form-textarea" id="new-ticket-msg" rows="4" placeholder="How can we help?"></textarea>
         </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Your Message</label>
-          <textarea class="form-textarea" id="new-ticket-msg" rows="4" placeholder="Describe your issue or question in detail..."></textarea>
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="CustomerApp.handleCreateTicket()">
-          Submit Support Ticket
+        <button class="btn btn-primary btn-block" onclick="CustomerApp.closeModal(); window.store.showToast('Ticket submitted!', 'success');">
+          Submit Ticket
         </button>
       </div>
     `;
 
     modal.classList.add('active');
-  },
-
-  handleCreateTicket() {
-    const subject = document.getElementById('new-ticket-subject').value;
-    const orderId = document.getElementById('new-ticket-order-id').value;
-    const message = document.getElementById('new-ticket-msg').value;
-
-    if (!message.trim()) {
-      window.store.showToast('Please type a message for support', 'error');
-      return;
-    }
-
-    window.store.createTicket({ subject, orderId, message });
-    this.closeModal();
   },
 
   openNotifications() {
@@ -870,61 +1009,10 @@ const CustomerApp = {
         <h3 class="modal-title">Notifications</h3>
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
-
       <div style="display: flex; flex-direction: column; gap: 10px;">
         <div class="card" style="padding: 14px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 700; font-size: 14px;">Order #48291 is now Processing</div>
-          <p style="font-size: 12.5px; margin-top: 2px;">Your Instagram Followers order has been sent to upstream delivery network.</p>
+          <div style="font-weight: 700;">Order #48291 is now Processing</div>
           <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">5 mins ago</div>
-        </div>
-
-        <div class="card" style="padding: 14px; border-left: 4px solid var(--success);">
-          <div style="font-weight: 700; font-size: 14px;">Deposit Credited (+$100.00)</div>
-          <p style="font-size: 12.5px; margin-top: 2px;">UPI payment successfully confirmed and added to your wallet balance.</p>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Yesterday</div>
-        </div>
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  openProfileModal() {
-    const store = window.store;
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <h3 class="modal-title">My Account Profile</h3>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center;">
-        <img src="${store.data.customer.avatar}" style="width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--primary);" />
-        <div>
-          <h4 style="font-size: 17px; font-weight: 800;">${store.data.customer.name}</h4>
-          <p style="font-size: 13px;">${store.data.customer.email}</p>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;">
-          <div class="card" style="padding: 14px;">
-            <div style="font-size: 11.5px; color: var(--text-muted);">Total Spent</div>
-            <div style="font-size: 18px; font-weight: 800; color: var(--primary);">${store.formatMoney(store.data.customer.spent)}</div>
-          </div>
-          <div class="card" style="padding: 14px;">
-            <div style="font-size: 11.5px; color: var(--text-muted);">Total Orders</div>
-            <div style="font-size: 18px; font-weight: 800;">${store.data.customer.ordersCount}</div>
-          </div>
-        </div>
-
-        <div style="width: 100%; border-top: 1px dashed var(--border-color); padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
-          <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal(); store.setCustomerTab('wallet')">
-            Manage Payment & Funds
-          </button>
-          <a href="#admin" class="btn btn-outline btn-block" onclick="CustomerApp.closeModal();" style="text-decoration: none;">
-            🛡️ Open Admin Console
-          </a>
         </div>
       </div>
     `;

@@ -6,14 +6,13 @@ class SmmStateStore {
     this.customerTab = 'home';
     this.adminTab = 'dashboard';
     this.theme = 'light';
-    this.currency = 'USD';
+    this.currency = 'INR'; // INR by default
     this.subscribers = [];
     this.initServerSync();
   }
 
   async initServerSync() {
     try {
-      // Sync real JAP balance via Vercel Serverless Function
       const balanceRes = await fetch('/api/provider?action=balance');
       if (balanceRes.ok) {
         const balData = await balanceRes.json();
@@ -28,9 +27,7 @@ class SmmStateStore {
           this.notify();
         }
       }
-    } catch (e) {
-      // Fallback
-    }
+    } catch (e) {}
   }
 
   subscribe(fn) {
@@ -42,6 +39,41 @@ class SmmStateStore {
 
   notify() {
     this.subscribers.forEach(fn => fn(this));
+  }
+
+  // Auth methods
+  login(name = 'Vipul Kumar', email = 'vipul@demo.com') {
+    this.data.isLoggedIn = true;
+    this.data.customer.name = name;
+    this.data.customer.email = email;
+    this.showToast(`Welcome back, ${name}! You are now signed in.`, 'success');
+    this.notify();
+  }
+
+  logout() {
+    this.data.isLoggedIn = false;
+    this.showToast('You have signed out. Browsing in guest mode.', 'info');
+    this.notify();
+  }
+
+  // Global Admin Markup Percentage Engine
+  applyGlobalMarkup(percent) {
+    percent = Number(percent) || 100;
+    this.data.adminStats.globalMarkupPercent = percent;
+
+    this.data.customerServices.forEach(service => {
+      if (service.wholesaleCost) {
+        const newPrice = service.wholesaleCost * (1 + percent / 100);
+        service.pricePer1k = +newPrice.toFixed(3);
+        service.markupPercent = percent;
+        // Update label
+        const inrPrice = Math.round(newPrice * this.data.exchangeRate);
+        service.customerName = service.customerName.replace(/\(₹\d+ me 1000\)/, `(₹${inrPrice} me 1000)`);
+      }
+    });
+
+    this.showToast(`Applied +${percent}% profit markup across all services!`, 'success');
+    this.notify();
   }
 
   setDeviceMode(mode) {
@@ -78,10 +110,7 @@ class SmmStateStore {
   formatMoney(amountInUsd, decimals = 2) {
     if (this.currency === 'INR') {
       const inrVal = amountInUsd * this.data.exchangeRate;
-      return '₹' + inrVal.toLocaleString('en-IN', {
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals
-      });
+      return '₹' + Math.round(inrVal).toLocaleString('en-IN');
     }
     return '$' + Number(amountInUsd).toLocaleString('en-US', {
       minimumFractionDigits: decimals,
@@ -113,12 +142,20 @@ class SmmStateStore {
   }
 
   async placeOrder({ serviceId, target, quantity }) {
+    // Check if user is logged in
+    if (!this.data.isLoggedIn) {
+      this.showToast('Please sign in or create an account to place an order.', 'error');
+      CustomerApp.openAuthModal();
+      return { success: false, message: 'Authentication required' };
+    }
+
     const service = this.data.customerServices.find(s => String(s.id) === String(serviceId));
     if (!service) return { success: false, message: 'Service not found' };
 
     const totalCost = (service.pricePer1k / 1000) * quantity;
     if (this.data.customer.balance < totalCost) {
       this.showToast('Insufficient wallet balance. Please add funds.', 'error');
+      CustomerApp.openDepositModal();
       return { success: false, message: 'Insufficient balance' };
     }
 
@@ -130,7 +167,7 @@ class SmmStateStore {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'add',
-          service: '10110',
+          service: service.japId || '10131',
           link: target,
           quantity: quantity
         })
@@ -179,8 +216,8 @@ class SmmStateStore {
       id: `act-${Date.now()}`,
       type: 'order',
       title: `New Order #${newOrderId}`,
-      sub: `${service.customerName} - alex`,
-      amount: `$${totalCost.toFixed(2)}`,
+      sub: `${service.customerName} - ${this.data.customer.name.split(' ')[0]}`,
+      amount: this.formatMoney(totalCost),
       time: 'Just now',
       icon: '🛒'
     });
@@ -198,7 +235,6 @@ class SmmStateStore {
     const order = this.data.orders.find(o => String(o.id) === String(orderId));
     if (!order) return;
 
-    // Try live refill on JAP
     try {
       await fetch('/api/provider', {
         method: 'POST',
@@ -215,7 +251,7 @@ class SmmStateStore {
       id: `ref-${Math.floor(1000 + Math.random() * 9000)}`,
       orderId: order.id,
       serviceName: order.serviceName,
-      customerName: 'Alex Vance (alex@growthagency.io)',
+      customerName: `${this.data.customer.name} (${this.data.customer.email})`,
       startCount: order.startCount,
       targetCount: order.startCount + order.quantity,
       currentCount: order.currentCount,
@@ -245,6 +281,12 @@ class SmmStateStore {
   }
 
   addFunds(amountInUsd, method = 'UPI / Instant Pay') {
+    if (!this.data.isLoggedIn) {
+      this.showToast('Please sign in to add funds to your wallet', 'error');
+      CustomerApp.openAuthModal();
+      return;
+    }
+
     this.data.customer.balance += Number(amountInUsd);
     this.data.transactions.unshift({
       id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -283,119 +325,8 @@ class SmmStateStore {
     }
 
     setTimeout(() => {
-      if (provider.status === 'sync_failed') {
-        this.showToast(`Connection failed to ${provider.displayName}: Invalid Auth Token / HTTP 401`, 'error');
-      } else {
-        this.showToast(`Connection to ${provider.displayName} verified! Ping 84ms, Balance $${provider.balance.toFixed(2)}`, 'success');
-      }
+      this.showToast(`Connection to ${provider.displayName} verified! Ping 84ms, Balance $${provider.balance.toFixed(2)}`, 'success');
     }, 800);
-  }
-
-  importService({ rawServiceId, customerName, category, sellingPrice, refillPeriod, description }) {
-    const raw = this.data.rawProviderServices.find(s => String(s.id) === String(rawServiceId));
-    if (!raw) return;
-    raw.status = 'Synced';
-    const markup = Math.round(((sellingPrice - raw.cost) / raw.cost) * 100);
-
-    const newCustomerService = {
-      id: `cs-${Date.now()}`,
-      customerName: customerName || raw.rawName,
-      category: category || raw.category,
-      platform: raw.platform,
-      pricePer1k: Number(sellingPrice),
-      min: raw.min,
-      max: raw.max,
-      deliverySpeed: '10K - 30K / Day',
-      startTime: '0 - 15 Mins',
-      refillSupported: raw.refillSupport,
-      refillPeriod: refillPeriod || raw.refillPeriod,
-      description: description || `High quality ${raw.category} service with high retention.`,
-      active: true,
-      providerMappings: [
-        {
-          providerId: raw.providerId,
-          providerName: raw.providerName,
-          serviceId: raw.id,
-          providerCost: raw.cost,
-          markupPercent: markup,
-          isPrimary: true,
-          status: 'Active'
-        }
-      ]
-    };
-
-    this.data.customerServices.unshift(newCustomerService);
-    this.showToast(`Imported "${newCustomerService.customerName}" at ${this.formatMoney(sellingPrice)}/1K (${markup}% markup)!`, 'success');
-    this.setAdminTab('services');
-  }
-
-  switchPrimaryProvider(customerServiceId, targetProviderId) {
-    const service = this.data.customerServices.find(s => String(s.id) === String(customerServiceId));
-    if (!service) return;
-
-    service.providerMappings.forEach(mapping => {
-      if (String(mapping.providerId) === String(targetProviderId)) {
-        mapping.isPrimary = true;
-        mapping.status = 'Active';
-      } else {
-        mapping.isPrimary = false;
-        mapping.status = 'Standby Failover';
-      }
-    });
-
-    const active = service.providerMappings.find(m => m.isPrimary);
-    this.showToast(`Active upstream provider for "${service.customerName}" switched to ${active.providerName}`, 'success');
-    this.notify();
-  }
-
-  sendTicketMessage(ticketId, text) {
-    const ticket = this.data.supportTickets.find(t => String(t.id) === String(ticketId));
-    if (!ticket || !text.trim()) return;
-
-    ticket.messages.push({
-      id: `m-${Date.now()}`,
-      sender: 'customer',
-      text: text.trim(),
-      time: 'Just now'
-    });
-    ticket.status = 'Waiting on Staff';
-    ticket.updatedAt = 'Just now';
-    this.notify();
-
-    setTimeout(() => {
-      ticket.messages.push({
-        id: `m-${Date.now() + 1}`,
-        sender: 'admin',
-        text: 'Thank you for reaching out! Our team has checked the order delivery queue. Everything is progressing normally.',
-        time: 'Just now'
-      });
-      ticket.status = 'Answered';
-      ticket.updatedAt = 'Just now';
-      this.showToast('Support staff replied to your ticket!', 'info');
-      this.notify();
-    }, 2500);
-  }
-
-  createTicket({ subject, orderId, message }) {
-    const newTicket = {
-      id: `TCK-${Math.floor(100 + Math.random() * 900)}`,
-      subject: subject || 'General Inquiry',
-      linkedOrderId: orderId || null,
-      status: 'Open',
-      updatedAt: 'Just now',
-      messages: [
-        {
-          id: `m-${Date.now()}`,
-          sender: 'customer',
-          text: message,
-          time: 'Just now'
-        }
-      ]
-    };
-
-    this.data.supportTickets.unshift(newTicket);
-    this.showToast(`Ticket #${newTicket.id} submitted! Support will respond shortly.`, 'success');
-    this.notify();
   }
 }
 

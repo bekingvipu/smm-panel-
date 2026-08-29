@@ -35,15 +35,11 @@ const AdminApp = {
             </li>
             <li class="admin-nav-item ${tab === 'services' ? 'active' : ''}" onclick="store.setAdminTab('services')">
               <span class="nav-icon">📑</span>
-              <span>Services (Customer)</span>
+              <span>Services & Profit %</span>
             </li>
             <li class="admin-nav-item ${tab === 'providers' ? 'active' : ''}" onclick="store.setAdminTab('providers')">
               <span class="nav-icon">❖</span>
               <span>Providers</span>
-            </li>
-            <li class="admin-nav-item ${tab === 'sync_services' ? 'active' : ''}" onclick="store.setAdminTab('sync_services')">
-              <span class="nav-icon">🔄</span>
-              <span>Provider Services</span>
             </li>
             <li class="admin-nav-item ${tab === 'refills' ? 'active' : ''}" onclick="store.setAdminTab('refills')">
               <span class="nav-icon">🛡️</span>
@@ -70,23 +66,20 @@ const AdminApp = {
               <h1 class="admin-header-title">${this.getTabTitle(tab)}</h1>
             </div>
             <div class="admin-header-actions">
-              <!-- Currency Toggle -->
               <button class="btn btn-sm btn-secondary" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
                 ${store.currency === 'USD' ? '💵 USD' : '₹ INR'}
               </button>
-              <!-- Theme Toggle -->
               <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')" title="Toggle Theme">
                 <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
               </button>
-              <button class="header-icon-btn" onclick="store.showToast('All upstream provider APIs responding normally', 'info')">
+              <button class="header-icon-btn" onclick="store.showToast('Upstream JAP API responding normally', 'info')">
                 <span>🔔</span>
               </button>
               <a href="#customer" class="btn btn-sm btn-secondary" style="text-decoration: none;">
                 Exit to Storefront
               </a>
               <div class="admin-user-pill">
-                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" alt="Admin" />
-                <span class="admin-user-name">James Miller (Super Admin)</span>
+                <span class="admin-user-name">Vipul (Super Admin)</span>
               </div>
             </div>
           </header>
@@ -102,26 +95,22 @@ const AdminApp = {
   getTabTitle(tab) {
     if (tab === 'dashboard') return 'Dashboard';
     if (tab === 'providers') return 'Provider Management';
-    if (tab === 'sync_services') return 'Sync Services (Raw Provider Catalog)';
-    if (tab === 'services') return 'Customer-Facing Services';
+    if (tab === 'services') return 'Customer Services & Profit Markup';
     if (tab === 'refills') return 'Refill Requests Management';
     if (tab === 'orders') return 'All Orders Master Table';
     if (tab === 'support') return 'Support Ticket Queue';
     return 'Admin Console';
   },
 
-  // 1. ADMIN DASHBOARD
   renderDashboard(store) {
     const stats = store.data.adminStats;
-    const activities = store.data.recentActivity;
 
     return `
-      <!-- KPI Stats Row -->
       <div class="kpi-grid">
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">👥</div>
-            <span class="badge badge-error">${stats.customersTrend}%</span>
+            <span class="badge badge-success">+14%</span>
           </div>
           <div class="kpi-label">Total Customers</div>
           <div class="kpi-value">${stats.totalCustomers.toLocaleString()}</div>
@@ -150,93 +139,121 @@ const AdminApp = {
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">📈</div>
             <span class="badge badge-success">+${stats.profitTrend}%</span>
           </div>
-          <div class="kpi-label">Profit</div>
-          <div class="kpi-value">${store.formatMoney(stats.profit, 0)}</div>
+          <div class="kpi-label">Profit Markup Setting</div>
+          <div class="kpi-value">+${stats.globalMarkupPercent}%</div>
         </div>
 
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--warning-light); color: var(--warning);">🏛️</div>
-            <span class="badge badge-warning">${stats.providerBalanceStatus}</span>
+            <span class="badge badge-success">${stats.providerBalanceStatus}</span>
           </div>
-          <div class="kpi-label">Provider Balance</div>
-          <div class="kpi-value">${store.formatMoney(stats.providerBalance, 0)}</div>
-        </div>
-      </div>
-
-      <!-- 2-Column Analytics & Activity -->
-      <div class="admin-analytics-grid">
-        <div class="chart-card">
-          <div class="chart-header">
-            <div>
-              <h3 style="font-size: 17px; font-weight: 800;">Order Volume (7 Days)</h3>
-              <p style="font-size: 12.5px;">Aggregated order throughput across all provider channels</p>
-            </div>
-            <span style="font-size: 20px; cursor: pointer; color: var(--text-muted);">⋮</span>
-          </div>
-
-          <div class="chart-bars-container">
-            <div class="chart-bar-col">
-              <div class="chart-bar" style="height: 48%;"></div>
-              <span class="chart-day-label">Mon</span>
-            </div>
-            <div class="chart-bar-col">
-              <div class="chart-bar" style="height: 65%;"></div>
-              <span class="chart-day-label">Tue</span>
-            </div>
-            <div class="chart-bar-col">
-              <div class="chart-bar highlight" style="height: 90%;"></div>
-              <span class="chart-day-label">Wed</span>
-            </div>
-            <div class="chart-bar-col">
-              <div class="chart-bar" style="height: 52%;"></div>
-              <span class="chart-day-label">Thu</span>
-            </div>
-            <div class="chart-bar-col">
-              <div class="chart-bar" style="height: 75%;"></div>
-              <span class="chart-day-label">Fri</span>
-            </div>
-            <div class="chart-bar-col">
-              <div class="chart-bar highlight" style="height: 96%;"></div>
-              <span class="chart-day-label">Sat</span>
-            </div>
-            <div class="chart-bar-col">
-              <div class="chart-bar" style="height: 38%;"></div>
-              <span class="chart-day-label">Sun</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="activity-card">
-          <div class="chart-header">
-            <h3 style="font-size: 17px; font-weight: 800;">Recent Activity</h3>
-            <a class="section-link" onclick="store.setAdminTab('orders')">View All</a>
-          </div>
-
-          <div class="activity-list">
-            ${activities.map(act => `
-              <div class="activity-item">
-                <div class="activity-icon-badge" style="background: var(--bg-subtle);">
-                  ${act.icon}
-                </div>
-                <div class="activity-details">
-                  <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div class="activity-title">${act.title}</div>
-                    ${act.amount ? `<strong style="font-size: 12.5px; color: var(--text-main);">${act.amount}</strong>` : ''}
-                    ${act.badge ? `<span class="badge badge-warning" style="font-size: 10px;">${act.badge}</span>` : ''}
-                  </div>
-                  <div class="activity-sub">${act.sub}</div>
-                </div>
-                <div class="activity-time">${act.time}</div>
-              </div>
-            `).join('')}
-          </div>
+          <div class="kpi-label">JAP Balance</div>
+          <div class="kpi-value">$${stats.providerBalance.toFixed(2)} USD</div>
         </div>
       </div>
     `;
   },
 
-  // 2. PROVIDER MANAGEMENT
+  // CUSTOMER SERVICES & PROFIT % TOOL
+  renderCustomerServices(store) {
+    const services = store.data.customerServices;
+    const currentMarkup = store.data.adminStats.globalMarkupPercent || 120;
+
+    return `
+      <!-- GLOBAL PROFIT PERCENTAGE TOOL -->
+      <div class="card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08)); border: 2px solid var(--primary); display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--primary);">⚡ Global Profit Percentage Tool</h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
+              Automatically calculate customer selling prices from JustAnotherPanel wholesale costs:
+              <strong>Selling Price = Provider Cost + Your Profit %</strong>
+            </p>
+          </div>
+          <span class="badge badge-primary" style="font-size: 14px; padding: 6px 14px;">
+            Current Active Markup: <strong>+${currentMarkup}%</strong>
+          </span>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-secondary" onclick="store.applyGlobalMarkup(50)">+50% Profit</button>
+          <button class="btn btn-sm btn-secondary" onclick="store.applyGlobalMarkup(100)">+100% Profit (2X)</button>
+          <button class="btn btn-sm btn-secondary" onclick="store.applyGlobalMarkup(150)">+150% Profit (2.5X)</button>
+          <button class="btn btn-sm btn-secondary" onclick="store.applyGlobalMarkup(200)">+200% Profit (3X)</button>
+          
+          <div style="display: flex; align-items: center; gap: 6px; margin-left: auto;">
+            <input type="number" id="custom-markup-input" class="form-input" style="width: 100px; height: 36px; text-align: center;" placeholder="e.g. 120" value="${currentMarkup}" />
+            <span style="font-weight: 700;">%</span>
+            <button class="btn btn-sm btn-primary" onclick="AdminApp.handleCustomMarkup()">
+              Apply Markup to All
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Services Table -->
+      <div class="sync-table-container" style="margin-top: 20px;">
+        <table class="sync-data-table">
+          <thead>
+            <tr>
+              <th>Sub-Category & Package Name</th>
+              <th>Platform</th>
+              <th>JAP Wholesale Cost</th>
+              <th>Customer Selling Price</th>
+              <th>Profit Margin</th>
+              <th>Refill Guarantee</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${services.map(s => `
+              <tr>
+                <td>
+                  <strong style="font-size: 14px;">${s.customerName}</strong>
+                  <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">
+                    Subcategory: <em>${s.subcategory}</em> • JAP #${s.japId || '10131'}
+                  </div>
+                </td>
+                <td>
+                  <span class="badge badge-neutral" style="text-transform: uppercase;">${s.platform}</span>
+                </td>
+                <td>
+                  <strong style="color: var(--text-muted); font-size: 13.5px;">
+                    ${store.formatMoney(s.wholesaleCost || 0.12)}
+                  </strong>
+                </td>
+                <td>
+                  <strong style="font-size: 15px; color: var(--primary);">
+                    ${store.formatMoney(s.pricePer1k)} / 1K
+                  </strong>
+                </td>
+                <td>
+                  <span class="badge badge-success">+${s.markupPercent}% Profit</span>
+                </td>
+                <td>
+                  <span class="badge ${s.refillSupported ? 'badge-primary' : 'badge-neutral'}">
+                    ${s.refillSupported ? `🛡️ ${s.refillPeriod}` : 'No Refill'}
+                  </span>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  handleCustomMarkup() {
+    const input = document.getElementById('custom-markup-input');
+    if (!input) return;
+    const val = Number(input.value);
+    if (!val || val <= 0) {
+      window.store.showToast('Please enter a valid profit percentage', 'error');
+      return;
+    }
+    window.store.applyGlobalMarkup(val);
+  },
+
   renderProviders(store) {
     const providers = store.data.providers;
 
@@ -246,23 +263,20 @@ const AdminApp = {
           <h2 style="font-size: 24px; font-weight: 800;">Provider Management</h2>
           <p style="font-size: 13.5px;">Manage and monitor your external SMM API connections.</p>
         </div>
-        <button class="btn btn-primary" onclick="AdminApp.openAddProviderModal()">
-          <span>＋ Add New Provider</span>
-        </button>
       </div>
 
       <div class="provider-cards-grid">
         ${providers.map(p => `
-          <div class="provider-card ${p.status === 'active' ? 'status-active' : 'status-error'}">
+          <div class="provider-card status-active">
             <div class="provider-card-header">
               <div class="provider-identity">
                 <div class="provider-avatar-box">❖</div>
                 <div class="provider-title-box">
                   <h3>${p.displayName}</h3>
                   <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
-                    <span class="badge-dot" style="background: ${p.status === 'active' ? 'var(--success)' : 'var(--error)'};"></span>
-                    <span style="font-size: 12px; font-weight: 600; color: ${p.status === 'active' ? 'var(--success)' : 'var(--error)'};">
-                      ${p.status === 'active' ? 'Active' : 'Sync Failed'}
+                    <span class="badge-dot" style="background: var(--success);"></span>
+                    <span style="font-size: 12px; font-weight: 600; color: var(--success);">
+                      Active (Live Connected)
                     </span>
                   </div>
                 </div>
@@ -274,7 +288,7 @@ const AdminApp = {
               <div class="provider-stat-col">
                 <span class="provider-stat-label">Account Balance</span>
                 <span class="provider-stat-val">
-                  ${p.balance !== null ? store.formatMoney(p.balance) : '— —'}
+                  $${p.balance !== null ? p.balance.toFixed(2) : '0.00'} USD
                 </span>
               </div>
               <div class="provider-stat-col">
@@ -284,9 +298,9 @@ const AdminApp = {
             </div>
 
             <div class="provider-card-actions">
-              <a class="section-link" onclick="AdminApp.openProviderConfig('${p.id}')">Configure &gt;</a>
+              <span style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);">${p.apiUrl}</span>
               <button class="btn btn-sm btn-secondary" onclick="store.testProviderConnection('${p.id}')">
-                ${p.status === 'active' ? 'Test Connection' : 'Reconnect'}
+                Test Connection
               </button>
             </div>
           </div>
@@ -295,268 +309,6 @@ const AdminApp = {
     `;
   },
 
-  // 3. PROVIDER SERVICE SYNC
-  renderSyncServices(store) {
-    const rawServices = store.data.rawProviderServices;
-
-    return `
-      <div style="font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
-        <span onclick="store.setAdminTab('providers')" style="cursor: pointer; text-decoration: underline;">Providers</span>
-        <span>&gt;</span>
-        <strong style="color: var(--primary);">API1_GlobalSMM</strong>
-        <span>&gt;</span>
-        <span>Service Sync</span>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
-          <h2 style="font-size: 26px; font-weight: 800;">Sync Services</h2>
-          <p style="font-size: 13.5px; max-width: 650px;">
-            Review and import raw services from <strong>API1_GlobalSMM</strong>. Services marked with warnings may have structural changes or are currently unavailable upstream.
-          </p>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <button class="btn btn-secondary" onclick="store.showToast('Provider API catalog refreshed: 1,204 services fetched', 'success')">
-            <span>🔄 Refresh API</span>
-          </button>
-          <button class="btn btn-primary" onclick="AdminApp.promptBulkImport()">
-            <span>📥 Bulk Import</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="sync-table-container">
-        <div class="table-filter-bar">
-          <div style="position: relative; flex: 1; max-width: 380px;">
-            <input type="text" class="form-input" placeholder="Search raw service name or ID..." style="min-height: 40px; padding-left: 36px;" />
-            <span style="position: absolute; left: 12px; top: 10px; color: var(--text-muted);">🔍</span>
-          </div>
-
-          <div class="table-filter-tabs">
-            <span class="filter-tab-pill active">All Services <strong>1,204</strong></span>
-            <span class="filter-tab-pill">New <strong>45</strong></span>
-            <span class="filter-tab-pill" style="color: var(--warning);">Warnings <strong>12</strong></span>
-            <button class="btn btn-sm btn-secondary">More Filters</button>
-          </div>
-        </div>
-
-        <table class="sync-data-table">
-          <thead>
-            <tr>
-              <th style="width: 40px;"><input type="checkbox" /></th>
-              <th>ID</th>
-              <th>Raw Service Name & Category</th>
-              <th>Provider Cost</th>
-              <th>Min / Max</th>
-              <th>Status / Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rawServices.map(raw => {
-              let statusPill = '';
-              if (raw.status === 'Ready to Import') {
-                statusPill = `<button class="btn btn-sm btn-outline" onclick="AdminApp.openImportModal('${raw.id}')">Ready to Import</button>`;
-              } else if (raw.status === 'Unavailable Upstream') {
-                statusPill = `<span class="badge badge-error">⚠️ Unavailable Upstream</span>`;
-              } else if (raw.status === 'Review Pricing') {
-                statusPill = `<button class="btn btn-sm btn-outline" style="color: var(--warning); border-color: var(--warning);" onclick="AdminApp.openReviewPricingModal('${raw.id}')">⚠️ Review Pricing</button>`;
-              } else if (raw.status === 'Synced') {
-                statusPill = `<span class="badge badge-primary">Synced ↗</span>`;
-              }
-
-              return `
-                <tr>
-                  <td><input type="checkbox" /></td>
-                  <td style="font-family: var(--font-mono); font-weight: 700; color: var(--text-muted);">#${raw.id}</td>
-                  <td>
-                    <div style="font-weight: 700; font-size: 14px;">${raw.rawName}</div>
-                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
-                      <span class="badge badge-neutral" style="font-size: 10px; text-transform: uppercase;">${raw.platform}</span>
-                      <span style="font-size: 11.5px; color: var(--text-secondary);">${raw.category}</span>
-                    </div>
-                  </td>
-                  <td>
-                    ${raw.oldCost ? `
-                      <span style="text-decoration: line-through; color: var(--text-muted); font-size: 12px;">$${raw.oldCost.toFixed(2)}</span>
-                      <strong style="color: var(--warning); font-size: 14px;">$${raw.cost.toFixed(2)}</strong>
-                      <div style="font-size: 10px; color: var(--warning); font-weight: 700;">↗ Cost Increased</div>
-                    ` : `
-                      <strong style="font-size: 14.5px;">${store.formatMoney(raw.cost)}</strong>
-                    `}
-                  </td>
-                  <td style="font-family: var(--font-mono); font-size: 12.5px;">
-                    ${raw.min.toLocaleString()} / ${raw.max.toLocaleString()}
-                  </td>
-                  <td>
-                    ${statusPill}
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-
-        <div style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); font-size: 12.5px; color: var(--text-secondary);">
-          <span>Showing 1-6 of 1,204 services</span>
-          <div style="display: flex; gap: 4px;">
-            <button class="btn btn-sm btn-secondary" style="min-width: 32px;">&lt;</button>
-            <button class="btn btn-sm btn-primary" style="min-width: 32px;">1</button>
-            <button class="btn btn-sm btn-secondary" style="min-width: 32px;">2</button>
-            <button class="btn btn-sm btn-secondary" style="min-width: 32px;">3</button>
-            <button class="btn btn-sm btn-secondary" style="min-width: 32px;">&gt;</button>
-          </div>
-        </div>
-      </div>
-    `;
-  },
-
-  // 4. CUSTOMER SERVICES
-  renderCustomerServices(store) {
-    const services = store.data.customerServices;
-
-    return `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
-          <h2 style="font-size: 24px; font-weight: 800;">Customer-Facing Services</h2>
-          <p style="font-size: 13.5px;">
-            Services visible on the customer storefront. Raw provider services are imported and mapped with custom selling prices and refill policies.
-          </p>
-        </div>
-        <button class="btn btn-primary" onclick="store.setAdminTab('sync_services')">
-          <span>＋ Import From Provider</span>
-        </button>
-      </div>
-
-      <div class="sync-table-container">
-        <table class="sync-data-table">
-          <thead>
-            <tr>
-              <th>Customer Service Name</th>
-              <th>Category</th>
-              <th>Selling Price</th>
-              <th>Active Provider & Cost</th>
-              <th>Markup Margin</th>
-              <th>Refill Policy</th>
-              <th>Provider Mappings</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${services.map(service => {
-              const activeMapping = (service.providerMappings && service.providerMappings.find(m => m.isPrimary)) || (service.providerMappings && service.providerMappings[0]) || { providerName: 'API1_GlobalSMM', providerCost: 0.42 };
-              const markup = Math.round(((service.pricePer1k - activeMapping.providerCost) / activeMapping.providerCost) * 100);
-
-              return `
-                <tr>
-                  <td>
-                    <strong style="font-size: 14px;">${service.customerName}</strong>
-                    <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">
-                      Speed: ${service.deliverySpeed} • Start: ${service.startTime}
-                    </div>
-                  </td>
-                  <td>
-                    <span class="badge badge-neutral">${service.category}</span>
-                  </td>
-                  <td>
-                    <strong style="font-size: 15px; color: var(--primary);">${store.formatMoney(service.pricePer1k)}/1K</strong>
-                  </td>
-                  <td>
-                    <div style="font-weight: 700;">${activeMapping.providerName}</div>
-                    <div style="font-size: 11.5px; color: var(--text-secondary);">Cost: ${store.formatMoney(activeMapping.providerCost)}/1K</div>
-                  </td>
-                  <td>
-                    <span class="badge badge-success">+${markup}% Profit</span>
-                  </td>
-                  <td>
-                    <span class="badge ${service.refillSupported ? 'badge-primary' : 'badge-neutral'}">
-                      ${service.refillSupported ? `🛡️ ${service.refillPeriod}` : 'No Refill'}
-                    </span>
-                  </td>
-                  <td>
-                    <button class="btn btn-sm btn-secondary" onclick="AdminApp.openMultiProviderMappingDrawer('${service.id}')">
-                      <span>❖ ${service.providerMappings ? service.providerMappings.length : 1} Providers</span>
-                    </button>
-                  </td>
-                </tr>
-              `;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    `;
-  },
-
-  openMultiProviderMappingDrawer(serviceId) {
-    const store = window.store;
-    const service = store.data.customerServices.find(s => String(s.id) === String(serviceId));
-    if (!service) return;
-
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <div>
-          <h3 class="modal-title">Multi-Provider Mappings</h3>
-          <div style="font-size: 12.5px; color: var(--text-secondary);">${service.customerName}</div>
-        </div>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-md); font-size: 13px;">
-          <div style="display: flex; justify-content: space-between;">
-            <span>Customer Selling Price:</span>
-            <strong style="color: var(--primary); font-size: 15px;">${store.formatMoney(service.pricePer1k)} / 1K</strong>
-          </div>
-          <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 4px;">
-            One customer service can connect to multiple upstream providers for instant failover or pricing optimization.
-          </p>
-        </div>
-
-        <div class="mapping-providers-list">
-          ${service.providerMappings ? service.providerMappings.map(mapping => `
-            <div class="mapping-provider-card ${mapping.isPrimary ? 'active-mapping' : ''}">
-              <div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                  <strong style="font-size: 14px;">${mapping.providerName}</strong>
-                  ${mapping.isPrimary ? '<span class="badge badge-success">Active Provider</span>' : `<span class="badge badge-neutral">${mapping.status}</span>`}
-                </div>
-                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                  Provider Service ID: #${mapping.serviceId} • Cost: <strong>${store.formatMoney(mapping.providerCost)}/1K</strong>
-                  • Margin: <span style="color: var(--success); font-weight: 700;">+${mapping.markupPercent}%</span>
-                </div>
-              </div>
-
-              <div>
-                ${mapping.isPrimary ? `
-                  <button class="btn btn-sm btn-success" disabled>✓ Active</button>
-                ` : `
-                  <button class="btn btn-sm btn-outline" onclick="AdminApp.handleSwitchProvider('${service.id}', '${mapping.providerId}')">
-                    Set Active
-                  </button>
-                `}
-              </div>
-            </div>
-          `).join('') : ''}
-        </div>
-
-        <div style="border-top: 1px dashed var(--border-color); padding-top: 12px;">
-          <button class="btn btn-secondary btn-block" onclick="store.showToast('Provider failover engine configuration saved', 'info'); CustomerApp.closeModal();">
-            Save Provider Failover Rules
-          </button>
-        </div>
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  handleSwitchProvider(serviceId, providerId) {
-    window.store.switchPrimaryProvider(serviceId, providerId);
-    this.openMultiProviderMappingDrawer(serviceId);
-  },
-
-  // 5. REFILLS QUEUE
   renderRefillsQueue(store) {
     const queue = store.data.refillQueue;
 
@@ -564,11 +316,8 @@ const AdminApp = {
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 style="font-size: 24px; font-weight: 800;">Refill Requests Queue</h2>
-          <p style="font-size: 13.5px;">Monitor and manage customer-initiated refills sent to upstream providers.</p>
+          <p style="font-size: 13.5px;">Monitor customer-initiated refills routed to JustAnotherPanel.</p>
         </div>
-        <span class="badge badge-warning" style="font-size: 13px; padding: 6px 14px;">
-          ${queue.filter(r => r.status === 'Pending').length} Pending Requests
-        </span>
       </div>
 
       <div class="sync-table-container">
@@ -578,17 +327,13 @@ const AdminApp = {
               <th>Refill ID</th>
               <th>Order ID & Service</th>
               <th>Customer</th>
-              <th>Start / Current / Target</th>
+              <th>Start / Target</th>
               <th>Drop Count</th>
-              <th>Provider</th>
               <th>Status</th>
-              <th>Admin Action</th>
             </tr>
           </thead>
           <tbody>
-            ${queue.length === 0 ? `
-              <tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--text-muted);">No refill requests in queue</td></tr>
-            ` : queue.map(ref => `
+            ${queue.map(ref => `
               <tr>
                 <td style="font-family: var(--font-mono); font-weight: 700;">#${ref.id}</td>
                 <td>
@@ -597,31 +342,10 @@ const AdminApp = {
                 </td>
                 <td style="font-size: 12.5px;">${ref.customerName}</td>
                 <td style="font-family: var(--font-mono); font-size: 12px;">
-                  Start: ${ref.startCount} | Curr: ${ref.currentCount} | Goal: ${ref.targetCount}
+                  Start: ${ref.startCount} | Goal: ${ref.targetCount}
                 </td>
-                <td>
-                  <strong style="color: var(--error);">${ref.dropCount} dropped</strong>
-                </td>
-                <td>${ref.provider}</td>
-                <td>
-                  <span class="badge ${ref.status === 'Completed' ? 'badge-success' : 'badge-warning'}">
-                    ${ref.status}
-                  </span>
-                </td>
-                <td>
-                  ${ref.status === 'Pending' ? `
-                    <div style="display: flex; gap: 6px;">
-                      <button class="btn btn-sm btn-primary" onclick="store.showToast('Pushed refill #${ref.id} to ${ref.provider} API', 'success')">
-                        Push Upstream
-                      </button>
-                      <button class="btn btn-sm btn-secondary" onclick="store.showToast('Refill #${ref.id} marked verified', 'info')">
-                        Complete
-                      </button>
-                    </div>
-                  ` : `
-                    <span style="font-size: 12px; color: var(--text-muted);">Processed</span>
-                  `}
-                </td>
+                <td><strong style="color: var(--error);">${ref.dropCount} dropped</strong></td>
+                <td><span class="badge badge-warning">${ref.status}</span></td>
               </tr>
             `).join('')}
           </tbody>
@@ -630,18 +354,10 @@ const AdminApp = {
     `;
   },
 
-  // 6. ADMIN ORDERS
   renderAdminOrders(store) {
     const orders = store.data.orders;
 
     return `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
-          <h2 style="font-size: 24px; font-weight: 800;">Order Management</h2>
-          <p style="font-size: 13.5px;">Admin view of customer orders with upstream provider tracking.</p>
-        </div>
-      </div>
-
       <div class="sync-table-container">
         <table class="sync-data-table">
           <thead>
@@ -650,8 +366,7 @@ const AdminApp = {
               <th>Customer Service</th>
               <th>Target URL</th>
               <th>Quantity</th>
-              <th>Selling Price</th>
-              <th>Provider Assigned</th>
+              <th>Charge</th>
               <th>Status</th>
             </tr>
           </thead>
@@ -665,12 +380,7 @@ const AdminApp = {
                 </td>
                 <td>${Number(o.quantity).toLocaleString()}</td>
                 <td><strong style="color: var(--primary);">${store.formatMoney(o.amount)}</strong></td>
-                <td>
-                  <span class="badge badge-neutral">API1_GlobalSMM (#4092)</span>
-                </td>
-                <td>
-                  <span class="badge badge-primary">${o.status}</span>
-                </td>
+                <td><span class="badge badge-primary">${o.status}</span></td>
               </tr>
             `).join('')}
           </tbody>
@@ -679,226 +389,24 @@ const AdminApp = {
     `;
   },
 
-  // 7. ADMIN SUPPORT
   renderAdminSupport(store) {
     const tickets = store.data.supportTickets;
 
     return `
-      <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-        <div>
-          <h2 style="font-size: 24px; font-weight: 800;">Support Desk Management</h2>
-          <p style="font-size: 13.5px;">Customer tickets and conversation threads.</p>
-        </div>
-      </div>
-
       <div style="display: flex; flex-direction: column; gap: 12px;">
         ${tickets.map(t => `
           <div class="card" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="CustomerApp.openTicketChat('${t.id}')">
             <div>
               <div style="font-size: 15px; font-weight: 700;">${t.subject}</div>
               <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                Ticket #${t.id} • Customer: Alex Vance • ${t.linkedOrderId ? `Linked Order #${t.linkedOrderId}` : ''}
+                Ticket #${t.id} • Customer: Vipul Kumar
               </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="badge ${t.status === 'Answered' ? 'badge-success' : 'badge-warning'}">${t.status}</span>
-              <button class="btn btn-sm btn-secondary">Open Chat Thread</button>
-            </div>
+            <span class="badge badge-success">${t.status}</span>
           </div>
         `).join('')}
       </div>
     `;
-  },
-
-  openImportModal(rawId) {
-    const store = window.store;
-    const raw = store.data.rawProviderServices.find(s => String(s.id) === String(rawId));
-    if (!raw) return;
-
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-    const defaultSellingPrice = (raw.cost * 2.0).toFixed(2);
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <div>
-          <h3 class="modal-title">Import Raw Service to Storefront</h3>
-          <div style="font-size: 12px; color: var(--text-secondary);">Provider: ${raw.providerName} (ID: #${raw.id})</div>
-        </div>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md); font-size: 12.5px;">
-          <div>Raw Upstream Service: <strong>${raw.rawName}</strong></div>
-          <div style="margin-top: 4px;">Provider Wholesale Cost: <strong style="color: var(--text-main);">${store.formatMoney(raw.cost)} / 1K</strong></div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Customer-Facing Service Title</label>
-          <input type="text" class="form-input" id="import-customer-title" value="${raw.rawName.replace('[HQ] - Fast', '[Real & Active HQ]')}" />
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Storefront Category</label>
-          <select class="form-select" id="import-customer-category">
-            <option value="Instagram" ${raw.platform === 'instagram' ? 'selected' : ''}>Instagram</option>
-            <option value="YouTube" ${raw.platform === 'youtube' ? 'selected' : ''}>YouTube</option>
-            <option value="TikTok" ${raw.platform === 'tiktok' ? 'selected' : ''}>TikTok</option>
-            <option value="Twitter" ${raw.platform === 'twitter' ? 'selected' : ''}>Twitter / X</option>
-            <option value="Facebook" ${raw.platform === 'facebook' ? 'selected' : ''}>Facebook</option>
-          </select>
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Customer Selling Price ($)</label>
-            <input type="number" step="0.05" class="form-input" id="import-selling-price" value="${defaultSellingPrice}" />
-          </div>
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Calculated Profit Markup</label>
-            <input type="text" class="form-input" id="import-markup-label" value="+100%" disabled style="background: var(--bg-subtle);" />
-          </div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Refill Guarantee Period</label>
-          <select class="form-select" id="import-refill-period">
-            <option value="30 Days">30 Days Auto-Refill Guarantee</option>
-            <option value="60 Days">60 Days Auto-Refill Guarantee</option>
-            <option value="15 Days">15 Days Auto-Refill Guarantee</option>
-            <option value="None">No Refill (Drop Warning)</option>
-          </select>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Customer Description & Instructions</label>
-          <textarea class="form-textarea" id="import-description" rows="3">High retention delivery from verified worldwide accounts. Drop protected with refill guarantee.</textarea>
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="AdminApp.handleConfirmImport('${raw.id}')">
-          Import & Publish Customer Service
-        </button>
-      </div>
-    `;
-
-    const priceInput = document.getElementById('import-selling-price');
-    const markupLabel = document.getElementById('import-markup-label');
-    priceInput.addEventListener('input', () => {
-      const sp = Number(priceInput.value) || 0;
-      const mk = Math.round(((sp - raw.cost) / raw.cost) * 100);
-      markupLabel.value = `+${mk}% Margin`;
-    });
-
-    modal.classList.add('active');
-  },
-
-  handleConfirmImport(rawId) {
-    const customerName = document.getElementById('import-customer-title').value;
-    const category = document.getElementById('import-customer-category').value;
-    const sellingPrice = Number(document.getElementById('import-selling-price').value);
-    const refillPeriod = document.getElementById('import-refill-period').value;
-    const description = document.getElementById('import-description').value;
-
-    window.store.importService({
-      rawServiceId: rawId,
-      customerName,
-      category,
-      sellingPrice,
-      refillPeriod,
-      description
-    });
-
-    CustomerApp.closeModal();
-  },
-
-  openProviderConfig(providerId) {
-    const p = window.store.data.providers.find(prov => String(prov.id) === String(providerId));
-    if (!p) return;
-
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <h3 class="modal-title">Configure ${p.displayName}</h3>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">API Endpoint URL</label>
-          <input type="text" class="form-input" value="${p.apiUrl}" />
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">API Key (Masked for Security)</label>
-          <input type="password" class="form-input" value="${p.apiKeyMasked}" />
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Auto-Sync Catalog Interval</label>
-          <select class="form-select">
-            <option>Every 15 minutes</option>
-            <option>Every 1 hour</option>
-            <option>Every 6 hours</option>
-            <option>Manual Sync Only</option>
-          </select>
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="window.store.showToast('Provider API configuration saved', 'success'); CustomerApp.closeModal();">
-          Save Configuration
-        </button>
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  openAddProviderModal() {
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <h3 class="modal-title">Connect New SMM Provider API</h3>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Provider Name / Alias</label>
-          <input type="text" class="form-input" placeholder="e.g. SMM_Kings_Wholesale" />
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">API V2 Base URL</label>
-          <input type="text" class="form-input" placeholder="https://api.smmkings.com/api/v2" />
-        </div>
-
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Secret API Key</label>
-          <input type="password" class="form-input" placeholder="Paste your API key here..." />
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="window.store.showToast('Provider added! Verifying API ping & fetching services...', 'success'); CustomerApp.closeModal();">
-          Connect & Sync Services
-        </button>
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  promptBulkImport() {
-    window.store.showToast('Bulk import ready — all upstream services fetched.', 'info');
-  },
-
-  openReviewPricingModal(rawId) {
-    const raw = window.store.data.rawProviderServices.find(s => String(s.id) === String(rawId));
-    if (!raw) return;
-
-    alert(`Upstream Price Increase Alert for #${raw.id} (${raw.rawName})\n\nOld Provider Cost: $${raw.oldCost ? raw.oldCost.toFixed(2) : '2.50'}\nNew Provider Cost: $${raw.cost.toFixed(2)}\n\nRecommended Action: Adjust customer selling price to maintain profit margin.`);
   }
 };
 
