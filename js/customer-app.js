@@ -11,76 +11,141 @@ const CustomerApp = {
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
 
     container.innerHTML = `
-      <div class="customer-container">
-        <!-- Header -->
-        <header class="customer-header">
-          <div class="customer-brand-group">
-            <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="View Profile" />
-            <div class="customer-brand-name">SMM Pro</div>
-          </div>
-          <div class="customer-header-actions">
-            <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" aria-label="Notifications">
-              <span>🔔</span>
-              <span class="notification-dot"></span>
-            </button>
-          </div>
-        </header>
+      <!-- Desktop Production Header (Screens >= 768px) -->
+      <nav class="desktop-navbar">
+        <div class="desktop-nav-brand" onclick="store.setCustomerTab('home')">
+          <span style="background: var(--primary); color: white; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">⚡</span>
+          <span>SMM Pro</span>
+        </div>
 
-        <!-- View Body -->
-        <main class="customer-view-content">
-          ${contentHtml}
-        </main>
-
-        <!-- Fixed Mobile Bottom Navigation Bar -->
-        <nav class="customer-bottom-nav">
-          <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
-            <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}">
-              <span>⊞</span>
-            </div>
-            <span>Home</span>
-          </div>
-
-          <div class="bottom-nav-item ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
-            <div class="nav-icon ${tab === 'new_order' ? 'nav-icon-bg' : ''}">
-              <span>🛒</span>
-            </div>
+        <div class="desktop-nav-links">
+          <a class="desktop-nav-link ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
+            <span>⊞</span>
+            <span>Dashboard</span>
+          </a>
+          <a class="desktop-nav-link ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
+            <span>🛒</span>
             <span>New Order</span>
-          </div>
-
-          <div class="bottom-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
-            <div class="nav-icon ${tab === 'orders' ? 'nav-icon-bg' : ''}">
-              <span>⏱️</span>
-            </div>
+          </a>
+          <a class="desktop-nav-link ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
+            <span>⏱️</span>
             <span>Orders</span>
-          </div>
-
-          <div class="bottom-nav-item ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
-            <div class="nav-icon ${tab === 'wallet' ? 'nav-icon-bg' : ''}">
-              <span>💳</span>
-            </div>
-            <span>Wallet</span>
-          </div>
-
-          <div class="bottom-nav-item ${tab === 'support' ? 'active' : ''}" onclick="store.setCustomerTab('support')">
-            <div class="nav-icon ${tab === 'support' ? 'nav-icon-bg' : ''}">
-              <span>💬</span>
-            </div>
+          </a>
+          <a class="desktop-nav-link ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
+            <span>💳</span>
+            <span>Add Funds</span>
+          </a>
+          <a class="desktop-nav-link ${tab === 'support' ? 'active' : ''}" onclick="store.setCustomerTab('support')">
+            <span>💬</span>
             <span>Support</span>
+          </a>
+        </div>
+
+        <div class="desktop-nav-actions">
+          <!-- Balance Pill -->
+          <div class="nav-balance-pill">
+            <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Balance:</span>
+            <span class="nav-balance-amount">${store.formatMoney(store.data.customer.balance)}</span>
           </div>
-        </nav>
+
+          <button class="btn btn-primary btn-sm" onclick="store.setCustomerTab('wallet')">
+            ＋ Add Funds
+          </button>
+
+          <!-- Currency Toggle -->
+          <button class="btn btn-sm btn-secondary" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
+            ${store.currency === 'USD' ? '💵 USD' : '₹ INR'}
+          </button>
+
+          <!-- Theme Toggle -->
+          <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')" title="Toggle Theme">
+            <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
+          </button>
+
+          <!-- Notification Bell -->
+          <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" title="Notifications">
+            <span>🔔</span>
+            <span class="notification-dot"></span>
+          </button>
+
+          <!-- Profile Avatar -->
+          <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="Account Profile" />
+        </div>
+      </nav>
+
+      <!-- Mobile Production Header (Screens < 768px) -->
+      <header class="customer-header">
+        <div class="customer-brand-group">
+          <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="View Profile" />
+          <div class="customer-brand-name">SMM Pro</div>
+        </div>
+        <div class="customer-header-actions">
+          <button class="btn btn-sm btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
+            ${store.currency === 'USD' ? '$' : '₹'}
+          </button>
+          <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')">
+            <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
+          </button>
+          <button class="header-icon-btn" onclick="CustomerApp.openNotifications()">
+            <span>🔔</span>
+            <span class="notification-dot"></span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Responsive Content Container (Centers cleanly on desktop, 100% on mobile) -->
+      <div class="customer-desktop-container">
+        ${contentHtml}
       </div>
+
+      <!-- Fixed Mobile Bottom Navigation Bar (Screens < 768px) -->
+      <nav class="customer-bottom-nav">
+        <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
+          <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}">
+            <span>⊞</span>
+          </div>
+          <span>Home</span>
+        </div>
+
+        <div class="bottom-nav-item ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
+          <div class="nav-icon ${tab === 'new_order' ? 'nav-icon-bg' : ''}">
+            <span>🛒</span>
+          </div>
+          <span>New Order</span>
+        </div>
+
+        <div class="bottom-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
+          <div class="nav-icon ${tab === 'orders' ? 'nav-icon-bg' : ''}">
+            <span>⏱️</span>
+          </div>
+          <span>Orders</span>
+        </div>
+
+        <div class="bottom-nav-item ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
+          <div class="nav-icon ${tab === 'wallet' ? 'nav-icon-bg' : ''}">
+            <span>💳</span>
+          </div>
+          <span>Wallet</span>
+        </div>
+
+        <div class="bottom-nav-item ${tab === 'support' ? 'active' : ''}" onclick="store.setCustomerTab('support')">
+          <div class="nav-icon ${tab === 'support' ? 'nav-icon-bg' : ''}">
+            <span>💬</span>
+          </div>
+          <span>Support</span>
+        </div>
+      </nav>
     `;
 
-    // Attach dynamic listeners
     this.bindEvents();
   },
 
-  // 1. HOME TAB (Directly matches Screenshot 4)
+  // 1. HOME TAB
   renderHomeTab(store) {
-    const recentOrders = store.data.orders.slice(0, 4);
+    const recentOrders = store.data.orders.slice(0, 5);
 
     return `
-      <!-- Balance Hero Card (Screenshot 4) -->
+      <!-- Balance Hero Card -->
       <div class="balance-hero-card">
         <div class="balance-hero-header">
           <div>
@@ -91,12 +156,12 @@ const CustomerApp = {
             <span>💳</span>
           </div>
         </div>
-        <button class="btn btn-primary btn-block" onclick="store.setCustomerTab('wallet')">
+        <button class="btn btn-primary" onclick="store.setCustomerTab('wallet')">
           <span>＋ Add Funds</span>
         </button>
       </div>
 
-      <!-- Quick Actions 2-Column Grid (Screenshot 4) -->
+      <!-- Quick Actions Grid -->
       <div class="quick-actions-grid">
         <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
           <div class="action-icon-circle">
@@ -111,15 +176,29 @@ const CustomerApp = {
           </div>
           <div class="action-card-title">Refill Request</div>
         </div>
+
+        <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
+          <div class="action-icon-circle" style="background: #10B981;">
+            <span>💰</span>
+          </div>
+          <div class="action-card-title">Add Funds</div>
+        </div>
+
+        <div class="quick-action-card" onclick="store.setCustomerTab('support')">
+          <div class="action-icon-circle" style="background: #3B82F6;">
+            <span>💬</span>
+          </div>
+          <div class="action-card-title">Support Desk</div>
+        </div>
       </div>
 
-      <!-- Recent Orders Header -->
+      <!-- Recent Orders Section -->
       <div class="section-header-row">
         <div class="section-title">Recent Orders</div>
-        <a class="section-link" onclick="store.setCustomerTab('orders')">View All</a>
+        <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
       </div>
 
-      <!-- Recent Orders List Cards (Screenshot 4) -->
+      <!-- Recent Orders List Cards -->
       <div class="mobile-orders-list">
         ${recentOrders.map(order => this.renderOrderCard(order, store)).join('')}
       </div>
@@ -165,16 +244,16 @@ const CustomerApp = {
     `;
   },
 
-  // 2. NEW ORDER TAB (Linear, tap-friendly, real-time calculation)
+  // 2. NEW ORDER TAB
   renderNewOrderTab(store) {
     const services = store.data.customerServices;
-    const initialService = services[0];
+    const initialService = services[0] || {};
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
         <div>
-          <h2 style="font-size: 20px; font-weight: 800;">Place New Order</h2>
-          <p style="font-size: 13px;">Select a service and enter your target link.</p>
+          <h2 style="font-size: 24px; font-weight: 800;">Place New Order</h2>
+          <p style="font-size: 14px;">Select an SMM service and enter your target link.</p>
         </div>
 
         <!-- Step 1: Category Filter Chips -->
@@ -204,26 +283,26 @@ const CustomerApp = {
         <!-- Step 3: Service Details Card -->
         <div class="service-details-card" id="service-details-box">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: var(--primary);">Service Specification</strong>
+            <strong style="color: var(--primary); font-size: 14px;">Service Specification</strong>
             <span class="badge ${initialService.refillSupported ? 'badge-success' : 'badge-neutral'}">
               ${initialService.refillSupported ? `🛡️ ${initialService.refillPeriod} Refill` : 'No Refill'}
             </span>
           </div>
-          <p id="service-detail-desc" style="font-size: 12.5px; color: var(--text-secondary);">
-            ${initialService.description}
+          <p id="service-detail-desc" style="font-size: 13px; color: var(--text-secondary);">
+            ${initialService.description || ''}
           </p>
-          <div class="service-meta-grid" style="margin-top: 6px;">
+          <div class="service-meta-grid" style="margin-top: 8px;">
             <div class="meta-item">
               <span class="meta-item-label">Min / Max Limit</span>
-              <span class="meta-item-val" id="service-detail-limits">${initialService.min.toLocaleString()} / ${initialService.max.toLocaleString()}</span>
+              <span class="meta-item-val" id="service-detail-limits">${initialService.min ? initialService.min.toLocaleString() : 100} / ${initialService.max ? initialService.max.toLocaleString() : 50000}</span>
             </div>
             <div class="meta-item">
               <span class="meta-item-label">Avg Speed</span>
-              <span class="meta-item-val" id="service-detail-speed">${initialService.deliverySpeed}</span>
+              <span class="meta-item-val" id="service-detail-speed">${initialService.deliverySpeed || 'Instant'}</span>
             </div>
             <div class="meta-item">
               <span class="meta-item-label">Start Time</span>
-              <span class="meta-item-val" id="service-detail-start">${initialService.startTime}</span>
+              <span class="meta-item-val" id="service-detail-start">${initialService.startTime || '0 - 15 Mins'}</span>
             </div>
             <div class="meta-item">
               <span class="meta-item-label">Refill Guarantee</span>
@@ -240,7 +319,7 @@ const CustomerApp = {
           </label>
           <div style="position: relative;">
             <input type="url" class="form-input" id="new-order-target" placeholder="https://instagram.com/yourprofile" value="https://instagram.com/creator_daily" />
-            <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 6px; top: 6px; height: 34px; padding: 0 10px;" onclick="CustomerApp.pasteSampleLink()">
+            <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 6px; top: 6px; height: 34px; padding: 0 12px;" onclick="CustomerApp.pasteSampleLink()">
               Paste
             </button>
           </div>
@@ -265,7 +344,7 @@ const CustomerApp = {
         <div class="calculation-summary-card">
           <div class="calc-row">
             <span>Unit Rate (per 1,000):</span>
-            <strong id="calc-rate-label">${store.formatMoney(initialService.pricePer1k)}</strong>
+            <strong id="calc-rate-label">${store.formatMoney(initialService.pricePer1k || 0.95)}</strong>
           </div>
           <div class="calc-row">
             <span>Current Wallet Balance:</span>
@@ -273,7 +352,7 @@ const CustomerApp = {
           </div>
           <div class="calc-row total-row">
             <span>Total Charge:</span>
-            <span id="calc-total-label">${store.formatMoney((initialService.pricePer1k / 1000) * 1000)}</span>
+            <span id="calc-total-label">${store.formatMoney(((initialService.pricePer1k || 0.95) / 1000) * 1000)}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 4px;">
             <span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>
@@ -288,15 +367,18 @@ const CustomerApp = {
     `;
   },
 
-  // 3. ORDERS TAB (Mobile Cards, Filter Tabs, Smart Refill Action)
+  // 3. ORDERS TAB
   renderOrdersTab(store) {
     const orders = store.data.orders;
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 20px;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 style="font-size: 20px; font-weight: 800;">My Orders</h2>
-          <span class="badge badge-primary">${orders.length} Total</span>
+          <div>
+            <h2 style="font-size: 24px; font-weight: 800;">My Orders</h2>
+            <p style="font-size: 13.5px;">Track delivery progress and refill warranties.</p>
+          </div>
+          <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px;">${orders.length} Total Orders</span>
         </div>
 
         <!-- Filter Tabs -->
@@ -305,7 +387,6 @@ const CustomerApp = {
           <button class="platform-chip" data-filter="in_progress">In Progress</button>
           <button class="platform-chip" data-filter="completed">Completed</button>
           <button class="platform-chip" data-filter="processing">Processing</button>
-          <button class="platform-chip" data-filter="refillable">Refill Eligible 🛡️</button>
         </div>
 
         <!-- Orders List -->
@@ -325,50 +406,49 @@ const CustomerApp = {
     const canRefill = order.refillEligible && order.status === 'Completed';
 
     return `
-      <div class="card" style="display: flex; flex-direction: column; gap: 12px;">
+      <div class="card" style="display: flex; flex-direction: column; gap: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <div>
-            <div style="font-size: 14.5px; font-weight: 700; color: var(--text-main);">${order.serviceName}</div>
-            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            <div style="font-size: 15.5px; font-weight: 700; color: var(--text-main);">${order.serviceName}</div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
               Order #${order.id} • ${order.date}
             </div>
           </div>
           <span class="badge ${badgeClass}"><span class="badge-dot"></span>${order.status}</span>
         </div>
 
-        <div style="background: var(--bg-subtle); padding: 10px 12px; border-radius: var(--radius-sm); font-size: 12.5px;">
-          <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 600;">Target</div>
+        <div style="background: var(--bg-subtle); padding: 12px 14px; border-radius: var(--radius-md); font-size: 13px;">
+          <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700;">Target Link / Handle</div>
           <div style="font-family: var(--font-mono); color: var(--text-main); word-break: break-all; margin-top: 2px;">
             ${order.target}
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 12px; text-align: center; background: var(--bg-surface); padding: 8px 0;">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; font-size: 13px; text-align: center; background: var(--bg-surface); padding: 8px 0;">
           <div>
-            <div style="color: var(--text-muted); font-size: 11px;">Quantity</div>
-            <strong style="color: var(--text-main);">${order.quantity.toLocaleString()}</strong>
+            <div style="color: var(--text-muted); font-size: 11.5px;">Quantity</div>
+            <strong style="color: var(--text-main); font-size: 15px;">${Number(order.quantity).toLocaleString()}</strong>
           </div>
           <div>
-            <div style="color: var(--text-muted); font-size: 11px;">Current</div>
-            <strong style="color: var(--text-main);">${order.currentCount.toLocaleString()}</strong>
+            <div style="color: var(--text-muted); font-size: 11.5px;">Current</div>
+            <strong style="color: var(--text-main); font-size: 15px;">${Number(order.currentCount).toLocaleString()}</strong>
           </div>
           <div>
-            <div style="color: var(--text-muted); font-size: 11px;">Charge</div>
-            <strong style="color: var(--primary);">${store.formatMoney(order.amount)}</strong>
+            <div style="color: var(--text-muted); font-size: 11.5px;">Charge</div>
+            <strong style="color: var(--primary); font-size: 15px;">${store.formatMoney(order.amount)}</strong>
           </div>
         </div>
 
-        <!-- Refill Area (Only shown if eligible or in refill state) -->
         ${order.refillStatus && order.refillStatus.includes('Refill') ? `
-          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--warning-light); padding: 8px 12px; border-radius: var(--radius-sm);">
-            <span style="font-size: 12px; font-weight: 700; color: var(--warning);">
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--warning-light); padding: 10px 14px; border-radius: var(--radius-md);">
+            <span style="font-size: 13px; font-weight: 700; color: var(--warning);">
               🔄 ${order.refillStatus}
             </span>
-            <span style="font-size: 11px; color: var(--text-secondary);">Provider Sync Active</span>
+            <span style="font-size: 12px; color: var(--text-secondary);">Provider Sync Active</span>
           </div>
         ` : ''}
 
-        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 8px; border-top: 1px dashed var(--border-color);">
+        <div style="display: flex; align-items: center; justify-content: space-between; padding-top: 10px; border-top: 1px dashed var(--border-color);">
           <button class="btn btn-sm btn-secondary" onclick="CustomerApp.openOrderDetails('${order.id}')">
             View Details
           </button>
@@ -378,19 +458,19 @@ const CustomerApp = {
               <span>🔄 Request Refill</span>
             </button>
           ` : (order.status === 'Completed' && !order.refillEligible && !order.refillStatus ? `
-            <span style="font-size: 11px; color: var(--text-muted);">Refill Guarantee Expired / N/A</span>
+            <span style="font-size: 12px; color: var(--text-muted);">Refill Guarantee Expired</span>
           ` : '')}
         </div>
       </div>
     `;
   },
 
-  // 4. WALLET TAB (Add Funds & Transactions)
+  // 4. WALLET TAB
   renderWalletTab(store) {
     const transactions = store.data.transactions;
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 18px;">
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 800px; margin: 0 auto; width: 100%;">
         <!-- Wallet Hero Card -->
         <div class="balance-hero-card">
           <div class="balance-hero-header">
@@ -400,17 +480,17 @@ const CustomerApp = {
             </div>
             <div class="balance-icon-pill"><span>💰</span></div>
           </div>
-          <p style="font-size: 12.5px; color: var(--text-secondary);">
-            Instant auto-deposit. Funds are credited within seconds.
+          <p style="font-size: 13px; color: var(--text-secondary); max-width: 320px;">
+            Instant auto-deposit. Funds are credited immediately upon transaction confirmation.
           </p>
         </div>
 
-        <!-- Add Funds Section -->
-        <div class="card" style="display: flex; flex-direction: column; gap: 14px;">
-          <h3 style="font-size: 16px; font-weight: 700;">Add Funds to Wallet</h3>
+        <!-- Add Funds Form -->
+        <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
+          <h3 style="font-size: 18px; font-weight: 800;">Add Funds to Wallet</h3>
 
           <!-- Preset Amounts -->
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
             <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(10)">$10</button>
             <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(25)">$25</button>
             <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(50)">$50</button>
@@ -418,11 +498,11 @@ const CustomerApp = {
           </div>
 
           <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Custom Deposit Amount (USD)</label>
+            <label class="form-label">Deposit Amount (USD)</label>
             <input type="number" class="form-input" id="add-funds-amount-input" value="25" min="5" max="5000" />
           </div>
 
-          <!-- Payment Method Selector -->
+          <!-- Payment Method -->
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label">Payment Method</label>
             <select class="form-select" id="add-funds-method-select">
@@ -433,32 +513,32 @@ const CustomerApp = {
             </select>
           </div>
 
-          <button class="btn btn-primary btn-block" onclick="CustomerApp.handleDeposit()">
+          <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.handleDeposit()">
             <span>Proceed to Deposit</span>
           </button>
         </div>
 
         <!-- Transaction History -->
         <div>
-          <div class="section-header-row" style="margin-bottom: 12px;">
+          <div class="section-header-row" style="margin-bottom: 14px;">
             <div class="section-title">Transaction History</div>
             <span class="badge badge-neutral">${transactions.length} Records</span>
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 10px;">
             ${transactions.map(txn => `
-              <div class="card" style="padding: 14px; display: flex; align-items: center; justify-content: space-between;">
+              <div class="card" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
                 <div>
-                  <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">${txn.description}</div>
-                  <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">
+                  <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${txn.description}</div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
                     ${txn.id} • ${txn.date}
                   </div>
                 </div>
                 <div style="text-align: right;">
-                  <strong style="font-size: 14.5px; color: ${txn.amount >= 0 ? 'var(--success)' : 'var(--text-main)'};">
+                  <strong style="font-size: 15px; color: ${txn.amount >= 0 ? 'var(--success)' : 'var(--text-main)'};">
                     ${txn.amount >= 0 ? '+' : ''}${store.formatMoney(txn.amount)}
                   </strong>
-                  <div style="font-size: 11px; color: var(--text-muted);">Bal: ${store.formatMoney(txn.balanceAfter)}</div>
+                  <div style="font-size: 11.5px; color: var(--text-muted);">Bal: ${store.formatMoney(txn.balanceAfter)}</div>
                 </div>
               </div>
             `).join('')}
@@ -468,16 +548,16 @@ const CustomerApp = {
     `;
   },
 
-  // 5. SUPPORT TAB (Tickets & Interactive Chat)
+  // 5. SUPPORT TAB
   renderSupportTab(store) {
     const tickets = store.data.supportTickets;
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
           <div>
-            <h2 style="font-size: 20px; font-weight: 800;">Support Desk</h2>
-            <p style="font-size: 13px;">We typically respond in under 15 minutes.</p>
+            <h2 style="font-size: 24px; font-weight: 800;">Support Desk</h2>
+            <p style="font-size: 13.5px;">Have questions about an order or delivery speed? We respond in minutes.</p>
           </div>
           <button class="btn btn-primary btn-sm" onclick="CustomerApp.openNewTicketModal()">
             ＋ New Ticket
@@ -486,18 +566,18 @@ const CustomerApp = {
 
         <div style="display: flex; flex-direction: column; gap: 12px;">
           ${tickets.map(ticket => `
-            <div class="card" style="display: flex; flex-direction: column; gap: 10px; cursor: pointer;" onclick="CustomerApp.openTicketChat('${ticket.id}')">
+            <div class="card" style="display: flex; flex-direction: column; gap: 12px; cursor: pointer;" onclick="CustomerApp.openTicketChat('${ticket.id}')">
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${ticket.subject}</div>
+                <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">${ticket.subject}</div>
                 <span class="badge ${ticket.status === 'Answered' ? 'badge-success' : 'badge-warning'}">
                   ${ticket.status}
                 </span>
               </div>
-              <div style="font-size: 12px; color: var(--text-secondary);">
+              <div style="font-size: 12.5px; color: var(--text-secondary);">
                 Ticket #${ticket.id} ${ticket.linkedOrderId ? `• Linked to Order #${ticket.linkedOrderId}` : ''}
               </div>
-              <div style="font-size: 11.5px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 6px;">
-                Last message ${ticket.updatedAt} • Tap to view chat thread
+              <div style="font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 8px;">
+                Last message ${ticket.updatedAt} • Click to open conversation thread
               </div>
             </div>
           `).join('')}
@@ -515,10 +595,9 @@ const CustomerApp = {
       const updateCalc = () => {
         const store = window.store;
         const selectedId = serviceSelect.value;
-        const service = store.data.customerServices.find(s => s.id === selectedId);
+        const service = store.data.customerServices.find(s => String(s.id) === String(selectedId));
         if (!service) return;
 
-        // Update details card
         document.getElementById('service-detail-desc').textContent = service.description;
         document.getElementById('service-detail-limits').textContent = `${service.min.toLocaleString()} / ${service.max.toLocaleString()}`;
         document.getElementById('service-detail-speed').textContent = service.deliverySpeed;
@@ -580,7 +659,6 @@ const CustomerApp = {
       return;
     }
 
-    // Confirmation Modal simulation
     store.placeOrder({ serviceId, target, quantity });
   },
 
@@ -595,7 +673,7 @@ const CustomerApp = {
   },
 
   promptRefill(orderId) {
-    const order = window.store.data.orders.find(o => o.id === orderId);
+    const order = window.store.data.orders.find(o => String(o.id) === String(orderId));
     if (!order) return;
 
     if (confirm(`Request automatic refill for Order #${order.id} (${order.serviceName})?\n\nCurrent count: ${order.currentCount} / Target: ${order.startCount + order.quantity}`)) {
@@ -609,7 +687,7 @@ const CustomerApp = {
   },
 
   openOrderDetails(orderId) {
-    const order = window.store.data.orders.find(o => o.id === orderId);
+    const order = window.store.data.orders.find(o => String(o.id) === String(orderId));
     if (!order) return;
 
     const modal = document.getElementById('generic-modal-backdrop');
@@ -624,7 +702,7 @@ const CustomerApp = {
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md);">
           <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Service</div>
-          <div style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-top: 2px;">${order.serviceName}</div>
+          <div style="font-size: 14.5px; font-weight: 700; color: var(--text-main); margin-top: 2px;">${order.serviceName}</div>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -634,19 +712,19 @@ const CustomerApp = {
           </div>
           <div class="calc-row">
             <span>Quantity Ordered:</span>
-            <strong>${order.quantity.toLocaleString()}</strong>
+            <strong>${Number(order.quantity).toLocaleString()}</strong>
           </div>
           <div class="calc-row">
             <span>Start Count:</span>
-            <span>${order.startCount.toLocaleString()}</span>
+            <span>${Number(order.startCount).toLocaleString()}</span>
           </div>
           <div class="calc-row">
             <span>Current Count:</span>
-            <span>${order.currentCount.toLocaleString()}</span>
+            <span>${Number(order.currentCount).toLocaleString()}</span>
           </div>
           <div class="calc-row">
             <span>Remains to deliver:</span>
-            <span>${order.remains.toLocaleString()}</span>
+            <span>${Number(order.remains).toLocaleString()}</span>
           </div>
           <div class="calc-row">
             <span>Total Paid:</span>
@@ -658,17 +736,17 @@ const CustomerApp = {
           </div>
         </div>
 
-        <div style="border-top: 1px dashed var(--border-color); padding-top: 12px;">
-          <h4 style="font-size: 13.5px; font-weight: 700; margin-bottom: 6px;">Refill Guarantee Info</h4>
+        <div style="border-top: 1px dashed var(--border-color); padding-top: 14px;">
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">Refill Guarantee Info</h4>
           ${order.refillEligible ? `
-            <p style="font-size: 12px; color: var(--success); font-weight: 600;">
-              🛡️ Refill is Available! (${order.refillDaysLeft} days remaining on warranty)
+            <p style="font-size: 12.5px; color: var(--success); font-weight: 600;">
+              🛡️ Refill is Available! (30-day warranty active)
             </p>
             <button class="btn btn-primary btn-block" style="margin-top: 10px;" onclick="CustomerApp.closeModal(); CustomerApp.promptRefill('${order.id}')">
               🔄 Request Refill Now
             </button>
           ` : `
-            <p style="font-size: 12px; color: var(--text-secondary);">
+            <p style="font-size: 12.5px; color: var(--text-secondary);">
               ${order.refillReason || 'Refill is currently not active for this order.'}
             </p>
           `}
@@ -680,7 +758,7 @@ const CustomerApp = {
   },
 
   openTicketChat(ticketId) {
-    const ticket = window.store.data.supportTickets.find(t => t.id === ticketId);
+    const ticket = window.store.data.supportTickets.find(t => String(t.id) === String(ticketId));
     if (!ticket) return;
 
     const modal = document.getElementById('generic-modal-backdrop');
@@ -718,7 +796,7 @@ const CustomerApp = {
     if (!input || !input.value.trim()) return;
     const text = input.value.trim();
     window.store.sendTicketMessage(ticketId, text);
-    this.openTicketChat(ticketId); // Refresh modal view
+    this.openTicketChat(ticketId);
   },
 
   openNewTicketModal() {
@@ -785,22 +863,16 @@ const CustomerApp = {
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div class="card" style="padding: 12px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 700; font-size: 13.5px;">Order #48291 is now Processing</div>
-          <p style="font-size: 12px; margin-top: 2px;">Your Instagram Followers order has been sent to upstream delivery network.</p>
-          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;">5 mins ago</div>
+        <div class="card" style="padding: 14px; border-left: 4px solid var(--primary);">
+          <div style="font-weight: 700; font-size: 14px;">Order #48291 is now Processing</div>
+          <p style="font-size: 12.5px; margin-top: 2px;">Your Instagram Followers order has been sent to upstream delivery network.</p>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">5 mins ago</div>
         </div>
 
-        <div class="card" style="padding: 12px; border-left: 4px solid var(--success);">
-          <div style="font-weight: 700; font-size: 13.5px;">Deposit Credited (+$100.00)</div>
-          <p style="font-size: 12px; margin-top: 2px;">UPI payment successfully confirmed and added to your wallet balance.</p>
-          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;">Yesterday</div>
-        </div>
-
-        <div class="card" style="padding: 12px; border-left: 4px solid var(--warning);">
-          <div style="font-weight: 700; font-size: 13.5px;">Scheduled Maintenance Notice</div>
-          <p style="font-size: 12px; margin-top: 2px;">Payment gateway maintenance tonight 02:00 - 02:30 UTC. Card payments may experience brief pauses.</p>
-          <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 4px;">2 days ago</div>
+        <div class="card" style="padding: 14px; border-left: 4px solid var(--success);">
+          <div style="font-weight: 700; font-size: 14px;">Deposit Credited (+$100.00)</div>
+          <p style="font-size: 12.5px; margin-top: 2px;">UPI payment successfully confirmed and added to your wallet balance.</p>
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Yesterday</div>
         </div>
       </div>
     `;
@@ -815,35 +887,35 @@ const CustomerApp = {
 
     sheet.innerHTML = `
       <div class="modal-header">
-        <h3 class="modal-title">My Profile & Settings</h3>
+        <h3 class="modal-title">My Account Profile</h3>
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center;">
         <img src="${store.data.customer.avatar}" style="width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--primary);" />
         <div>
-          <h4 style="font-size: 16px; font-weight: 800;">${store.data.customer.name}</h4>
-          <p style="font-size: 12.5px;">${store.data.customer.email}</p>
+          <h4 style="font-size: 17px; font-weight: 800;">${store.data.customer.name}</h4>
+          <p style="font-size: 13px;">${store.data.customer.email}</p>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;">
-          <div class="card" style="padding: 12px;">
-            <div style="font-size: 11px; color: var(--text-muted);">Total Spent</div>
-            <div style="font-size: 16px; font-weight: 800; color: var(--primary);">${store.formatMoney(store.data.customer.spent)}</div>
+          <div class="card" style="padding: 14px;">
+            <div style="font-size: 11.5px; color: var(--text-muted);">Total Spent</div>
+            <div style="font-size: 18px; font-weight: 800; color: var(--primary);">${store.formatMoney(store.data.customer.spent)}</div>
           </div>
-          <div class="card" style="padding: 12px;">
-            <div style="font-size: 11px; color: var(--text-muted);">Total Orders</div>
-            <div style="font-size: 16px; font-weight: 800;">${store.data.customer.ordersCount}</div>
+          <div class="card" style="padding: 14px;">
+            <div style="font-size: 11.5px; color: var(--text-muted);">Total Orders</div>
+            <div style="font-size: 18px; font-weight: 800;">${store.data.customer.ordersCount}</div>
           </div>
         </div>
 
         <div style="width: 100%; border-top: 1px dashed var(--border-color); padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
           <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal(); store.setCustomerTab('wallet')">
-            Manage Payment & Invoices
+            Manage Payment & Funds
           </button>
-          <button class="btn btn-outline btn-block" onclick="CustomerApp.closeModal(); store.setPersona('admin')">
-            Switch to Admin Console
-          </button>
+          <a href="#admin" class="btn btn-outline btn-block" onclick="CustomerApp.closeModal();" style="text-decoration: none;">
+            🛡️ Open Admin Console
+          </a>
         </div>
       </div>
     `;

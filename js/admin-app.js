@@ -14,7 +14,7 @@ const AdminApp = {
 
     container.innerHTML = `
       <div class="admin-shell">
-        <!-- Sidebar Navigation (Matching Screenshot 1) -->
+        <!-- Sidebar Navigation -->
         <aside class="admin-sidebar">
           <div class="admin-brand">
             <div class="admin-brand-icon">🛡️</div>
@@ -55,7 +55,10 @@ const AdminApp = {
             </li>
           </ul>
 
-          <div class="admin-sidebar-footer">
+          <div class="admin-sidebar-footer" style="display: flex; flex-direction: column; gap: 8px;">
+            <a href="#customer" class="btn btn-secondary btn-sm btn-block" style="text-decoration: none;">
+              ← Customer View
+            </a>
             <span>v2.4.0 • System Management</span>
           </div>
         </aside>
@@ -63,15 +66,24 @@ const AdminApp = {
         <!-- Main Content Pane -->
         <div class="admin-main">
           <header class="admin-header">
-            <h1 class="admin-header-title">${this.getTabTitle(tab)}</h1>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <h1 class="admin-header-title">${this.getTabTitle(tab)}</h1>
+            </div>
             <div class="admin-header-actions">
+              <!-- Currency Toggle -->
+              <button class="btn btn-sm btn-secondary" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
+                ${store.currency === 'USD' ? '💵 USD' : '₹ INR'}
+              </button>
+              <!-- Theme Toggle -->
+              <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')" title="Toggle Theme">
+                <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
+              </button>
               <button class="header-icon-btn" onclick="store.showToast('All upstream provider APIs responding normally', 'info')">
                 <span>🔔</span>
               </button>
-              <button class="header-icon-btn" onclick="store.setAdminTab('support')">
-                <span>✉️</span>
-                <span class="notification-dot"></span>
-              </button>
+              <a href="#customer" class="btn btn-sm btn-secondary" style="text-decoration: none;">
+                Exit to Storefront
+              </a>
               <div class="admin-user-pill">
                 <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80" alt="Admin" />
                 <span class="admin-user-name">James Miller (Super Admin)</span>
@@ -98,15 +110,14 @@ const AdminApp = {
     return 'Admin Console';
   },
 
-  // 1. ADMIN DASHBOARD (Matches Screenshot 1)
+  // 1. ADMIN DASHBOARD
   renderDashboard(store) {
     const stats = store.data.adminStats;
     const activities = store.data.recentActivity;
 
     return `
-      <!-- KPI Stats Row (Screenshot 1) -->
+      <!-- KPI Stats Row -->
       <div class="kpi-grid">
-        <!-- Total Customers -->
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">👥</div>
@@ -116,7 +127,6 @@ const AdminApp = {
           <div class="kpi-value">${stats.totalCustomers.toLocaleString()}</div>
         </div>
 
-        <!-- Total Orders -->
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">🛍️</div>
@@ -126,7 +136,6 @@ const AdminApp = {
           <div class="kpi-value">${stats.totalOrders.toLocaleString()}</div>
         </div>
 
-        <!-- Revenue -->
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--success-light); color: var(--success);">$</div>
@@ -136,7 +145,6 @@ const AdminApp = {
           <div class="kpi-value">${store.formatMoney(stats.revenue, 0)}</div>
         </div>
 
-        <!-- Profit -->
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">📈</div>
@@ -146,7 +154,6 @@ const AdminApp = {
           <div class="kpi-value">${store.formatMoney(stats.profit, 0)}</div>
         </div>
 
-        <!-- Provider Balance -->
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--warning-light); color: var(--warning);">🏛️</div>
@@ -157,14 +164,13 @@ const AdminApp = {
         </div>
       </div>
 
-      <!-- 2-Column Analytics & Activity (Screenshot 1) -->
+      <!-- 2-Column Analytics & Activity -->
       <div class="admin-analytics-grid">
-        <!-- Order Volume 7 Days Chart -->
         <div class="chart-card">
           <div class="chart-header">
             <div>
               <h3 style="font-size: 17px; font-weight: 800;">Order Volume (7 Days)</h3>
-              <p style="font-size: 12.5px;">Aggregated order dispatch throughput</p>
+              <p style="font-size: 12.5px;">Aggregated order throughput across all provider channels</p>
             </div>
             <span style="font-size: 20px; cursor: pointer; color: var(--text-muted);">⋮</span>
           </div>
@@ -201,7 +207,6 @@ const AdminApp = {
           </div>
         </div>
 
-        <!-- Recent Activity Feed (Screenshot 1) -->
         <div class="activity-card">
           <div class="chart-header">
             <h3 style="font-size: 17px; font-weight: 800;">Recent Activity</h3>
@@ -231,7 +236,7 @@ const AdminApp = {
     `;
   },
 
-  // 2. PROVIDER MANAGEMENT (Matches Screenshot 2)
+  // 2. PROVIDER MANAGEMENT
   renderProviders(store) {
     const providers = store.data.providers;
 
@@ -246,7 +251,6 @@ const AdminApp = {
         </button>
       </div>
 
-      <!-- Provider Grid Cards (Screenshot 2) -->
       <div class="provider-cards-grid">
         ${providers.map(p => `
           <div class="provider-card ${p.status === 'active' ? 'status-active' : 'status-error'}">
@@ -291,12 +295,11 @@ const AdminApp = {
     `;
   },
 
-  // 3. PROVIDER SERVICE SYNC (Matches Screenshot 3)
+  // 3. PROVIDER SERVICE SYNC
   renderSyncServices(store) {
     const rawServices = store.data.rawProviderServices;
 
     return `
-      <!-- Breadcrumb (Screenshot 3) -->
       <div style="font-size: 12.5px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
         <span onclick="store.setAdminTab('providers')" style="cursor: pointer; text-decoration: underline;">Providers</span>
         <span>&gt;</span>
@@ -305,7 +308,6 @@ const AdminApp = {
         <span>Service Sync</span>
       </div>
 
-      <!-- Header Row (Screenshot 3) -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 style="font-size: 26px; font-weight: 800;">Sync Services</h2>
@@ -323,9 +325,7 @@ const AdminApp = {
         </div>
       </div>
 
-      <!-- Sync Table Container (Screenshot 3) -->
       <div class="sync-table-container">
-        <!-- Filter Bar -->
         <div class="table-filter-bar">
           <div style="position: relative; flex: 1; max-width: 380px;">
             <input type="text" class="form-input" placeholder="Search raw service name or ID..." style="min-height: 40px; padding-left: 36px;" />
@@ -340,7 +340,6 @@ const AdminApp = {
           </div>
         </div>
 
-        <!-- Table Data (Screenshot 3) -->
         <table class="sync-data-table">
           <thead>
             <tr>
@@ -397,7 +396,6 @@ const AdminApp = {
           </tbody>
         </table>
 
-        <!-- Table Footer Pagination -->
         <div style="padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-subtle); font-size: 12.5px; color: var(--text-secondary);">
           <span>Showing 1-6 of 1,204 services</span>
           <div style="display: flex; gap: 4px;">
@@ -412,7 +410,7 @@ const AdminApp = {
     `;
   },
 
-  // 4. CUSTOMER SERVICES & MULTI-PROVIDER MAPPING (Core Distinction Requirement)
+  // 4. CUSTOMER SERVICES
   renderCustomerServices(store) {
     const services = store.data.customerServices;
 
@@ -444,7 +442,7 @@ const AdminApp = {
           </thead>
           <tbody>
             ${services.map(service => {
-              const activeMapping = service.providerMappings.find(m => m.isPrimary) || service.providerMappings[0];
+              const activeMapping = (service.providerMappings && service.providerMappings.find(m => m.isPrimary)) || (service.providerMappings && service.providerMappings[0]) || { providerName: 'API1_GlobalSMM', providerCost: 0.42 };
               const markup = Math.round(((service.pricePer1k - activeMapping.providerCost) / activeMapping.providerCost) * 100);
 
               return `
@@ -475,7 +473,7 @@ const AdminApp = {
                   </td>
                   <td>
                     <button class="btn btn-sm btn-secondary" onclick="AdminApp.openMultiProviderMappingDrawer('${service.id}')">
-                      <span>❖ ${service.providerMappings.length} Providers</span>
+                      <span>❖ ${service.providerMappings ? service.providerMappings.length : 1} Providers</span>
                     </button>
                   </td>
                 </tr>
@@ -487,10 +485,9 @@ const AdminApp = {
     `;
   },
 
-  // Multi-Provider Mapping Drawer (Requirement 6)
   openMultiProviderMappingDrawer(serviceId) {
     const store = window.store;
-    const service = store.data.customerServices.find(s => s.id === serviceId);
+    const service = store.data.customerServices.find(s => String(s.id) === String(serviceId));
     if (!service) return;
 
     const modal = document.getElementById('generic-modal-backdrop');
@@ -517,7 +514,7 @@ const AdminApp = {
         </div>
 
         <div class="mapping-providers-list">
-          ${service.providerMappings.map(mapping => `
+          ${service.providerMappings ? service.providerMappings.map(mapping => `
             <div class="mapping-provider-card ${mapping.isPrimary ? 'active-mapping' : ''}">
               <div>
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -540,7 +537,7 @@ const AdminApp = {
                 `}
               </div>
             </div>
-          `).join('')}
+          `).join('') : ''}
         </div>
 
         <div style="border-top: 1px dashed var(--border-color); padding-top: 12px;">
@@ -556,10 +553,10 @@ const AdminApp = {
 
   handleSwitchProvider(serviceId, providerId) {
     window.store.switchPrimaryProvider(serviceId, providerId);
-    this.openMultiProviderMappingDrawer(serviceId); // re-render drawer
+    this.openMultiProviderMappingDrawer(serviceId);
   },
 
-  // 5. REFILLS QUEUE (Requirement 7)
+  // 5. REFILLS QUEUE
   renderRefillsQueue(store) {
     const queue = store.data.refillQueue;
 
@@ -633,7 +630,7 @@ const AdminApp = {
     `;
   },
 
-  // 6. ADMIN ORDERS MASTER TABLE
+  // 6. ADMIN ORDERS
   renderAdminOrders(store) {
     const orders = store.data.orders;
 
@@ -666,7 +663,7 @@ const AdminApp = {
                 <td style="font-family: var(--font-mono); font-size: 11.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ${o.target}
                 </td>
-                <td>${o.quantity.toLocaleString()}</td>
+                <td>${Number(o.quantity).toLocaleString()}</td>
                 <td><strong style="color: var(--primary);">${store.formatMoney(o.amount)}</strong></td>
                 <td>
                   <span class="badge badge-neutral">API1_GlobalSMM (#4092)</span>
@@ -682,7 +679,7 @@ const AdminApp = {
     `;
   },
 
-  // 7. ADMIN SUPPORT DESK
+  // 7. ADMIN SUPPORT
   renderAdminSupport(store) {
     const tickets = store.data.supportTickets;
 
@@ -713,16 +710,13 @@ const AdminApp = {
     `;
   },
 
-  // Import Service Modal (Step 4 & 5 Requirement)
   openImportModal(rawId) {
     const store = window.store;
-    const raw = store.data.rawProviderServices.find(s => s.id === rawId);
+    const raw = store.data.rawProviderServices.find(s => String(s.id) === String(rawId));
     if (!raw) return;
 
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
-
-    // Default markup: 100%
     const defaultSellingPrice = (raw.cost * 2.0).toFixed(2);
 
     sheet.innerHTML = `
@@ -788,7 +782,6 @@ const AdminApp = {
       </div>
     `;
 
-    // Dynamic markup calculation
     const priceInput = document.getElementById('import-selling-price');
     const markupLabel = document.getElementById('import-markup-label');
     priceInput.addEventListener('input', () => {
@@ -820,7 +813,7 @@ const AdminApp = {
   },
 
   openProviderConfig(providerId) {
-    const p = window.store.data.providers.find(prov => prov.id === providerId);
+    const p = window.store.data.providers.find(prov => String(prov.id) === String(providerId));
     if (!p) return;
 
     const modal = document.getElementById('generic-modal-backdrop');
@@ -898,14 +891,14 @@ const AdminApp = {
   },
 
   promptBulkImport() {
-    window.store.showToast('Bulk import modal ready — select markup preset and import all new services in 1 click.', 'info');
+    window.store.showToast('Bulk import ready — all upstream services fetched.', 'info');
   },
 
   openReviewPricingModal(rawId) {
-    const raw = window.store.data.rawProviderServices.find(s => s.id === rawId);
+    const raw = window.store.data.rawProviderServices.find(s => String(s.id) === String(rawId));
     if (!raw) return;
 
-    alert(`Upstream Price Increase Alert for #${raw.id} (${raw.rawName})\n\nOld Provider Cost: $${raw.oldCost.toFixed(2)}\nNew Provider Cost: $${raw.cost.toFixed(2)}\n\nRecommended Action: Adjust customer selling price to maintain profit margin.`);
+    alert(`Upstream Price Increase Alert for #${raw.id} (${raw.rawName})\n\nOld Provider Cost: $${raw.oldCost ? raw.oldCost.toFixed(2) : '2.50'}\nNew Provider Cost: $${raw.cost.toFixed(2)}\n\nRecommended Action: Adjust customer selling price to maintain profit margin.`);
   }
 };
 

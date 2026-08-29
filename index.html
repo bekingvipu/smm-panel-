@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>SMM Panel — Interactive Mobile-First Prototype</title>
+  <title>SMM Pro — Premier Social Media Marketing Growth Panel</title>
   
   <!-- CSS Stylesheets -->
   <link rel="stylesheet" href="css/design-system.css" />
@@ -13,73 +13,10 @@
 </head>
 <body>
 
-  <!-- Top Simulator & Review Control Bar -->
-  <header class="simulator-topbar">
-    <div class="simulator-brand">
-      <div class="logo-badge">⚡</div>
-      <span>SMM Pro Prototype</span>
-    </div>
-
-    <div class="simulator-controls">
-      <!-- Persona Switcher -->
-      <div class="control-group">
-        <button id="btn-persona-customer" class="control-btn active" title="Switch to Customer Experience">
-          <span>📱 Customer View</span>
-        </button>
-        <button id="btn-persona-admin" class="control-btn" title="Switch to Admin Console">
-          <span>🛡️ Admin Console</span>
-        </button>
-      </div>
-
-      <!-- Viewport Device Switcher -->
-      <div class="control-group">
-        <button id="btn-mode-mobile" class="control-btn active" title="iPhone 15 Mobile Frame (390px)">
-          <span>📱 Mobile (90%)</span>
-        </button>
-        <button id="btn-mode-tablet" class="control-btn" title="iPad Tablet Frame (768px)">
-          <span>💻 Tablet</span>
-        </button>
-        <button id="btn-mode-desktop" class="control-btn" title="Full Responsive Desktop">
-          <span>🖥️ Desktop</span>
-        </button>
-      </div>
-
-      <!-- Flow Shortcut Navigator -->
-      <select id="quick-flow-select" class="quick-flows-dropdown" title="Jump directly to specific UX flows">
-        <option value="customer_home">⚡ Jump to Flow: Customer Dashboard</option>
-        <option value="new_order">🛒 Flow: New Order (Step-by-Step)</option>
-        <option value="refill_flow">🔄 Flow: Refill Guarantee (Order #48285)</option>
-        <option value="wallet_funds">💰 Flow: Wallet & Add Funds (UPI/Cards)</option>
-        <option value="admin_dashboard">📊 Flow: Admin Dashboard (KPIs & Chart)</option>
-        <option value="provider_sync">📥 Flow: Provider Service Sync (Raw Catalog)</option>
-        <option value="multi_provider_mapping">❖ Flow: Multi-Provider Mapping (Failover)</option>
-        <option value="refills_queue">🛡️ Flow: Admin Refills Queue</option>
-      </select>
-
-      <!-- Currency Switcher -->
-      <button id="btn-currency-toggle" class="control-btn" style="background: #1C2035; border: 1px solid #2C3252;" title="Toggle between USD ($) and INR (₹)">
-        <span>💵 USD ($)</span>
-      </button>
-
-      <!-- Theme Switcher -->
-      <button id="btn-theme-toggle" class="control-btn" style="background: #1C2035; border: 1px solid #2C3252;" title="Toggle Light / Dark Mode">
-        <span>🌙 Dark Mode</span>
-      </button>
-
-      <!-- Reset Mock State -->
-      <button id="btn-reset-data" class="control-btn" style="background: #2D1B36; color: #F87171; border: 1px solid #4C264D;" title="Reset Mock Data">
-        <span>↺ Reset Data</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Main Canvas -->
-  <div class="simulator-canvas">
-    <div id="device-wrapper" class="device-wrapper mode-mobile">
-      <div class="device-speaker-notch"></div>
-      <div id="screen-container" class="device-screen">
-        <!-- Rendered dynamically by CustomerApp or AdminApp -->
-      </div>
+  <!-- Full Viewport Production Application Container -->
+  <div id="app-root">
+    <div id="screen-container" class="production-canvas">
+      <!-- Dynamically rendered by CustomerApp or AdminApp based on URL route -->
     </div>
   </div>
 
