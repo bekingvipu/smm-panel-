@@ -1,6 +1,6 @@
 window.SMM_MOCK = {
-  currency: 'USD', // 'USD' ($) or 'INR' (₹)
-  exchangeRate: 83.0, // 1 USD = 83 INR
+  currency: 'USD',
+  exchangeRate: 83.0,
   
   customer: {
     name: 'Alex Vance',
@@ -20,21 +20,21 @@ window.SMM_MOCK = {
     revenueTrend: 8.1,
     profit: 4200,
     profitTrend: 4.2,
-    providerBalance: 1100,
-    providerBalanceStatus: 'Low'
+    providerBalance: 0.00,
+    providerBalanceStatus: 'Live Connected'
   },
 
   providers: [
     {
       id: 'p1',
-      name: 'API1_GlobalSMM',
-      displayName: 'Main Provider API',
+      name: 'JustAnotherPanel',
+      displayName: 'JustAnotherPanel (JAP Wholesale)',
       status: 'active',
-      balance: 450.00,
-      activeServices: 1200,
-      lastSync: '2 mins ago',
-      apiUrl: 'https://api1.globalsmm.io/v2',
-      apiKeyMasked: 'sk_live_948f••••••••8492'
+      balance: 0.00,
+      activeServices: 5803,
+      lastSync: 'Live Connected',
+      apiUrl: 'https://justanotherpanel.com/api/v2',
+      apiKeyMasked: '30265a••••••••4a63'
     },
     {
       id: 'p2',
@@ -57,26 +57,15 @@ window.SMM_MOCK = {
       lastSync: '2 days ago',
       apiUrl: 'https://v1.legacysmm.com/api',
       apiKeyMasked: 'sk_live_884b••••••••1103'
-    },
-    {
-      id: 'p4',
-      name: 'Demo_Wholesale_SMM',
-      displayName: 'Demo Wholesale Provider',
-      status: 'active',
-      balance: 890.00,
-      activeServices: 680,
-      lastSync: '1 hour ago',
-      apiUrl: 'https://demo.smm-provider.com/v2',
-      apiKeyMasked: 'sk_demo_771c••••••••0042'
     }
   ],
 
   rawProviderServices: [
     {
-      id: '4092',
+      id: '10110',
       providerId: 'p1',
-      providerName: 'API1_GlobalSMM',
-      rawName: 'Instagram Followers [HQ] - Fast [50K]',
+      providerName: 'JustAnotherPanel (JAP)',
+      rawName: 'Instagram Followers [HQ] - Fast Delivery [50K]',
       category: 'Instagram Followers',
       platform: 'instagram',
       cost: 0.42,
@@ -86,13 +75,45 @@ window.SMM_MOCK = {
       refillSupport: true,
       refillPeriod: '30 Days',
       cancelSupport: true,
+      status: 'Synced'
+    },
+    {
+      id: '10115',
+      providerId: 'p1',
+      providerName: 'JustAnotherPanel (JAP)',
+      rawName: 'Instagram Likes [Instant & Real HQ Profiles]',
+      category: 'Instagram Likes',
+      platform: 'instagram',
+      cost: 0.12,
+      oldCost: null,
+      min: 50,
+      max: 100000,
+      refillSupport: true,
+      refillPeriod: '30 Days',
+      cancelSupport: true,
       status: 'Ready to Import'
     },
     {
-      id: '4093',
+      id: '10220',
       providerId: 'p1',
-      providerName: 'API1_GlobalSMM',
-      rawName: 'TikTok Views [Fast]',
+      providerName: 'JustAnotherPanel (JAP)',
+      rawName: 'YouTube Views [High Retention 4K Speed]',
+      category: 'YouTube Views',
+      platform: 'youtube',
+      cost: 1.40,
+      oldCost: null,
+      min: 500,
+      max: 500000,
+      refillSupport: true,
+      refillPeriod: '30 Days',
+      cancelSupport: true,
+      status: 'Synced'
+    },
+    {
+      id: '10330',
+      providerId: 'p1',
+      providerName: 'JustAnotherPanel (JAP)',
+      rawName: 'TikTok Views [Fast Instant Algorithm Boost]',
       category: 'TikTok Views',
       platform: 'tiktok',
       cost: 0.02,
@@ -102,12 +123,12 @@ window.SMM_MOCK = {
       refillSupport: false,
       refillPeriod: 'None',
       cancelSupport: false,
-      status: 'Unavailable Upstream'
+      status: 'Ready to Import'
     },
     {
       id: '5102',
       providerId: 'p1',
-      providerName: 'API1_GlobalSMM',
+      providerName: 'JustAnotherPanel (JAP)',
       rawName: 'YouTube Subscribers [Non-Drop Real HQ]',
       category: 'YouTube Subscribers',
       platform: 'youtube',
@@ -119,54 +140,6 @@ window.SMM_MOCK = {
       refillPeriod: '60 Days',
       cancelSupport: true,
       status: 'Review Pricing'
-    },
-    {
-      id: '102',
-      providerId: 'p1',
-      providerName: 'API1_GlobalSMM',
-      rawName: 'Twitter Likes [Real Users]',
-      category: 'Twitter Engagement',
-      platform: 'twitter',
-      cost: 0.85,
-      oldCost: null,
-      min: 10,
-      max: 10000,
-      refillSupport: true,
-      refillPeriod: '30 Days',
-      cancelSupport: true,
-      status: 'Synced'
-    },
-    {
-      id: '6011',
-      providerId: 'p4',
-      providerName: 'Demo_Wholesale_SMM',
-      rawName: 'Instagram Likes [Instant HQ High Speed]',
-      category: 'Instagram Likes',
-      platform: 'instagram',
-      cost: 0.25,
-      oldCost: null,
-      min: 50,
-      max: 100000,
-      refillSupport: true,
-      refillPeriod: '30 Days',
-      cancelSupport: true,
-      status: 'Ready to Import'
-    },
-    {
-      id: '7701',
-      providerId: 'p1',
-      providerName: 'API1_GlobalSMM',
-      rawName: 'YouTube Views [High Retention 4K Lifetime]',
-      category: 'YouTube Views',
-      platform: 'youtube',
-      cost: 1.80,
-      oldCost: null,
-      min: 500,
-      max: 500000,
-      refillSupport: true,
-      refillPeriod: '30 Days',
-      cancelSupport: true,
-      status: 'Synced'
     }
   ],
 
@@ -176,7 +149,7 @@ window.SMM_MOCK = {
       customerName: 'Instagram Followers [Real & Active HQ]',
       category: 'Instagram',
       platform: 'instagram',
-      pricePer1k: 0.95, // selling price ($0.95 / ₹79.00)
+      pricePer1k: 0.95,
       min: 100,
       max: 50000,
       deliverySpeed: '10K - 20K / Day',
@@ -185,12 +158,11 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'Guaranteed high-quality real profiles with active posts and profile pictures. Drop rate below 2%. Protected with 30-Day Refill Guarantee.',
       active: true,
-      // Multi-Provider Mappings for 1 Customer Service!
       providerMappings: [
         {
           providerId: 'p1',
-          providerName: 'API1_GlobalSMM',
-          serviceId: '4092',
+          providerName: 'JustAnotherPanel (JAP)',
+          serviceId: '10110',
           providerCost: 0.42,
           markupPercent: 126,
           isPrimary: true,
@@ -204,15 +176,6 @@ window.SMM_MOCK = {
           markupPercent: 106,
           isPrimary: false,
           status: 'Standby Failover 1'
-        },
-        {
-          providerId: 'p4',
-          providerName: 'Demo Provider',
-          serviceId: '8110',
-          providerCost: 0.50,
-          markupPercent: 90,
-          isPrimary: false,
-          status: 'Standby Failover 2'
         }
       ]
     },
@@ -233,21 +196,12 @@ window.SMM_MOCK = {
       providerMappings: [
         {
           providerId: 'p1',
-          providerName: 'API1_GlobalSMM',
-          serviceId: '7701',
-          providerCost: 1.80,
-          markupPercent: 39,
+          providerName: 'JustAnotherPanel (JAP)',
+          serviceId: '10220',
+          providerCost: 1.40,
+          markupPercent: 78,
           isPrimary: true,
           status: 'Active'
-        },
-        {
-          providerId: 'p2',
-          providerName: 'Backup Provider',
-          serviceId: '3104',
-          providerCost: 1.95,
-          markupPercent: 28,
-          isPrimary: false,
-          status: 'Standby Failover 1'
         }
       ]
     },
@@ -268,7 +222,7 @@ window.SMM_MOCK = {
       providerMappings: [
         {
           providerId: 'p1',
-          providerName: 'API1_GlobalSMM',
+          providerName: 'JustAnotherPanel (JAP)',
           serviceId: '9102',
           providerCost: 1.10,
           markupPercent: 100,
@@ -282,48 +236,22 @@ window.SMM_MOCK = {
       customerName: 'Instagram Likes [Instant & High Quality]',
       category: 'Instagram',
       platform: 'instagram',
-      pricePer1k: 0.55,
+      pricePer1k: 0.45,
       min: 50,
       max: 100000,
       deliverySpeed: '30K / Day',
       startTime: 'Instant',
-      refillSupported: false,
-      refillPeriod: 'None',
+      refillSupported: true,
+      refillPeriod: '30 Days',
       description: 'Super fast delivery likes. Real looking profiles. High stability.',
       active: true,
       providerMappings: [
         {
-          providerId: 'p4',
-          providerName: 'Demo Provider',
-          serviceId: '6011',
-          providerCost: 0.25,
-          markupPercent: 120,
-          isPrimary: true,
-          status: 'Active'
-        }
-      ]
-    },
-    {
-      id: 'cs-5',
-      customerName: 'Twitter/X Likes [Real Global Accounts]',
-      category: 'Twitter',
-      platform: 'twitter',
-      pricePer1k: 1.80,
-      min: 50,
-      max: 10000,
-      deliverySpeed: '5K / Day',
-      startTime: '15 - 30 Minutes',
-      refillSupported: true,
-      refillPeriod: '30 Days',
-      description: 'Real accounts with profile photos and bio. Good for engagement verification.',
-      active: true,
-      providerMappings: [
-        {
           providerId: 'p1',
-          providerName: 'API1_GlobalSMM',
-          serviceId: '102',
-          providerCost: 0.85,
-          markupPercent: 112,
+          providerName: 'JustAnotherPanel (JAP)',
+          serviceId: '10115',
+          providerCost: 0.12,
+          markupPercent: 275,
           isPrimary: true,
           status: 'Active'
         }
@@ -341,7 +269,6 @@ window.SMM_MOCK = {
       quantity: 1000,
       amount: 5.00,
       status: 'Processing',
-      statusType: 'processing',
       date: 'Today, 20:50',
       startCount: 12400,
       currentCount: 12400,
@@ -358,7 +285,6 @@ window.SMM_MOCK = {
       quantity: 5000,
       amount: 12.50,
       status: 'In Progress',
-      statusType: 'in_progress',
       date: 'Today, 18:30',
       startCount: 850,
       currentCount: 3200,
@@ -375,51 +301,14 @@ window.SMM_MOCK = {
       quantity: 1000,
       amount: 5.00,
       status: 'Completed',
-      statusType: 'completed',
       date: '27 Aug 2026',
       startCount: 1020,
       currentCount: 1850,
       remains: 0,
-      refillEligible: true, // Eligible for Refill!
+      refillEligible: true,
       refillDaysLeft: 28,
       refillStatus: 'Available',
       refillHistory: []
-    },
-    {
-      id: '48270',
-      serviceId: 'cs-3',
-      serviceName: 'TikTok Likes [Fast Delivery & Non-Drop]',
-      platform: 'tiktok',
-      target: 'https://tiktok.com/@creative_art/video/719',
-      quantity: 1000,
-      amount: 2.20,
-      status: 'Completed',
-      statusType: 'completed',
-      date: '22 Aug 2026',
-      startCount: 340,
-      currentCount: 1340,
-      remains: 0,
-      refillEligible: true,
-      refillDaysLeft: 8,
-      refillStatus: 'Available',
-      refillHistory: []
-    },
-    {
-      id: '48255',
-      serviceId: 'cs-4',
-      serviceName: 'Instagram Likes [Instant & High Quality]',
-      platform: 'instagram',
-      target: 'https://instagram.com/p/C-xyz910',
-      quantity: 2000,
-      amount: 1.10,
-      status: 'Completed',
-      statusType: 'completed',
-      date: '20 Aug 2026',
-      startCount: 20,
-      currentCount: 2020,
-      remains: 0,
-      refillEligible: false, // Refill NOT supported for this service
-      refillReason: 'Service does not have refill guarantee'
     }
   ],
 
@@ -435,7 +324,7 @@ window.SMM_MOCK = {
       dropCount: 170,
       requestedAt: '10 mins ago',
       status: 'Pending',
-      provider: 'API1_GlobalSMM'
+      provider: 'JustAnotherPanel (JAP)'
     }
   ],
 
@@ -457,24 +346,6 @@ window.SMM_MOCK = {
       balanceAfter: 140.50,
       status: 'Success',
       date: '29 Aug 2026, 20:50'
-    },
-    {
-      id: 'TXN-903',
-      type: 'Order Deduction',
-      description: 'Payment for Order #48290',
-      amount: -12.50,
-      balanceAfter: 145.50,
-      status: 'Success',
-      date: '29 Aug 2026, 18:30'
-    },
-    {
-      id: 'TXN-904',
-      type: 'Refund',
-      description: 'Refund for Order #44975 (Canceled Upstream)',
-      amount: 45.00,
-      balanceAfter: 158.00,
-      status: 'Success',
-      date: '29 Aug 2026, 17:15'
     }
   ],
 
@@ -495,7 +366,7 @@ window.SMM_MOCK = {
         {
           id: 'm2',
           sender: 'admin',
-          text: 'Hello Alex! We see your refill request in our queue. The upstream provider is currently dispatching the top-up. You will be back to 2,020+ within a few hours.',
+          text: 'Hello Alex! We see your refill request in our queue. The upstream JAP provider is currently dispatching the top-up.',
           time: '29 Aug, 20:45'
         }
       ]
@@ -520,23 +391,6 @@ window.SMM_MOCK = {
       badge: 'Pending',
       time: '15m ago',
       icon: '🔄'
-    },
-    {
-      id: 'act-3',
-      type: 'failed',
-      title: 'Order Failed #44975',
-      sub: 'YT Subs - Provider API Error',
-      amount: '$45.00',
-      time: '1h ago',
-      icon: '⏱️'
-    },
-    {
-      id: 'act-4',
-      type: 'signup',
-      title: 'New User Signup',
-      sub: 'agency_pro@example.com',
-      time: '2h ago',
-      icon: '👤'
     }
   ]
 };
