@@ -1,4 +1,6 @@
 const CustomerApp = {
+  currentCategory: 'all',
+
   render(container) {
     const store = window.store;
     const tab = store.customerTab;
@@ -42,7 +44,6 @@ const CustomerApp = {
         </div>
 
         <div class="desktop-nav-actions">
-          <!-- Balance Pill -->
           <div class="nav-balance-pill">
             <span style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Balance:</span>
             <span class="nav-balance-amount">${store.formatMoney(store.data.customer.balance)}</span>
@@ -52,23 +53,19 @@ const CustomerApp = {
             ＋ Add Funds
           </button>
 
-          <!-- Currency Toggle -->
           <button class="btn btn-sm btn-secondary" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
             ${store.currency === 'USD' ? '💵 USD' : '₹ INR'}
           </button>
 
-          <!-- Theme Toggle -->
           <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')" title="Toggle Theme">
             <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
           </button>
 
-          <!-- Notification Bell -->
           <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" title="Notifications">
             <span>🔔</span>
             <span class="notification-dot"></span>
           </button>
 
-          <!-- Profile Avatar -->
           <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="Account Profile" />
         </div>
       </nav>
@@ -93,12 +90,12 @@ const CustomerApp = {
         </div>
       </header>
 
-      <!-- Responsive Content Container (Centers cleanly on desktop, 100% on mobile) -->
+      <!-- Content Container -->
       <div class="customer-desktop-container">
         ${contentHtml}
       </div>
 
-      <!-- Fixed Mobile Bottom Navigation Bar (Screens < 768px) -->
+      <!-- Permanently Fixed Mobile Bottom Navigation Bar (Screens < 768px) -->
       <nav class="customer-bottom-nav">
         <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
           <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}">
@@ -205,12 +202,13 @@ const CustomerApp = {
     `;
   },
 
-  // Helper for Order Card
   renderOrderCard(order, store) {
     let icon = '👍';
     if (order.platform === 'youtube') icon = '👁️';
     if (order.platform === 'tiktok') icon = '❤️';
     if (order.platform === 'twitter') icon = '𝕏';
+    if (order.platform === 'facebook') icon = '👥';
+    if (order.platform === 'telegram') icon = '✈️';
 
     let badgeClass = 'badge-primary';
     if (order.status === 'Processing') badgeClass = 'badge-success';
@@ -244,10 +242,16 @@ const CustomerApp = {
     `;
   },
 
-  // 2. NEW ORDER TAB
+  // 2. NEW ORDER TAB WITH WORKING CATEGORY FILTER
   renderNewOrderTab(store) {
-    const services = store.data.customerServices;
-    const initialService = services[0] || {};
+    const allServices = store.data.customerServices;
+    const cat = this.currentCategory || 'all';
+
+    const filteredServices = cat === 'all' 
+      ? allServices 
+      : allServices.filter(s => s.platform.toLowerCase() === cat.toLowerCase());
+
+    const activeService = filteredServices[0] || allServices[0] || {};
 
     return `
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
@@ -256,23 +260,25 @@ const CustomerApp = {
           <p style="font-size: 14px;">Select an SMM service and enter your target link.</p>
         </div>
 
-        <!-- Step 1: Category Filter Chips -->
+        <!-- Step 1: Category Filter Chips (Working) -->
         <div class="form-group" style="margin-bottom: 4px;">
-          <label class="form-label">Category</label>
+          <label class="form-label">Category / Platform</label>
           <div class="platform-chips-scroll" id="new-order-category-chips">
-            <button class="platform-chip active" data-cat="all">All Services</button>
-            <button class="platform-chip" data-cat="instagram">Instagram</button>
-            <button class="platform-chip" data-cat="youtube">YouTube</button>
-            <button class="platform-chip" data-cat="tiktok">TikTok</button>
-            <button class="platform-chip" data-cat="twitter">Twitter / X</button>
+            <button class="platform-chip ${cat === 'all' ? 'active' : ''}" onclick="CustomerApp.filterCategory('all')">All Services</button>
+            <button class="platform-chip ${cat === 'instagram' ? 'active' : ''}" onclick="CustomerApp.filterCategory('instagram')">Instagram</button>
+            <button class="platform-chip ${cat === 'facebook' ? 'active' : ''}" onclick="CustomerApp.filterCategory('facebook')">Facebook</button>
+            <button class="platform-chip ${cat === 'youtube' ? 'active' : ''}" onclick="CustomerApp.filterCategory('youtube')">YouTube</button>
+            <button class="platform-chip ${cat === 'tiktok' ? 'active' : ''}" onclick="CustomerApp.filterCategory('tiktok')">TikTok</button>
+            <button class="platform-chip ${cat === 'telegram' ? 'active' : ''}" onclick="CustomerApp.filterCategory('telegram')">Telegram</button>
+            <button class="platform-chip ${cat === 'twitter' ? 'active' : ''}" onclick="CustomerApp.filterCategory('twitter')">Twitter / X</button>
           </div>
         </div>
 
         <!-- Step 2: Service Selector -->
         <div class="form-group">
-          <label class="form-label">Service</label>
+          <label class="form-label">Service (${filteredServices.length} available)</label>
           <select class="form-select" id="new-order-service-select">
-            ${services.map(s => `
+            ${filteredServices.map(s => `
               <option value="${s.id}" data-price="${s.pricePer1k}" data-min="${s.min}" data-max="${s.max}">
                 ${s.customerName} — ${store.formatMoney(s.pricePer1k)}/1K
               </option>
@@ -284,29 +290,29 @@ const CustomerApp = {
         <div class="service-details-card" id="service-details-box">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <strong style="color: var(--primary); font-size: 14px;">Service Specification</strong>
-            <span class="badge ${initialService.refillSupported ? 'badge-success' : 'badge-neutral'}">
-              ${initialService.refillSupported ? `🛡️ ${initialService.refillPeriod} Refill` : 'No Refill'}
+            <span class="badge ${activeService.refillSupported ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge">
+              ${activeService.refillSupported ? `🛡️ ${activeService.refillPeriod} Refill` : 'No Refill'}
             </span>
           </div>
           <p id="service-detail-desc" style="font-size: 13px; color: var(--text-secondary);">
-            ${initialService.description || ''}
+            ${activeService.description || ''}
           </p>
           <div class="service-meta-grid" style="margin-top: 8px;">
             <div class="meta-item">
               <span class="meta-item-label">Min / Max Limit</span>
-              <span class="meta-item-val" id="service-detail-limits">${initialService.min ? initialService.min.toLocaleString() : 100} / ${initialService.max ? initialService.max.toLocaleString() : 50000}</span>
+              <span class="meta-item-val" id="service-detail-limits">${activeService.min ? activeService.min.toLocaleString() : 50} / ${activeService.max ? activeService.max.toLocaleString() : 200000}</span>
             </div>
             <div class="meta-item">
               <span class="meta-item-label">Avg Speed</span>
-              <span class="meta-item-val" id="service-detail-speed">${initialService.deliverySpeed || 'Instant'}</span>
+              <span class="meta-item-val" id="service-detail-speed">${activeService.deliverySpeed || 'Instant'}</span>
             </div>
             <div class="meta-item">
               <span class="meta-item-label">Start Time</span>
-              <span class="meta-item-val" id="service-detail-start">${initialService.startTime || '0 - 15 Mins'}</span>
+              <span class="meta-item-val" id="service-detail-start">${activeService.startTime || '0 - 15 Mins'}</span>
             </div>
             <div class="meta-item">
               <span class="meta-item-label">Refill Guarantee</span>
-              <span class="meta-item-val" id="service-detail-refill">${initialService.refillSupported ? initialService.refillPeriod : 'None'}</span>
+              <span class="meta-item-val" id="service-detail-refill">${activeService.refillSupported ? activeService.refillPeriod : 'None'}</span>
             </div>
           </div>
         </div>
@@ -329,9 +335,9 @@ const CustomerApp = {
         <div class="form-group">
           <label class="form-label">
             <span>Quantity</span>
-            <span class="form-label-hint" id="qty-limits-hint">Min: 100 | Max: 50,000</span>
+            <span class="form-label-hint" id="qty-limits-hint">Min: ${activeService.min || 50} | Max: ${(activeService.max || 200000).toLocaleString()}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="100" max="50000" step="100" />
+          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="${activeService.min || 50}" max="${activeService.max || 200000}" step="100" />
           <div class="qty-preset-chips">
             <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(500)">+500</button>
             <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
@@ -344,7 +350,7 @@ const CustomerApp = {
         <div class="calculation-summary-card">
           <div class="calc-row">
             <span>Unit Rate (per 1,000):</span>
-            <strong id="calc-rate-label">${store.formatMoney(initialService.pricePer1k || 0.95)}</strong>
+            <strong id="calc-rate-label">${store.formatMoney(activeService.pricePer1k || 0.71)}</strong>
           </div>
           <div class="calc-row">
             <span>Current Wallet Balance:</span>
@@ -352,7 +358,7 @@ const CustomerApp = {
           </div>
           <div class="calc-row total-row">
             <span>Total Charge:</span>
-            <span id="calc-total-label">${store.formatMoney(((initialService.pricePer1k || 0.95) / 1000) * 1000)}</span>
+            <span id="calc-total-label">${store.formatMoney(((activeService.pricePer1k || 0.71) / 1000) * 1000)}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 4px;">
             <span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>
@@ -367,6 +373,12 @@ const CustomerApp = {
     `;
   },
 
+  filterCategory(cat) {
+    this.currentCategory = cat;
+    const screenContainer = document.getElementById('screen-container');
+    this.render(screenContainer);
+  },
+
   // 3. ORDERS TAB
   renderOrdersTab(store) {
     const orders = store.data.orders;
@@ -379,14 +391,6 @@ const CustomerApp = {
             <p style="font-size: 13.5px;">Track delivery progress and refill warranties.</p>
           </div>
           <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px;">${orders.length} Total Orders</span>
-        </div>
-
-        <!-- Filter Tabs -->
-        <div class="platform-chips-scroll" id="orders-filter-chips">
-          <button class="platform-chip active" data-filter="all">All (${orders.length})</button>
-          <button class="platform-chip" data-filter="in_progress">In Progress</button>
-          <button class="platform-chip" data-filter="completed">Completed</button>
-          <button class="platform-chip" data-filter="processing">Processing</button>
         </div>
 
         <!-- Orders List -->
@@ -471,7 +475,6 @@ const CustomerApp = {
 
     return `
       <div style="display: flex; flex-direction: column; gap: 24px; max-width: 800px; margin: 0 auto; width: 100%;">
-        <!-- Wallet Hero Card -->
         <div class="balance-hero-card">
           <div class="balance-hero-header">
             <div>
@@ -485,24 +488,21 @@ const CustomerApp = {
           </p>
         </div>
 
-        <!-- Add Funds Form -->
         <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
           <h3 style="font-size: 18px; font-weight: 800;">Add Funds to Wallet</h3>
 
-          <!-- Preset Amounts -->
           <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(10)">$10</button>
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(25)">$25</button>
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(50)">$50</button>
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(100)">$100</button>
+            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(100)">₹100</button>
+            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(250)">₹250</button>
+            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(500)">₹500</button>
+            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(1000)">₹1,000</button>
           </div>
 
           <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Deposit Amount (USD)</label>
-            <input type="number" class="form-input" id="add-funds-amount-input" value="25" min="5" max="5000" />
+            <label class="form-label">Deposit Amount (₹ INR)</label>
+            <input type="number" class="form-input" id="add-funds-amount-input" value="250" min="50" max="50000" />
           </div>
 
-          <!-- Payment Method -->
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label">Payment Method</label>
             <select class="form-select" id="add-funds-method-select">
@@ -518,7 +518,6 @@ const CustomerApp = {
           </button>
         </div>
 
-        <!-- Transaction History -->
         <div>
           <div class="section-header-row" style="margin-bottom: 14px;">
             <div class="section-title">Transaction History</div>
@@ -586,7 +585,6 @@ const CustomerApp = {
     `;
   },
 
-  // Dynamic Event Handlers
   bindEvents() {
     const serviceSelect = document.getElementById('new-order-service-select');
     const qtyInput = document.getElementById('new-order-quantity');
@@ -603,6 +601,13 @@ const CustomerApp = {
         document.getElementById('service-detail-speed').textContent = service.deliverySpeed;
         document.getElementById('service-detail-start').textContent = service.startTime;
         document.getElementById('service-detail-refill').textContent = service.refillSupported ? service.refillPeriod : 'None';
+        
+        const badge = document.getElementById('service-detail-refill-badge');
+        if (badge) {
+          badge.className = `badge ${service.refillSupported ? 'badge-success' : 'badge-neutral'}`;
+          badge.textContent = service.refillSupported ? `🛡️ ${service.refillPeriod} Refill` : 'No Refill';
+        }
+
         document.getElementById('calc-rate-label').textContent = store.formatMoney(service.pricePer1k);
 
         const qty = Number(qtyInput.value) || 0;
@@ -645,7 +650,9 @@ const CustomerApp = {
 
   handlePlaceOrder() {
     const store = window.store;
-    const serviceId = document.getElementById('new-order-service-select').value;
+    const serviceSelect = document.getElementById('new-order-service-select');
+    if (!serviceSelect) return;
+    const serviceId = serviceSelect.value;
     const target = document.getElementById('new-order-target').value;
     const quantity = Number(document.getElementById('new-order-quantity').value);
 
@@ -669,7 +676,9 @@ const CustomerApp = {
       window.store.showToast('Please enter a valid amount', 'error');
       return;
     }
-    window.store.addFunds(amount, method);
+    // Convert INR to USD base
+    const usdAmount = amount / window.store.data.exchangeRate;
+    window.store.addFunds(usdAmount, method);
   },
 
   promptRefill(orderId) {
