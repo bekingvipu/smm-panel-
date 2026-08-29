@@ -1,6 +1,7 @@
 const CustomerApp = {
   currentPlatform: 'instagram',
-  currentSubcategory: 'Instagram Followers [Guaranteed / Refill 30D - 365D]',
+  currentCategory: 'Instagram Followers [Guaranteed]',
+  searchQuery: '',
 
   render(container) {
     const store = window.store;
@@ -8,8 +9,8 @@ const CustomerApp = {
     const isLoggedIn = store.data.isLoggedIn;
 
     let contentHtml = '';
-    if (tab === 'home') contentHtml = this.renderHomeTab(store);
-    else if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
+    if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
+    else if (tab === 'home') contentHtml = this.renderHomeTab(store);
     else if (tab === 'orders') contentHtml = this.renderOrdersTab(store);
     else if (tab === 'wallet') contentHtml = this.renderWalletTab(store);
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
@@ -77,7 +78,7 @@ const CustomerApp = {
 
       <!-- Mobile Production Header (Screens < 768px) -->
       <header class="customer-header">
-        <div class="customer-brand-group">
+        <div class="customer-brand-group" onclick="store.setCustomerTab('new_order')">
           ${isLoggedIn ? `
             <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="View Profile" />
           ` : `
@@ -108,7 +109,7 @@ const CustomerApp = {
       <!-- Public Catalog Banner for Guests -->
       ${!isLoggedIn ? `
         <div style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1)); border-bottom: 1px solid var(--border-color); padding: 10px 16px; text-align: center; font-size: 13px; color: var(--text-main);">
-          <span>👀 <strong>Public Catalog Active:</strong> Browse all live packages and prices freely. Login required only when placing an order.</span>
+          <span>👀 <strong>Public Catalog Active (5,803 Services):</strong> Browse all live packages and prices freely. Login required only when placing an order.</span>
         </div>
       ` : ''}
 
@@ -120,37 +121,23 @@ const CustomerApp = {
       <!-- Permanently Fixed Mobile Bottom Navigation Bar (Screens < 768px) -->
       <nav class="customer-bottom-nav">
         <div class="bottom-nav-item ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
-          <div class="nav-icon ${tab === 'new_order' ? 'nav-icon-bg' : ''}">
-            <span>🛒</span>
-          </div>
+          <div class="nav-icon ${tab === 'new_order' ? 'nav-icon-bg' : ''}"><span>🛒</span></div>
           <span>New Order</span>
         </div>
-
         <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
-          <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}">
-            <span>⊞</span>
-          </div>
+          <div class="nav-icon ${tab === 'home' ? 'nav-icon-bg' : ''}"><span>⊞</span></div>
           <span>Dashboard</span>
         </div>
-
         <div class="bottom-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
-          <div class="nav-icon ${tab === 'orders' ? 'nav-icon-bg' : ''}">
-            <span>⏱️</span>
-          </div>
+          <div class="nav-icon ${tab === 'orders' ? 'nav-icon-bg' : ''}"><span>⏱️</span></div>
           <span>Orders</span>
         </div>
-
         <div class="bottom-nav-item ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
-          <div class="nav-icon ${tab === 'wallet' ? 'nav-icon-bg' : ''}">
-            <span>💳</span>
-          </div>
+          <div class="nav-icon ${tab === 'wallet' ? 'nav-icon-bg' : ''}"><span>💳</span></div>
           <span>Wallet</span>
         </div>
-
         <div class="bottom-nav-item ${tab === 'support' ? 'active' : ''}" onclick="store.setCustomerTab('support')">
-          <div class="nav-icon ${tab === 'support' ? 'nav-icon-bg' : ''}">
-            <span>💬</span>
-          </div>
+          <div class="nav-icon ${tab === 'support' ? 'nav-icon-bg' : ''}"><span>💬</span></div>
           <span>Support</span>
         </div>
       </nav>
@@ -159,202 +146,135 @@ const CustomerApp = {
     this.bindEvents();
   },
 
-  // 1. HOME TAB
-  renderHomeTab(store) {
-    const recentOrders = store.data.orders.slice(0, 5);
-
-    return `
-      <!-- Balance Hero Card -->
-      <div class="balance-hero-card">
-        <div class="balance-hero-header">
-          <div>
-            <div class="balance-label">${store.data.isLoggedIn ? 'Current Wallet Balance' : 'Guest Visitor'}</div>
-            <div class="balance-amount">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Browse Mode'}</div>
-          </div>
-          <div class="balance-icon-pill">
-            <span>💳</span>
-          </div>
-        </div>
-        ${store.data.isLoggedIn ? `
-          <button class="btn btn-primary" onclick="store.setCustomerTab('wallet')">
-            <span>＋ Add Funds</span>
-          </button>
-        ` : `
-          <button class="btn btn-primary" onclick="CustomerApp.openAuthModal('login')">
-            <span>🔑 Sign In / Register Account</span>
-          </button>
-        `}
-      </div>
-
-      <!-- Quick Actions Grid -->
-      <div class="quick-actions-grid">
-        <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
-          <div class="action-icon-circle"><span>🛒</span></div>
-          <div class="action-card-title">New Order</div>
-        </div>
-
-        <div class="quick-action-card" onclick="CustomerApp.quickRefillFilter()">
-          <div class="action-icon-circle"><span>🔄</span></div>
-          <div class="action-card-title">Refill Request</div>
-        </div>
-
-        <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
-          <div class="action-icon-circle" style="background: #10B981;"><span>💰</span></div>
-          <div class="action-card-title">Add Funds</div>
-        </div>
-
-        <div class="quick-action-card" onclick="store.setCustomerTab('support')">
-          <div class="action-icon-circle" style="background: #3B82F6;"><span>💬</span></div>
-          <div class="action-card-title">Support Desk</div>
-        </div>
-      </div>
-
-      <!-- Recent Orders Section -->
-      <div class="section-header-row">
-        <div class="section-title">Recent Orders</div>
-        <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
-      </div>
-
-      <div class="mobile-orders-list">
-        ${recentOrders.map(order => this.renderOrderCard(order, store)).join('')}
-      </div>
-    `;
-  },
-
-  renderOrderCard(order, store) {
-    let icon = '👍';
-    if (order.platform === 'youtube') icon = '👁️';
-    if (order.platform === 'tiktok') icon = '❤️';
-    if (order.platform === 'twitter') icon = '𝕏';
-    if (order.platform === 'facebook') icon = '👥';
-    if (order.platform === 'telegram') icon = '✈️';
-
-    let badgeClass = 'badge-primary';
-    if (order.status === 'Processing') badgeClass = 'badge-success';
-    if (order.status === 'In Progress') badgeClass = 'badge-info';
-    if (order.status === 'Completed') badgeClass = 'badge-neutral';
-
-    return `
-      <div class="mobile-order-card" onclick="CustomerApp.openOrderDetails('${order.id}')">
-        <div class="order-card-top">
-          <div class="order-platform-icon">${icon}</div>
-          <div class="order-card-info">
-            <div class="order-service-title">${order.serviceName}</div>
-            <div class="order-id-sub">ID: #${order.id}</div>
-          </div>
-          <div class="order-card-price">${store.formatMoney(order.amount)}</div>
-        </div>
-
-        <div class="order-card-bottom">
-          <span class="badge ${badgeClass}">
-            <span class="badge-dot"></span>
-            ${order.status}
-          </span>
-          <span class="order-qty-label">Qty: ${Number(order.quantity).toLocaleString()}</span>
-        </div>
-      </div>
-    `;
-  },
-
-  // 2. NEW ORDER TAB WITH 2-LEVEL CASCADING DROPDOWNS (JAP STYLE)
+  // 2-LEVEL CASCADING DROPDOWNS OVER ALL 5,803 SERVICES
   renderNewOrderTab(store) {
-    const allServices = store.data.customerServices;
+    const rawServices = window.JAP_SERVICES || [];
     const plat = this.currentPlatform || 'instagram';
+    const query = (this.searchQuery || '').trim().toLowerCase();
 
-    // Step A: Filter by Platform
-    const platformServices = plat === 'all' 
-      ? allServices 
-      : allServices.filter(s => s.platform.toLowerCase() === plat.toLowerCase());
-
-    // Step B: Get unique subcategories under this platform
-    const subcategories = [...new Set(platformServices.map(s => s.subcategory))];
-    
-    if (!subcategories.includes(this.currentSubcategory) && subcategories.length > 0) {
-      this.currentSubcategory = subcategories[0];
+    // 1. Filter services by platform or search query
+    let filteredServices = rawServices;
+    if (query) {
+      filteredServices = rawServices.filter(s => 
+        String(s.id).includes(query) || 
+        s.name.toLowerCase().includes(query) ||
+        s.category.toLowerCase().includes(query)
+      );
+    } else if (plat !== 'all') {
+      filteredServices = rawServices.filter(s => s.platform === plat);
     }
 
-    // Step C: Filter packages under the active subcategory
-    const activePackages = platformServices.filter(s => s.subcategory === this.currentSubcategory);
-    const activeService = activePackages[0] || platformServices[0] || allServices[0] || {};
+    // 2. Get unique categories
+    const categories = [...new Set(filteredServices.map(s => s.category))];
+    if (!categories.includes(this.currentCategory) && categories.length > 0) {
+      this.currentCategory = categories[0];
+    }
+
+    // 3. Get packages under active category
+    let activePackages = filteredServices.filter(s => s.category === this.currentCategory);
+    if (activePackages.length === 0 && filteredServices.length > 0) {
+      activePackages = filteredServices;
+    }
+
+    const activeService = activePackages[0] || {};
+    const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
 
     return `
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
-        <div>
-          <h2 style="font-size: 24px; font-weight: 800;">Place New Order</h2>
-          <p style="font-size: 14px;">Select platform category, package tier, and enter your target link.</p>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
+          <div>
+            <h2 style="font-size: 24px; font-weight: 800;">Place New Order</h2>
+            <p style="font-size: 14px;">Instant automated delivery across 5,803 live services.</p>
+          </div>
+          <span class="badge badge-primary" style="font-size: 13px; padding: 6px 12px;">
+            5,803 Services Active
+          </span>
         </div>
 
-        <!-- Platform Tabs -->
+        <!-- Live Instant Search Box -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <div style="position: relative;">
+            <input type="text" class="form-input" id="service-search-input" placeholder="🔍 Search service name, ID (e.g. 10349), or keyword..." value="${this.searchQuery}" style="padding-left: 38px; min-height: 42px;" oninput="CustomerApp.handleSearch(this.value)" />
+            <span style="position: absolute; left: 12px; top: 11px; font-size: 16px; color: var(--text-muted);">⚡</span>
+          </div>
+        </div>
+
+        <!-- Platform Filter Tabs -->
         <div class="form-group" style="margin-bottom: 4px;">
           <label class="form-label">Platform</label>
           <div class="platform-chips-scroll" id="new-order-platform-chips">
-            <button class="platform-chip ${plat === 'all' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('all')">All</button>
+            <button class="platform-chip ${plat === 'all' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('all')">All (5,803)</button>
             <button class="platform-chip ${plat === 'instagram' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('instagram')">Instagram</button>
-            <button class="platform-chip ${plat === 'facebook' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('facebook')">Facebook</button>
-            <button class="platform-chip ${plat === 'youtube' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('youtube')">YouTube</button>
             <button class="platform-chip ${plat === 'tiktok' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('tiktok')">TikTok</button>
+            <button class="platform-chip ${plat === 'youtube' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('youtube')">YouTube</button>
+            <button class="platform-chip ${plat === 'facebook' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('facebook')">Facebook</button>
             <button class="platform-chip ${plat === 'telegram' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('telegram')">Telegram</button>
             <button class="platform-chip ${plat === 'twitter' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('twitter')">Twitter / X</button>
+            <button class="platform-chip ${plat === 'spotify' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('spotify')">Spotify</button>
+            <button class="platform-chip ${plat === 'other' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('other')">Other Platforms</button>
           </div>
         </div>
 
-        <!-- 1st Box: Sub-Category Dropdown (e.g. Guaranteed Followers, Likes, Reels) -->
+        <!-- 1st Box: Category Dropdown (JAP 242 Categories) -->
         <div class="form-group">
           <label class="form-label">
-            <span>1. Sub-Category</span>
-            <span class="form-label-hint">${subcategories.length} Categories available</span>
+            <span>1. Select Category</span>
+            <span class="form-label-hint">${categories.length} Categories available</span>
           </label>
-          <select class="form-select" id="new-order-category-select" onchange="CustomerApp.handleSubcategoryChange(this.value)">
-            ${subcategories.map(sub => `
-              <option value="${sub}" ${sub === this.currentSubcategory ? 'selected' : ''}>
-                ${sub}
+          <select class="form-select" id="new-order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)">
+            ${categories.map(c => `
+              <option value="${c}" ${c === this.currentCategory ? 'selected' : ''}>
+                ${c}
               </option>
             `).join('')}
           </select>
         </div>
 
-        <!-- 2nd Box: Specific Service Package (Tiered Rates e.g. ₹25, ₹50, ₹90 VIP) -->
+        <!-- 2nd Box: Service Package & Rates Dropdown -->
         <div class="form-group">
           <label class="form-label">
-            <span>2. Service Package & Rates</span>
+            <span>2. Select Service Package (with Selling Rates)</span>
             <span class="form-label-hint">${activePackages.length} Packages</span>
           </label>
           <select class="form-select" id="new-order-service-select">
-            ${activePackages.map(s => `
-              <option value="${s.id}" data-price="${s.pricePer1k}" data-min="${s.min}" data-max="${s.max}">
-                ${s.customerName} — ${store.formatMoney(s.pricePer1k)}/1K
-              </option>
-            `).join('')}
+            ${activePackages.map(s => {
+              const sp = store.getSellingPrice(s.cost);
+              return `
+                <option value="${s.id}" data-cost="${s.cost}" data-min="${s.min}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}">
+                  #${s.id} - ${s.name} — ${store.formatMoney(sp)}/1K
+                </option>
+              `;
+            }).join('')}
           </select>
         </div>
 
-        <!-- Service Specification Details Box -->
+        <!-- Service Specification Card -->
         <div class="service-details-card" id="service-details-box">
           <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: var(--primary); font-size: 14px;">Package Specification</strong>
-            <span class="badge ${activeService.refillSupported ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge">
-              ${activeService.refillSupported ? `🛡️ ${activeService.refillPeriod} Refill Guarantee` : 'No Refill Warranty'}
+            <strong style="color: var(--primary); font-size: 14px;">Service Details</strong>
+            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge">
+              ${activeService.refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty'}
             </span>
           </div>
-          <p id="service-detail-desc" style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            ${activeService.description || ''}
-          </p>
-          <div class="service-meta-grid" style="margin-top: 8px;">
+          <div id="service-detail-name" style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin-top: 6px;">
+            ${activeService.name || ''}
+          </div>
+          <div class="service-meta-grid" style="margin-top: 10px;">
             <div class="meta-item">
-              <span class="meta-item-label">Min / Max Limit</span>
-              <span class="meta-item-val" id="service-detail-limits">${activeService.min ? activeService.min.toLocaleString() : 50} / ${activeService.max ? activeService.max.toLocaleString() : 200000}</span>
+              <span class="meta-item-label">Min Limit</span>
+              <span class="meta-item-val" id="service-detail-min">${(activeService.min || 10).toLocaleString()}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-item-label">Avg Speed</span>
-              <span class="meta-item-val" id="service-detail-speed">${activeService.deliverySpeed || 'Instant'}</span>
+              <span class="meta-item-label">Max Limit</span>
+              <span class="meta-item-val" id="service-detail-max">${(activeService.max || 100000).toLocaleString()}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-item-label">Start Time</span>
-              <span class="meta-item-val" id="service-detail-start">${activeService.startTime || '0 - 15 Mins'}</span>
+              <span class="meta-item-label">Rate / 1K</span>
+              <span class="meta-item-val" id="service-detail-rate" style="color: var(--primary); font-weight: 800;">${store.formatMoney(sellingPrice)}</span>
             </div>
             <div class="meta-item">
-              <span class="meta-item-label">Refill Guarantee</span>
-              <span class="meta-item-val" id="service-detail-refill">${activeService.refillSupported ? activeService.refillPeriod : 'None'}</span>
+              <span class="meta-item-label">Service ID</span>
+              <span class="meta-item-val" id="service-detail-id" style="font-family: var(--font-mono);">#${activeService.id || '—'}</span>
             </div>
           </div>
         </div>
@@ -362,8 +282,8 @@ const CustomerApp = {
         <!-- Target Link / Username -->
         <div class="form-group">
           <label class="form-label">
-            <span>Target Link / Username</span>
-            <span class="form-label-hint">Public accounts only</span>
+            <span>Target Link / Profile</span>
+            <span class="form-label-hint">Public profiles or links only</span>
           </label>
           <div style="position: relative;">
             <input type="url" class="form-input" id="new-order-target" placeholder="https://instagram.com/yourprofile" value="https://instagram.com/creator_daily" />
@@ -377,9 +297,9 @@ const CustomerApp = {
         <div class="form-group">
           <label class="form-label">
             <span>Quantity</span>
-            <span class="form-label-hint" id="qty-limits-hint">Min: ${activeService.min || 50} | Max: ${(activeService.max || 200000).toLocaleString()}</span>
+            <span class="form-label-hint" id="qty-limits-hint">Min: ${(activeService.min || 10).toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="${activeService.min || 50}" max="${activeService.max || 200000}" step="100" />
+          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="${activeService.min || 10}" max="${activeService.max || 100000}" step="100" />
           <div class="qty-preset-chips">
             <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(500)">+500</button>
             <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
@@ -388,11 +308,11 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Live Price Calculation Box -->
+        <!-- Price Calculation Summary Box -->
         <div class="calculation-summary-card">
           <div class="calc-row">
             <span>Unit Rate (per 1,000):</span>
-            <strong id="calc-rate-label">${store.formatMoney(activeService.pricePer1k || 0.30)}</strong>
+            <strong id="calc-rate-label">${store.formatMoney(sellingPrice)}</strong>
           </div>
           <div class="calc-row">
             <span>Current Wallet Balance:</span>
@@ -400,13 +320,13 @@ const CustomerApp = {
           </div>
           <div class="calc-row total-row">
             <span>Total Charge:</span>
-            <span id="calc-total-label">${store.formatMoney(((activeService.pricePer1k || 0.30) / 1000) * 1000)}</span>
+            <span id="calc-total-label">${store.formatMoney((sellingPrice / 1000) * 1000)}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 4px;">
             ${store.data.isLoggedIn ? `
               <span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>
             ` : `
-              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary);">ℹ️ Sign in required to complete order</span>
+              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary);">ℹ️ Sign in required to place order</span>
             `}
           </div>
         </div>
@@ -421,14 +341,226 @@ const CustomerApp = {
 
   selectPlatform(plat) {
     this.currentPlatform = plat;
+    this.searchQuery = '';
     const screenContainer = document.getElementById('screen-container');
     this.render(screenContainer);
   },
 
-  handleSubcategoryChange(sub) {
-    this.currentSubcategory = sub;
+  handleCategoryChange(cat) {
+    this.currentCategory = cat;
     const screenContainer = document.getElementById('screen-container');
     this.render(screenContainer);
+  },
+
+  handleSearch(val) {
+    this.searchQuery = val;
+    // Don't fully rerender whole DOM on each keystroke, update smoothly
+    clearTimeout(this._searchDebounce);
+    this._searchDebounce = setTimeout(() => {
+      const screenContainer = document.getElementById('screen-container');
+      this.render(screenContainer);
+      const input = document.getElementById('service-search-input');
+      if (input) {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+      }
+    }, 250);
+  },
+
+  bindEvents() {
+    const serviceSelect = document.getElementById('new-order-service-select');
+    const qtyInput = document.getElementById('new-order-quantity');
+
+    if (serviceSelect && qtyInput) {
+      const updateCalc = () => {
+        const store = window.store;
+        const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
+        if (!selectedOpt) return;
+
+        const cost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
+        const min = parseInt(selectedOpt.getAttribute('data-min')) || 10;
+        const max = parseInt(selectedOpt.getAttribute('data-max')) || 100000;
+        const refill = selectedOpt.getAttribute('data-refill') === '1';
+        const name = selectedOpt.getAttribute('data-name') || '';
+        const id = selectedOpt.value;
+
+        const sellingPrice = store.getSellingPrice(cost);
+
+        document.getElementById('service-detail-name').textContent = name;
+        document.getElementById('service-detail-min').textContent = min.toLocaleString();
+        document.getElementById('service-detail-max').textContent = max.toLocaleString();
+        document.getElementById('service-detail-rate').textContent = store.formatMoney(sellingPrice);
+        document.getElementById('service-detail-id').textContent = '#' + id;
+        document.getElementById('qty-limits-hint').textContent = `Min: ${min.toLocaleString()} | Max: ${max.toLocaleString()}`;
+
+        const badge = document.getElementById('service-detail-refill-badge');
+        if (badge) {
+          badge.className = `badge ${refill ? 'badge-success' : 'badge-neutral'}`;
+          badge.textContent = refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty';
+        }
+
+        document.getElementById('calc-rate-label').textContent = store.formatMoney(sellingPrice);
+
+        const qty = Number(qtyInput.value) || 0;
+        const total = (sellingPrice / 1000) * qty;
+        document.getElementById('calc-total-label').textContent = store.formatMoney(total);
+
+        const statusBox = document.getElementById('balance-check-status');
+        if (store.data.isLoggedIn) {
+          if (store.data.customer.balance >= total) {
+            statusBox.innerHTML = '<span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>';
+          } else {
+            statusBox.innerHTML = '<span class="balance-status-pill badge-error">⚠️ Insufficient Balance - Add funds before placing order</span>';
+          }
+        }
+      };
+
+      serviceSelect.addEventListener('change', updateCalc);
+      qtyInput.addEventListener('input', updateCalc);
+    }
+  },
+
+  handlePlaceOrder() {
+    const store = window.store;
+    if (!store.data.isLoggedIn) {
+      this.openAuthModal('login');
+      return;
+    }
+
+    const serviceSelect = document.getElementById('new-order-service-select');
+    if (!serviceSelect) return;
+    const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
+    const serviceId = serviceSelect.value;
+    const serviceName = selectedOpt.getAttribute('data-name') || `Service #${serviceId}`;
+    const wholesaleCost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
+    const target = document.getElementById('new-order-target').value;
+    const quantity = Number(document.getElementById('new-order-quantity').value);
+
+    if (!target) {
+      store.showToast('Please enter a target link or username', 'error');
+      return;
+    }
+
+    if (!quantity || quantity <= 0) {
+      store.showToast('Please specify a valid quantity', 'error');
+      return;
+    }
+
+    store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity });
+  },
+
+  setQty(val) {
+    const input = document.getElementById('new-order-quantity');
+    if (input) {
+      input.value = val;
+      input.dispatchEvent(new Event('input'));
+    }
+  },
+
+  setDepositAmount(val) {
+    const input = document.getElementById('add-funds-amount-input');
+    if (input) input.value = val;
+  },
+
+  pasteSampleLink() {
+    const target = document.getElementById('new-order-target');
+    if (target) {
+      target.value = 'https://instagram.com/viral_media_hub';
+      window.store.showToast('Sample target link pasted!', 'info');
+    }
+  },
+
+  handleDeposit() {
+    const amount = Number(document.getElementById('add-funds-amount-input').value);
+    const method = document.getElementById('add-funds-method-select').value;
+    if (amount <= 0) {
+      window.store.showToast('Please enter a valid amount', 'error');
+      return;
+    }
+    const usdAmount = amount / window.store.data.exchangeRate;
+    window.store.addFunds(usdAmount, method);
+  },
+
+  openDepositModal() {
+    window.store.setCustomerTab('wallet');
+  },
+
+  // 1. HOME TAB
+  renderHomeTab(store) {
+    const recentOrders = store.data.orders.slice(0, 5);
+
+    return `
+      <div class="balance-hero-card">
+        <div class="balance-hero-header">
+          <div>
+            <div class="balance-label">${store.data.isLoggedIn ? 'Current Wallet Balance' : 'Guest Visitor'}</div>
+            <div class="balance-amount">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Browse Mode'}</div>
+          </div>
+          <div class="balance-icon-pill"><span>💳</span></div>
+        </div>
+        ${store.data.isLoggedIn ? `
+          <button class="btn btn-primary" onclick="store.setCustomerTab('wallet')">
+            <span>＋ Add Funds</span>
+          </button>
+        ` : `
+          <button class="btn btn-primary" onclick="CustomerApp.openAuthModal('login')">
+            <span>🔑 Sign In / Register Account</span>
+          </button>
+        `}
+      </div>
+
+      <div class="quick-actions-grid">
+        <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
+          <div class="action-icon-circle"><span>🛒</span></div>
+          <div class="action-card-title">New Order</div>
+        </div>
+        <div class="quick-action-card" onclick="CustomerApp.quickRefillFilter()">
+          <div class="action-icon-circle"><span>🔄</span></div>
+          <div class="action-card-title">Refill Request</div>
+        </div>
+        <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
+          <div class="action-icon-circle" style="background: #10B981;"><span>💰</span></div>
+          <div class="action-card-title">Add Funds</div>
+        </div>
+        <div class="quick-action-card" onclick="store.setCustomerTab('support')">
+          <div class="action-icon-circle" style="background: #3B82F6;"><span>💬</span></div>
+          <div class="action-card-title">Support Desk</div>
+        </div>
+      </div>
+
+      <div class="section-header-row">
+        <div class="section-title">Recent Orders</div>
+        <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
+      </div>
+
+      <div class="mobile-orders-list">
+        ${recentOrders.map(order => this.renderOrderCard(order, store)).join('')}
+      </div>
+    `;
+  },
+
+  renderOrderCard(order, store) {
+    let badgeClass = 'badge-primary';
+    if (order.status === 'Processing') badgeClass = 'badge-success';
+    if (order.status === 'In Progress') badgeClass = 'badge-info';
+    if (order.status === 'Completed') badgeClass = 'badge-neutral';
+
+    return `
+      <div class="mobile-order-card" onclick="CustomerApp.openOrderDetails('${order.id}')">
+        <div class="order-card-top">
+          <div class="order-platform-icon">⚡</div>
+          <div class="order-card-info">
+            <div class="order-service-title">${order.serviceName}</div>
+            <div class="order-id-sub">ID: #${order.id}</div>
+          </div>
+          <div class="order-card-price">${store.formatMoney(order.amount)}</div>
+        </div>
+        <div class="order-card-bottom">
+          <span class="badge ${badgeClass}"><span class="badge-dot"></span>${order.status}</span>
+          <span class="order-qty-label">Qty: ${Number(order.quantity).toLocaleString()}</span>
+        </div>
+      </div>
+    `;
   },
 
   // 3. ORDERS TAB
@@ -472,8 +604,6 @@ const CustomerApp = {
     if (order.status === 'In Progress') badgeClass = 'badge-info';
     if (order.status === 'Completed') badgeClass = 'badge-neutral';
 
-    const canRefill = order.refillEligible && order.status === 'Completed';
-
     return `
       <div class="card" style="display: flex; flex-direction: column; gap: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
@@ -499,8 +629,8 @@ const CustomerApp = {
             <strong style="color: var(--text-main); font-size: 15px;">${Number(order.quantity).toLocaleString()}</strong>
           </div>
           <div>
-            <div style="color: var(--text-muted); font-size: 11.5px;">Current</div>
-            <strong style="color: var(--text-main); font-size: 15px;">${Number(order.currentCount).toLocaleString()}</strong>
+            <div style="color: var(--text-muted); font-size: 11.5px;">Remains</div>
+            <strong style="color: var(--text-main); font-size: 15px;">${Number(order.remains).toLocaleString()}</strong>
           </div>
           <div>
             <div style="color: var(--text-muted); font-size: 11.5px;">Charge</div>
@@ -512,12 +642,6 @@ const CustomerApp = {
           <button class="btn btn-sm btn-secondary" onclick="CustomerApp.openOrderDetails('${order.id}')">
             View Details
           </button>
-
-          ${canRefill ? `
-            <button class="btn-refill" onclick="CustomerApp.promptRefill('${order.id}')">
-              <span>🔄 Request Refill</span>
-            </button>
-          ` : ''}
         </div>
       </div>
     `;
@@ -663,113 +787,6 @@ const CustomerApp = {
     `;
   },
 
-  bindEvents() {
-    const serviceSelect = document.getElementById('new-order-service-select');
-    const qtyInput = document.getElementById('new-order-quantity');
-
-    if (serviceSelect && qtyInput) {
-      const updateCalc = () => {
-        const store = window.store;
-        const selectedId = serviceSelect.value;
-        const service = store.data.customerServices.find(s => String(s.id) === String(selectedId));
-        if (!service) return;
-
-        document.getElementById('service-detail-desc').textContent = service.description;
-        document.getElementById('service-detail-limits').textContent = `${service.min.toLocaleString()} / ${service.max.toLocaleString()}`;
-        document.getElementById('service-detail-speed').textContent = service.deliverySpeed;
-        document.getElementById('service-detail-start').textContent = service.startTime;
-        document.getElementById('service-detail-refill').textContent = service.refillSupported ? service.refillPeriod : 'None';
-        
-        const badge = document.getElementById('service-detail-refill-badge');
-        if (badge) {
-          badge.className = `badge ${service.refillSupported ? 'badge-success' : 'badge-neutral'}`;
-          badge.textContent = service.refillSupported ? `🛡️ ${service.refillPeriod} Refill Guarantee` : 'No Refill Warranty';
-        }
-
-        document.getElementById('calc-rate-label').textContent = store.formatMoney(service.pricePer1k);
-
-        const qty = Number(qtyInput.value) || 0;
-        const total = (service.pricePer1k / 1000) * qty;
-        document.getElementById('calc-total-label').textContent = store.formatMoney(total);
-
-        const statusBox = document.getElementById('balance-check-status');
-        if (store.data.isLoggedIn) {
-          if (store.data.customer.balance >= total) {
-            statusBox.innerHTML = '<span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>';
-          } else {
-            statusBox.innerHTML = '<span class="balance-status-pill badge-error">⚠️ Insufficient Balance - Add funds before placing order</span>';
-          }
-        }
-      };
-
-      serviceSelect.addEventListener('change', updateCalc);
-      qtyInput.addEventListener('input', updateCalc);
-    }
-  },
-
-  setQty(val) {
-    const input = document.getElementById('new-order-quantity');
-    if (input) {
-      input.value = val;
-      input.dispatchEvent(new Event('input'));
-    }
-  },
-
-  setDepositAmount(val) {
-    const input = document.getElementById('add-funds-amount-input');
-    if (input) input.value = val;
-  },
-
-  pasteSampleLink() {
-    const target = document.getElementById('new-order-target');
-    if (target) {
-      target.value = 'https://instagram.com/viral_media_hub';
-      window.store.showToast('Sample target link pasted!', 'info');
-    }
-  },
-
-  handlePlaceOrder() {
-    const store = window.store;
-    if (!store.data.isLoggedIn) {
-      this.openAuthModal('login');
-      return;
-    }
-
-    const serviceSelect = document.getElementById('new-order-service-select');
-    if (!serviceSelect) return;
-    const serviceId = serviceSelect.value;
-    const target = document.getElementById('new-order-target').value;
-    const quantity = Number(document.getElementById('new-order-quantity').value);
-
-    if (!target) {
-      store.showToast('Please enter a target link or username', 'error');
-      return;
-    }
-
-    if (!quantity || quantity <= 0) {
-      store.showToast('Please specify a valid quantity', 'error');
-      return;
-    }
-
-    store.placeOrder({ serviceId, target, quantity });
-  },
-
-  handleDeposit() {
-    const amount = Number(document.getElementById('add-funds-amount-input').value);
-    const method = document.getElementById('add-funds-method-select').value;
-    if (amount <= 0) {
-      window.store.showToast('Please enter a valid amount', 'error');
-      return;
-    }
-    const usdAmount = amount / window.store.data.exchangeRate;
-    window.store.addFunds(usdAmount, method);
-  },
-
-  openDepositModal() {
-    window.store.setCustomerTab('wallet');
-  },
-
-  // AUTH MODAL (LOGIN / REGISTER WITH PUBLIC ACCESS)
   openAuthModal(defaultTab = 'login') {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
@@ -818,9 +835,6 @@ const CustomerApp = {
           <button class="btn btn-outline btn-block" onclick="CustomerApp.quickDemoLogin()">
             ⚡ 1-Click Fast Login (Vipul Kumar)
           </button>
-          <p style="font-size: 11.5px; color: var(--text-muted); margin-top: 6px;">
-            (Google 1-Tap Sign-In will connect here via Supabase)
-          </p>
         </div>
       </div>
     `;
@@ -886,20 +900,6 @@ const CustomerApp = {
     modal.classList.add('active');
   },
 
-  promptRefill(orderId) {
-    const order = window.store.data.orders.find(o => String(o.id) === String(orderId));
-    if (!order) return;
-
-    if (confirm(`Request automatic refill for Order #${order.id} (${order.serviceName})?\n\nCurrent count: ${order.currentCount} / Target: ${order.startCount + order.quantity}`)) {
-      window.store.requestRefill(orderId);
-    }
-  },
-
-  quickRefillFilter() {
-    window.store.setCustomerTab('orders');
-    window.store.showToast('Showing completed orders eligible for refill guarantee', 'info');
-  },
-
   openOrderDetails(orderId) {
     const order = window.store.data.orders.find(o => String(o.id) === String(orderId));
     if (!order) return;
@@ -916,16 +916,15 @@ const CustomerApp = {
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md);">
           <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Service</div>
-          <div style="font-size: 14.5px; font-weight: 700; color: var(--text-main); margin-top: 2px;">${order.serviceName}</div>
+          <div style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-top: 2px;">${order.serviceName}</div>
         </div>
-
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <div class="calc-row">
             <span>Target Link:</span>
             <span style="font-family: var(--font-mono); font-size: 12px; word-break: break-all;">${order.target}</span>
           </div>
           <div class="calc-row">
-            <span>Quantity Ordered:</span>
+            <span>Quantity:</span>
             <strong>${Number(order.quantity).toLocaleString()}</strong>
           </div>
           <div class="calc-row">
@@ -981,7 +980,6 @@ const CustomerApp = {
         <h3 class="modal-title">Create Support Ticket</h3>
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
-
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Subject</label>
@@ -1018,6 +1016,10 @@ const CustomerApp = {
     `;
 
     modal.classList.add('active');
+  },
+
+  quickRefillFilter() {
+    window.store.setCustomerTab('orders');
   },
 
   closeModal() {

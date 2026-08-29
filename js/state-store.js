@@ -3,12 +3,37 @@ class SmmStateStore {
     this.data = JSON.parse(JSON.stringify(window.SMM_MOCK));
     this.deviceMode = 'desktop';
     this.persona = 'customer';
-    this.customerTab = 'home';
+    this.customerTab = 'new_order';
     this.adminTab = 'dashboard';
     this.theme = 'light';
-    this.currency = 'INR'; // INR by default
+    this.currency = 'INR';
     this.subscribers = [];
+
+    // Restore saved profit markup percentage (NOT HARDCODED)
+    const savedMarkup = localStorage.getItem('smm_global_markup');
+    if (savedMarkup !== null) {
+      this.data.adminStats.globalMarkupPercent = Number(savedMarkup);
+    } else {
+      this.data.adminStats.globalMarkupPercent = 100; // Default 100% (2X) until changed by admin
+    }
+
     this.initServerSync();
+  }
+
+  // Dynamic profit calculation (never hardcoded)
+  getSellingPrice(wholesaleCostUsd) {
+    const markup = Number(this.data.adminStats.globalMarkupPercent) || 100;
+    return wholesaleCostUsd * (1 + markup / 100);
+  }
+
+  // Admin dynamic markup setter
+  applyGlobalMarkup(percent) {
+    percent = Number(percent) || 100;
+    this.data.adminStats.globalMarkupPercent = percent;
+    localStorage.setItem('smm_global_markup', percent);
+
+    this.showToast(`Applied +${percent}% profit markup across all 5,803 services!`, 'success');
+    this.notify();
   }
 
   async initServerSync() {
@@ -41,7 +66,6 @@ class SmmStateStore {
     this.subscribers.forEach(fn => fn(this));
   }
 
-  // Auth methods
   login(name = 'Vipul Kumar', email = 'vipul@demo.com') {
     this.data.isLoggedIn = true;
     this.data.customer.name = name;
@@ -53,26 +77,6 @@ class SmmStateStore {
   logout() {
     this.data.isLoggedIn = false;
     this.showToast('You have signed out. Browsing in guest mode.', 'info');
-    this.notify();
-  }
-
-  // Global Admin Markup Percentage Engine
-  applyGlobalMarkup(percent) {
-    percent = Number(percent) || 100;
-    this.data.adminStats.globalMarkupPercent = percent;
-
-    this.data.customerServices.forEach(service => {
-      if (service.wholesaleCost) {
-        const newPrice = service.wholesaleCost * (1 + percent / 100);
-        service.pricePer1k = +newPrice.toFixed(3);
-        service.markupPercent = percent;
-        // Update label
-        const inrPrice = Math.round(newPrice * this.data.exchangeRate);
-        service.customerName = service.customerName.replace(/\(₹\d+ me 1000\)/, `(₹${inrPrice} me 1000)`);
-      }
-    });
-
-    this.showToast(`Applied +${percent}% profit markup across all services!`, 'success');
     this.notify();
   }
 
@@ -141,25 +145,23 @@ class SmmStateStore {
     }, 3500);
   }
 
-  async placeOrder({ serviceId, target, quantity }) {
-    // Check if user is logged in
+  async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost }) {
     if (!this.data.isLoggedIn) {
       this.showToast('Please sign in or create an account to place an order.', 'error');
       CustomerApp.openAuthModal();
       return { success: false, message: 'Authentication required' };
     }
 
-    const service = this.data.customerServices.find(s => String(s.id) === String(serviceId));
-    if (!service) return { success: false, message: 'Service not found' };
+    const unitSellingPrice = this.getSellingPrice(wholesaleCost || 0.20);
+    const totalCost = (unitSellingPrice / 1000) * quantity;
 
-    const totalCost = (service.pricePer1k / 1000) * quantity;
     if (this.data.customer.balance < totalCost) {
       this.showToast('Insufficient wallet balance. Please add funds.', 'error');
       CustomerApp.openDepositModal();
       return { success: false, message: 'Insufficient balance' };
     }
 
-    // Try sending live order to JustAnotherPanel if it maps to JAP
+    // Try sending live order to JustAnotherPanel
     let liveOrderId = null;
     try {
       const liveRes = await fetch('/api/provider', {
@@ -167,7 +169,7 @@ class SmmStateStore {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'add',
-          service: service.japId || '10131',
+          service: String(serviceId),
           link: target,
           quantity: quantity
         })
@@ -185,19 +187,19 @@ class SmmStateStore {
 
     const newOrder = {
       id: newOrderId,
-      serviceId: service.id,
-      serviceName: service.customerName,
-      platform: service.platform,
+      serviceId: serviceId,
+      serviceName: serviceName || `Service #${serviceId}`,
+      platform: 'smm',
       target: target,
       quantity: Number(quantity),
       amount: totalCost,
       status: 'Processing',
       date: 'Just now',
-      startCount: 1420,
-      currentCount: 1420,
+      startCount: 0,
+      currentCount: 0,
       remains: Number(quantity),
       refillEligible: false,
-      refillReason: 'Order is still processing'
+      refillReason: 'Order is dispatching to JAP server'
     };
 
     this.data.orders.unshift(newOrder);
@@ -216,7 +218,7 @@ class SmmStateStore {
       id: `act-${Date.now()}`,
       type: 'order',
       title: `New Order #${newOrderId}`,
-      sub: `${service.customerName} - ${this.data.customer.name.split(' ')[0]}`,
+      sub: `${serviceName} - ${this.data.customer.name.split(' ')[0]}`,
       amount: this.formatMoney(totalCost),
       time: 'Just now',
       icon: '🛒'
@@ -224,7 +226,8 @@ class SmmStateStore {
 
     this.data.adminStats.totalOrders += 1;
     this.data.adminStats.revenue += totalCost;
-    this.data.adminStats.profit += (totalCost * 0.45);
+    const profitMargin = (Number(this.data.adminStats.globalMarkupPercent) || 100) / 100;
+    this.data.adminStats.profit += (totalCost * (profitMargin / (1 + profitMargin)));
 
     this.showToast(`Order #${newOrderId} placed successfully! Routed via JAP API.`, 'success');
     this.setCustomerTab('orders');
@@ -245,7 +248,6 @@ class SmmStateStore {
 
     order.refillEligible = false;
     order.refillStatus = 'Refill Requested';
-    order.refillReason = 'Refill cooldown active (24h)';
 
     const refillItem = {
       id: `ref-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -264,20 +266,6 @@ class SmmStateStore {
     this.data.refillQueue.unshift(refillItem);
     this.showToast(`Refill requested for Order #${order.id}! Dispatched to JAP.`, 'refill');
     this.notify();
-
-    setTimeout(() => {
-      order.refillStatus = 'Refill Processing';
-      refillItem.status = 'Processing';
-      this.notify();
-    }, 4000);
-
-    setTimeout(() => {
-      order.refillStatus = 'Refill Completed';
-      refillItem.status = 'Completed';
-      order.currentCount = order.startCount + order.quantity;
-      this.showToast(`Refill for #${order.id} has completed! Counts restored.`, 'success');
-      this.notify();
-    }, 9000);
   }
 
   addFunds(amountInUsd, method = 'UPI / Instant Pay') {
