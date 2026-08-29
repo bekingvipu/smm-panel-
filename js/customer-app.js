@@ -58,11 +58,6 @@ const CustomerApp = {
             <span>☰</span>
           </button>
 
-          <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" title="Notifications">
-            <span>🔔</span>
-            <span class="notification-dot"></span>
-          </button>
-
           ${isLoggedIn ? `
             <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="Account Profile" />
           ` : `
@@ -91,10 +86,6 @@ const CustomerApp = {
               <span class="header-balance-val">${store.formatMoney(store.data.customer.balance)}</span>
               <span class="add-plus-badge">＋</span>
             </div>
-            <button class="header-icon-btn" onclick="CustomerApp.openNotifications()" title="Notifications">
-              <span>🔔</span>
-              <span class="notification-dot"></span>
-            </button>
           ` : `
             <button class="btn btn-primary btn-sm" style="padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 9999px;" onclick="CustomerApp.openAuthModal('login')">
               Sign In
@@ -190,6 +181,10 @@ const CustomerApp = {
               </li>
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('support');">
                 <div class="drawer-item-left"><span class="drawer-item-icon">💬</span> <span>24/7 Support Desk</span></div>
+              </li>
+              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); CustomerApp.openNotifications();">
+                <div class="drawer-item-left"><span class="drawer-item-icon">🔔</span> <span>Notifications</span></div>
+                <span class="badge badge-primary" style="font-size: 10px;">New</span>
               </li>
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); window.location.hash='#admin';">
                 <div class="drawer-item-left"><span class="drawer-item-icon">🛡️</span> <span>Admin Console</span></div>
