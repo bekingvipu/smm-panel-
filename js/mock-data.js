@@ -39,7 +39,7 @@ window.SMM_CARTOON_AVATARS = [
 
 window.SMM_MOCK = {
   currency: 'INR',
-  exchangeRate: 83.0,
+  exchangeRate: 95.385,
   isLoggedIn: false, // Default: Guest Mode (Browse without signup)
   
   customer: {

@@ -281,8 +281,40 @@ class SmmStateStore {
 
   formatMoney(amountInUsd, decimals = 2) {
     if (this.currency === 'INR') {
-      const inrVal = amountInUsd * this.data.exchangeRate;
-      return '₹' + Math.round(inrVal).toLocaleString('en-IN');
+      const isNegative = Number(amountInUsd) < 0;
+      const absUsd = Math.abs(Number(amountInUsd) || 0);
+      if (absUsd === 0) return '₹0.00';
+
+      const inrRate = this.data.exchangeRate || 95.385;
+      const inrVal = absUsd * inrRate;
+
+      let formatted = '';
+      if (inrVal >= 100) {
+        formatted = inrVal.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+      } else if (inrVal >= 1) {
+        const rounded100 = Math.round(inrVal * 100);
+        const rounded10000 = Math.round(inrVal * 10000);
+        const hasDeepDecimals = (rounded100 * 100) !== rounded10000;
+        formatted = inrVal.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: hasDeepDecimals ? 4 : 2
+        });
+      } else {
+        // Micro amounts (< ₹1) e.g. ₹0.2862, ₹0.1431 (Never rounds down to ₹0!)
+        const fourDec = inrVal.toFixed(4);
+        if (fourDec.slice(-2) === '00') {
+          formatted = inrVal.toFixed(2);
+        } else if (fourDec.slice(-1) === '0') {
+          formatted = inrVal.toFixed(3);
+        } else {
+          formatted = fourDec;
+        }
+      }
+
+      return (isNegative ? '-₹' : '₹') + formatted;
     }
     return '$' + Number(amountInUsd).toLocaleString('en-US', {
       minimumFractionDigits: decimals,
