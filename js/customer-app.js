@@ -192,10 +192,6 @@ const CustomerApp = {
                 <div class="drawer-item-left"><span class="drawer-item-icon">🔔</span> <span>Notifications</span></div>
                 <span class="badge badge-primary" style="font-size: 10px;">New</span>
               </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); window.navigateToRoute('/admin');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">🛡️</span> <span>Admin Console</span></div>
-                <span style="font-size: 11px; color: var(--text-muted);">Admin</span>
-              </li>
             </ul>
           </div>
 
@@ -1797,9 +1793,6 @@ const CustomerApp = {
         <div style="width: 100%; border-top: 1px dashed var(--border-color); padding-top: 14px; display: flex; flex-direction: column; gap: 8px;">
           <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal(); store.setCustomerTab('wallet')">
             Manage Wallet & Funds
-          </button>
-          <button class="btn btn-outline btn-block" onclick="CustomerApp.closeModal(); window.navigateToRoute('/admin');">
-            🛡️ Open Admin Console
           </button>
           <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error); margin-top: 4px;" onclick="CustomerApp.closeModal(); window.signOutUser();">
             Sign Out (Switch to Guest Mode)
