@@ -291,90 +291,92 @@ const CustomerApp = {
     const sheet = document.getElementById('generic-modal-sheet');
 
     sheet.innerHTML = `
-      <div class="modal-header">
-        <div>
-          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #B45309; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 6px; letter-spacing: 0.5px;">
-            <span>🔥</span> <span>ZERO INVESTMENT • 300% MARGIN</span>
-          </div>
-          <h3 class="modal-title" style="font-size: 20px; font-weight: 900; color: var(--text-main);">
-            💰 How to Earn ₹20,000–₹50,000/Mo Reselling
-          </h3>
-          <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
-            Start your automated social media marketing agency with ₹0 upfront capital!
-          </p>
+      <!-- Centered Modal Header -->
+      <div style="position: relative; text-align: center; padding: 18px 16px 14px; border-bottom: 1px solid var(--border-color);">
+        <button class="modal-close" onclick="CustomerApp.closeModal()" style="position: absolute; right: 14px; top: 16px; background: var(--bg-subtle); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border: none; font-size: 18px; cursor: pointer;">&times;</button>
+        
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 6px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #B45309; font-size: 11px; font-weight: 800; padding: 4px 14px; border-radius: 999px; margin-bottom: 10px; letter-spacing: 0.5px;">
+          <span>🔥</span> <span>ZERO INVESTMENT • 300% MARGIN</span>
         </div>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+
+        <h3 class="modal-title" style="font-size: 21px; font-weight: 900; color: var(--text-main); text-align: center; margin: 0; line-height: 1.3;">
+          💰 How to Earn ₹20,000–₹50,000/Mo Reselling
+        </h3>
+
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 8px auto 0; max-width: 440px; text-align: center; line-height: 1.5;">
+          Start your automated social media marketing agency with ₹0 upfront capital!
+        </p>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto; padding-right: 4px;">
+      <div style="display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto; padding: 16px 4px 20px 4px;">
         
-        <!-- Step 1 Card -->
-        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(99, 102, 241, 0.25); background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05));">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 12px; background: #6366F1; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">
-                💎
-              </div>
-              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 1: Pick Wholesale Rates on LikeX</span>
-            </div>
-            <span class="badge badge-primary" style="font-size: 11px; font-weight: 800;">STEP 01</span>
+        <!-- Step 1 Card (Centered) -->
+        <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; border: 1.5px solid rgba(99, 102, 241, 0.25); background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05)); display: flex; flex-direction: column; align-items: center;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(99, 102, 241, 0.12); color: #4F46E5; font-size: 11px; font-weight: 800; padding: 3px 12px; border-radius: 999px; margin-bottom: 10px;">
+            <span>STEP 01</span>
           </div>
-          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: #6366F1; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin-bottom: 12px; box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);">
+            💎
+          </div>
+          <div style="font-weight: 800; font-size: 16px; color: var(--text-main); margin-bottom: 6px;">
+            Step 1: Pick Wholesale Rates on LikeX
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; max-width: 420px;">
             On <strong>LikeX</strong>, you get direct wholesale rates: <strong>1,000 Instagram Followers for only ₹25</strong>, or <strong>1,000 Likes for ₹10</strong>.
           </p>
         </div>
 
-        <!-- Step 2 Card -->
-        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(16, 185, 129, 0.25); background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05));">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 12px; background: #10B981; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
-                📢
-              </div>
-              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 2: Share with Clients & Creators</span>
-            </div>
-            <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">STEP 02</span>
+        <!-- Step 2 Card (Centered) -->
+        <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; border: 1.5px solid rgba(16, 185, 129, 0.25); background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05)); display: flex; flex-direction: column; align-items: center;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.12); color: #059669; font-size: 11px; font-weight: 800; padding: 3px 12px; border-radius: 999px; margin-bottom: 10px;">
+            <span>STEP 02</span>
           </div>
-          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: #10B981; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin-bottom: 12px; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);">
+            📢
+          </div>
+          <div style="font-weight: 800; font-size: 16px; color: var(--text-main); margin-bottom: 6px;">
+            Step 2: Share with Clients & Creators
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; max-width: 420px;">
             Post on your WhatsApp Status, Instagram Story, or pitch to local businesses (cafes, clothing shops, fitness trainers) offering Followers for <strong>₹99 per 1,000</strong>.
           </p>
         </div>
 
-        <!-- Step 3 Card -->
-        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(245, 158, 11, 0.25); background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(217, 119, 6, 0.05));">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 12px; background: #F59E0B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
-                💸
-              </div>
-              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 3: Collect Payment Directly via UPI</span>
-            </div>
-            <span class="badge badge-warning" style="font-size: 11px; font-weight: 800;">STEP 03</span>
+        <!-- Step 3 Card (Centered) -->
+        <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; border: 1.5px solid rgba(245, 158, 11, 0.25); background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(217, 119, 6, 0.05)); display: flex; flex-direction: column; align-items: center;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(245, 158, 11, 0.15); color: #B45309; font-size: 11px; font-weight: 800; padding: 3px 12px; border-radius: 999px; margin-bottom: 10px;">
+            <span>STEP 03</span>
           </div>
-          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: #F59E0B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin-bottom: 12px; box-shadow: 0 6px 16px rgba(245, 158, 11, 0.35);">
+            💸
+          </div>
+          <div style="font-weight: 800; font-size: 16px; color: var(--text-main); margin-bottom: 6px;">
+            Step 3: Collect Payment Directly via UPI
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; max-width: 420px;">
             Client pays you <strong>₹99 directly to your personal GPay, PhonePe, or Paytm</strong>. You collect 100% of the cash upfront with zero risk!
           </p>
         </div>
 
-        <!-- Step 4 Card -->
-        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(37, 211, 102, 0.4); background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.08));">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <div style="width: 36px; height: 36px; border-radius: 12px; background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);">
-                🚀
-              </div>
-              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 4: Place Order on LikeX & Keep Profit</span>
-            </div>
-            <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">STEP 04</span>
+        <!-- Step 4 Card (Centered) -->
+        <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; border: 1.5px solid rgba(37, 211, 102, 0.4); background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.08)); display: flex; flex-direction: column; align-items: center;">
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 211, 102, 0.16); color: #075E54; font-size: 11px; font-weight: 800; padding: 3px 12px; border-radius: 999px; margin-bottom: 10px;">
+            <span>STEP 04</span>
           </div>
-          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+          <div style="width: 52px; height: 52px; border-radius: 16px; background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; margin-bottom: 12px; box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);">
+            🚀
+          </div>
+          <div style="font-weight: 800; font-size: 16px; color: var(--text-main); margin-bottom: 6px;">
+            Step 4: Place Order on LikeX & Keep Profit
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; max-width: 420px;">
             Place the order on LikeX for ₹25 using your client's profile link. <br/>
             <strong>You pocket ₹74 instant pure profit (300% margin) on every single order!</strong>
           </p>
         </div>
 
-        <!-- Profit Calculator Breakdown Card -->
-        <div class="card" style="padding: 20px; border-radius: 20px; background: var(--bg-subtle); border: 1.5px dashed var(--primary); text-align: center;">
+        <!-- Profit Calculator Breakdown Card (Centered) -->
+        <div class="card" style="padding: 20px 16px; border-radius: 20px; background: var(--bg-subtle); border: 1.5px dashed var(--primary); text-align: center;">
           <div style="font-size: 11.5px; color: var(--primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;">
             📊 Real Profit Math (Per Order)
           </div>
@@ -394,7 +396,7 @@ const CustomerApp = {
             </div>
           </div>
 
-          <div style="background: var(--bg-surface); border-radius: 14px; padding: 12px; margin-top: 10px;">
+          <div style="background: var(--bg-surface); border-radius: 14px; padding: 14px 10px; margin-top: 10px;">
             <div style="font-size: 12px; color: var(--text-muted);">Estimated Monthly Income Potential:</div>
             <div style="font-size: 24px; font-weight: 900; color: var(--primary); margin: 4px 0;">
               ₹22,200 to ₹44,400 / month
@@ -405,8 +407,8 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Pro Selling Tip -->
-        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 14px; padding: 14px; font-size: 12.5px; color: var(--text-main); line-height: 1.5;">
+        <!-- Pro Selling Tip (Centered) -->
+        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 16px; padding: 16px; font-size: 12.5px; color: var(--text-main); line-height: 1.5; text-align: center;">
           <strong>💡 Pro Tip:</strong> Local salons, gym trainers, restaurants, aspiring models, and YouTube creators buy followers and video views constantly. Create a simple WhatsApp business catalog or Instagram page and pitch them today!
         </div>
 
