@@ -828,28 +828,28 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Target Link / Username -->
+        <!-- Target Link -->
         <div class="form-group">
           <label class="form-label">
-            <span style="font-weight: 800;">Target Link / Profile Username</span>
-            <span class="form-label-hint">Public profiles or links only</span>
+            <span style="font-weight: 800;">Target Link</span>
+            <span class="form-label-hint">Public links only</span>
           </label>
           <div style="position: relative;">
-            <input type="url" class="form-input" id="new-order-target" placeholder="https://instagram.com/your_profile" value="https://instagram.com/creator_daily" style="min-height: 48px; border-radius: 12px; padding-right: 80px;" />
-            <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 6px; top: 7px; height: 34px; padding: 0 14px; border-radius: 8px; font-weight: 700;" onclick="CustomerApp.pasteSampleLink()">
+            <input type="url" class="form-input" id="new-order-target" placeholder="https://..." value="" style="min-height: 48px; border-radius: 12px; padding-right: 80px;" />
+            <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 6px; top: 7px; height: 34px; padding: 0 14px; border-radius: 8px; font-weight: 700;" onclick="CustomerApp.pasteTargetLink()">
               Paste
             </button>
           </div>
         </div>
 
         <!-- Quantity with Interactive Steppers -->
-        <div class="form-group">
+        <div class="form-group" id="order-quantity-group">
           <label class="form-label">
             <span style="font-weight: 800;">Order Quantity</span>
             <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${(activeService.min || 10).toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="${activeService.min || 10}" max="${activeService.max || 100000}" step="100" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" />
-          <div class="qty-steppers-bar">
+          <input type="number" class="form-input" id="new-order-quantity" value="${(activeService.name || '').toLowerCase().includes('custom') && (activeService.name || '').toLowerCase().includes('comment') ? 5 : 1000}" min="${activeService.min || 1}" max="${activeService.max || 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" />
+          <div class="qty-steppers-bar" id="qty-steppers-bar">
             <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(500)">+500</button>
             <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
             <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(2500)">+2,500</button>
@@ -857,6 +857,21 @@ const CustomerApp = {
             <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(10000)">+10,000</button>
             <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(${activeService.max || 100000})" style="color: var(--primary); font-weight: 800;">MAX</button>
           </div>
+        </div>
+
+        <!-- Custom Comments (1 per line) Dynamic Box -->
+        <div class="form-group" id="custom-comments-group" style="display: none;">
+          <label class="form-label">
+            <span style="font-weight: 800;">Comments (1 per line)</span>
+            <span class="form-label-hint" id="comments-count-hint" style="font-family: var(--font-mono); font-weight: 700; color: var(--primary);">0 comments</span>
+          </label>
+          <textarea 
+            class="form-input" 
+            id="new-order-comments" 
+            rows="5" 
+            placeholder="Great post!&#10;Awesome reel 🔥&#10;Love your content!&#10;Keep it up!&#10;Best creator ✨" 
+            style="border-radius: 12px; font-family: inherit; font-size: 14px; line-height: 1.5; padding: 12px 14px; resize: vertical;"
+          ></textarea>
         </div>
 
         <!-- Luxury Receipt & Price Calculation Summary -->
@@ -926,10 +941,15 @@ const CustomerApp = {
   bindEvents() {
     const serviceSelect = document.getElementById('new-order-service-select');
     const qtyInput = document.getElementById('new-order-quantity');
+    const commentsBox = document.getElementById('new-order-comments');
+    const commentsGroup = document.getElementById('custom-comments-group');
+    const steppersBar = document.getElementById('qty-steppers-bar');
+    const commentsCountHint = document.getElementById('comments-count-hint');
 
     if (serviceSelect && qtyInput) {
       const updateCalc = () => {
         const store = window.store;
+        if (!serviceSelect.options || serviceSelect.selectedIndex < 0) return;
         const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
         if (!selectedOpt) return;
 
@@ -940,6 +960,35 @@ const CustomerApp = {
         const name = selectedOpt.getAttribute('data-name') || '';
         const id = selectedOpt.value;
 
+        const isCustomComment = name.toLowerCase().includes('custom') && name.toLowerCase().includes('comment');
+
+        if (commentsGroup) {
+          if (isCustomComment) {
+            commentsGroup.style.display = 'block';
+            if (steppersBar) steppersBar.style.display = 'none';
+            qtyInput.setAttribute('readonly', 'true');
+            qtyInput.style.backgroundColor = 'var(--bg-subtle)';
+            qtyInput.style.cursor = 'not-allowed';
+
+            const lines = commentsBox ? commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean) : [];
+            const count = lines.length;
+            if (commentsCountHint) {
+              commentsCountHint.textContent = `${count} comment${count === 1 ? '' : 's'}`;
+            }
+            qtyInput.value = count > 0 ? count : 1;
+            const hint = document.getElementById('qty-limits-hint');
+            if (hint) hint.textContent = '1 comment per line (Auto-counted)';
+          } else {
+            commentsGroup.style.display = 'none';
+            if (steppersBar) steppersBar.style.display = 'flex';
+            qtyInput.removeAttribute('readonly');
+            qtyInput.style.backgroundColor = '';
+            qtyInput.style.cursor = '';
+            const hint = document.getElementById('qty-limits-hint');
+            if (hint) hint.textContent = `Min: ${min.toLocaleString()} | Max: ${max.toLocaleString()}`;
+          }
+        }
+
         const sellingPrice = store.getSellingPrice(cost);
 
         document.getElementById('service-detail-name').textContent = name;
@@ -947,7 +996,6 @@ const CustomerApp = {
         document.getElementById('service-detail-max').textContent = max.toLocaleString();
         document.getElementById('service-detail-rate').textContent = store.formatMoney(sellingPrice);
         document.getElementById('service-detail-id').textContent = '#' + id;
-        document.getElementById('qty-limits-hint').textContent = `Min: ${min.toLocaleString()} | Max: ${max.toLocaleString()}`;
 
         const badge = document.getElementById('service-detail-refill-badge');
         if (badge) {
@@ -973,6 +1021,21 @@ const CustomerApp = {
 
       serviceSelect.addEventListener('change', updateCalc);
       qtyInput.addEventListener('input', updateCalc);
+
+      if (commentsBox) {
+        commentsBox.addEventListener('input', () => {
+          const lines = commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean);
+          const count = lines.length;
+          if (commentsCountHint) {
+            commentsCountHint.textContent = `${count} comment${count === 1 ? '' : 's'}`;
+          }
+          qtyInput.value = count > 0 ? count : 1;
+          updateCalc();
+        });
+      }
+
+      // Initial check on render
+      updateCalc();
     }
   },
 
@@ -991,9 +1054,29 @@ const CustomerApp = {
     const wholesaleCost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
     const target = document.getElementById('new-order-target').value.trim();
     const quantity = Number(document.getElementById('new-order-quantity').value);
+    const commentsBox = document.getElementById('new-order-comments');
+    const isCustomComment = (serviceName || '').toLowerCase().includes('custom') && (serviceName || '').toLowerCase().includes('comment');
+
+    let comments = '';
+    if (isCustomComment) {
+      if (!commentsBox || !commentsBox.value.trim()) {
+        store.showToast('Please enter at least 1 custom comment (1 per line)', 'error');
+        if (commentsBox) commentsBox.focus();
+        return;
+      }
+      const lines = commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean);
+      if (lines.length === 0) {
+        store.showToast('Please enter at least 1 custom comment', 'error');
+        if (commentsBox) commentsBox.focus();
+        return;
+      }
+      comments = lines.join('\n');
+    }
 
     if (!target) {
-      store.showToast('Please enter a target link or username', 'error');
+      store.showToast('Please enter the target link', 'error');
+      const targetInput = document.getElementById('new-order-target');
+      if (targetInput) targetInput.focus();
       return;
     }
 
@@ -1016,7 +1099,7 @@ const CustomerApp = {
       submitBtn.innerHTML = '<span>⚡ Processing Order Refraction...</span>';
     }
 
-    const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity }, { silent: true });
+    const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity, comments }, { silent: true });
 
     if (submitBtn) {
       submitBtn.disabled = false;
@@ -1094,12 +1177,25 @@ const CustomerApp = {
     if (input) input.value = val;
   },
 
-  pasteSampleLink() {
+  async pasteTargetLink() {
     const target = document.getElementById('new-order-target');
-    if (target) {
-      target.value = 'https://instagram.com/viral_media_hub';
-      window.store.showToast('Sample target link pasted!', 'info');
-    }
+    if (!target) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          target.value = text.trim();
+          window.store.showToast('Target link pasted! 📋', 'success');
+          return;
+        }
+      }
+    } catch (e) {}
+    target.focus();
+    window.store.showToast('Please paste your target link into the box', 'info');
+  },
+
+  pasteSampleLink() {
+    this.pasteTargetLink();
   },
 
   copyUpiId() {

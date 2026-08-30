@@ -32,6 +32,7 @@ export default async function handler(req, res) {
   if (paramsObj.service) formData.append('service', String(paramsObj.service));
   if (paramsObj.link) formData.append('link', String(paramsObj.link));
   if (paramsObj.quantity) formData.append('quantity', String(paramsObj.quantity));
+  if (paramsObj.comments) formData.append('comments', String(paramsObj.comments));
   if (paramsObj.order) formData.append('order', String(paramsObj.order));
   if (paramsObj.refill) formData.append('refill', String(paramsObj.refill));
 

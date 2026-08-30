@@ -345,7 +345,7 @@ class SmmStateStore {
     }, 3500);
   }
 
-  async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost }, options = {}) {
+  async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost, comments }, options = {}) {
     if (!this.data.isLoggedIn) {
       this.showToast('Please sign in or create an account to place an order.', 'error');
       CustomerApp.openAuthModal();
@@ -371,7 +371,8 @@ class SmmStateStore {
           action: 'add',
           service: String(serviceId),
           link: target,
-          quantity: quantity
+          quantity: quantity,
+          comments: comments || undefined
         })
       });
       if (liveRes.ok) {
@@ -396,6 +397,7 @@ class SmmStateStore {
       target: target,
       quantity: Number(quantity),
       amount: totalCost,
+      comments: comments || undefined,
       status: 'Processing',
       createdAt: now,
       date: formattedDate,
