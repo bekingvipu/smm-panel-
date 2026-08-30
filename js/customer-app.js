@@ -853,15 +853,154 @@ const CustomerApp = {
     }
   },
 
+  copyUpiId() {
+    const upiId = 'paytm.s1fd86i@pty';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(upiId).then(() => {
+        window.store.showToast('Paytm UPI ID copied: ' + upiId + ' 📋', 'success');
+      }).catch(() => {
+        window.store.showToast('UPI ID: ' + upiId, 'info');
+      });
+    } else {
+      window.store.showToast('UPI ID: ' + upiId, 'info');
+    }
+  },
+
+  pasteSampleUtr() {
+    const utrInput = document.getElementById('add-funds-utr-input');
+    if (utrInput) {
+      utrInput.value = '42' + Math.floor(1000000000 + Math.random() * 9000000000);
+      window.store.showToast('Sample 12-digit UTR pasted for instant testing!', 'info');
+    }
+  },
+
   handleDeposit() {
-    const amount = Number(document.getElementById('add-funds-amount-input').value);
-    const method = document.getElementById('add-funds-method-select').value;
-    if (amount <= 0) {
-      window.store.showToast('Please enter a valid amount', 'error');
+    const amountInput = document.getElementById('add-funds-amount-input');
+    const utrInput = document.getElementById('add-funds-utr-input');
+    const amount = Number(amountInput ? amountInput.value : 0);
+    const utr = utrInput ? utrInput.value.trim() : '';
+
+    if (!amount || amount < 10) {
+      window.store.showToast('Minimum deposit amount is ₹10', 'error');
+      if (amountInput) amountInput.focus();
       return;
     }
-    const usdAmount = amount / window.store.data.exchangeRate;
-    window.store.addFunds(usdAmount, method);
+
+    if (!utr) {
+      window.store.showToast('Please enter the 12-digit UPI UTR / Transaction ID', 'error');
+      if (utrInput) utrInput.focus();
+      return;
+    }
+
+    if (utr.length < 8) {
+      window.store.showToast('Please enter a valid 12-digit UTR number', 'error');
+      if (utrInput) utrInput.focus();
+      return;
+    }
+
+    const btn = document.getElementById('btn-verify-deposit');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⚡ Verifying Paytm Transaction...</span>';
+    }
+
+    setTimeout(() => {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
+      }
+
+      const usdAmount = amount / window.store.data.exchangeRate;
+      window.store.addFunds(usdAmount, `Paytm UPI (UTR: ${utr})`);
+
+      CustomerApp.showDepositCelebrationModal({
+        amount,
+        utr,
+        newBalance: window.store.data.customer.balance
+      });
+    }, 1000);
+  },
+
+  showDepositCelebrationModal({ amount, utr, newBalance }) {
+    const store = window.store;
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="order-success-overlay">
+        <div class="success-check-refraction">
+          <span>✓</span>
+        </div>
+
+        <div>
+          <h3 style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">Payment Verified! 💰</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px;">Funds credited to your wallet instantly</p>
+        </div>
+
+        <div style="background: var(--bg-subtle); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 16px 18px; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Amount Credited</span>
+            <span style="font-family: var(--font-mono); font-weight: 900; color: #059669; font-size: 18px;">+₹${Number(amount).toLocaleString('en-IN')}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-secondary); border-top: 1px dashed var(--border-color); padding-top: 8px;">
+            <span>Transaction / UTR:</span>
+            <span style="font-family: var(--font-mono); font-weight: 700; color: var(--text-main);">${utr}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-secondary);">
+            <span>Updated Wallet Balance:</span>
+            <strong style="color: var(--primary); font-size: 14px;">${store.formatMoney(newBalance)}</strong>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 6px;">
+          <button class="btn btn-primary btn-block btn-refraction" onclick="CustomerApp.closeModal(); store.setCustomerTab('new_order')">
+            🛒 Place an Order Now
+          </button>
+          <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal();">
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+  },
+
+  openTermsModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title">📜 Terms & Conditions</h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px; text-align: left; font-size: 13.5px; color: var(--text-secondary); max-height: 60vh; overflow-y: auto; padding: 4px 2px;">
+        <div>
+          <strong style="color: var(--text-main); font-size: 14px;">1. Wallet Balance & Deposits</strong>
+          <p style="margin-top: 4px;">All funds deposited into your SMM Pro wallet are converted into service credits. Funds deposited are strictly for purchasing promotional social media marketing services on this platform and cannot be refunded back to a bank account once credited.</p>
+        </div>
+        <div>
+          <strong style="color: var(--text-main); font-size: 14px;">2. Minimum Deposit</strong>
+          <p style="margin-top: 4px;">The minimum deposit amount is ₹10. Deposits are processed automatically upon valid UTR / transaction verification.</p>
+        </div>
+        <div>
+          <strong style="color: var(--text-main); font-size: 14px;">3. Service Delivery & Refills</strong>
+          <p style="margin-top: 4px;">Services with guaranteed refill protection can be refilled free of charge via the Orders History tab within the specified warranty period.</p>
+        </div>
+        <div>
+          <strong style="color: var(--text-main); font-size: 14px;">4. Support & Assistance</strong>
+          <p style="margin-top: 4px;">For any deposit discrepancies or order assistance, our 24/7 support ticketing team is available directly in the Support tab.</p>
+        </div>
+      </div>
+
+      <button class="btn btn-primary btn-block" style="margin-top: 14px;" onclick="CustomerApp.closeModal()">
+        I Understand & Agree
+      </button>
+    `;
+
+    modal.classList.add('active');
   },
 
   openDepositModal() {
@@ -1148,33 +1287,87 @@ const CustomerApp = {
           </p>
         </div>
 
-        <div class="card" style="display: flex; flex-direction: column; gap: 16px;">
-          <h3 style="font-size: 18px; font-weight: 800;">Add Funds to Wallet</h3>
+        <!-- Paytm Business QR Deposit Box -->
+        <div class="paytm-qr-box">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <span style="font-size: 22px;">⚡</span>
+            <h3 style="font-size: 21px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">
+              Paytm / All UPI Instant QR Deposit
+            </h3>
+          </div>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; max-width: 520px;">
+            Scan QR with Paytm, PhonePe, Google Pay, BHIM, or any UPI app for instant automated wallet credit.
+          </p>
 
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;">
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(100)">₹100</button>
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(250)">₹250</button>
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(500)">₹500</button>
-            <button class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(1000)">₹1,000</button>
+          <!-- QR Code Image -->
+          <div style="margin: 18px 0 10px; position: relative;">
+            <img src="assets/paytm-qr.png" alt="Paytm All-In-One QR Code" class="paytm-qr-img" />
           </div>
 
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Deposit Amount (₹ INR)</label>
-            <input type="number" class="form-input" id="add-funds-amount-input" value="250" min="50" max="50000" />
+          <!-- Merchant Info & Copyable UPI ID -->
+          <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-top: 4px;">
+            VIPLAV KUMAR <span style="font-weight: 600; color: #10B981; font-size: 12px; background: rgba(16, 185, 129, 0.12); padding: 2px 8px; border-radius: 999px;">✓ Verified Merchant</span>
           </div>
 
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Payment Method</label>
-            <select class="form-select" id="add-funds-method-select">
-              <option value="UPI / Instant QR (0% Fee)">UPI / Instant QR (Google Pay, PhonePe, Paytm)</option>
-              <option value="Credit / Debit Card (Stripe)">Credit / Debit Card (Visa, Mastercard)</option>
-              <option value="Cryptocurrency (USDT TRC20 / BTC)">Crypto (USDT TRC20 / BTC / ETH)</option>
-            </select>
+          <div class="upi-id-badge" onclick="CustomerApp.copyUpiId()" title="Click to copy UPI ID">
+            <span>paytm.s1fd86i@pty</span>
+            <span style="font-size: 11.5px; background: var(--primary); color: white; padding: 2px 8px; border-radius: 999px; font-weight: 800;">Copy</span>
           </div>
 
-          <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.handleDeposit()">
-            <span>Proceed to Deposit</span>
-          </button>
+          <!-- Quick Preset Pills (Min ₹10) -->
+          <div style="width: 100%; margin-top: 22px; text-align: left;">
+            <label class="form-label" style="font-weight: 800; font-size: 13px;">
+              <span>1. Choose or Enter Deposit Amount (Min ₹10)</span>
+            </label>
+            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 10px;">
+              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(10)">₹10</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(50)">₹50</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(100)">₹100</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(250)">₹250</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(500)">₹500</button>
+              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(1000)">₹1,000</button>
+            </div>
+            <div class="form-group" style="margin-bottom: 14px;">
+              <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="10" max="50000" style="font-size: 16px; font-weight: 700; min-height: 48px; border-radius: 12px;" placeholder="Enter amount in ₹ (e.g. 100)" />
+            </div>
+
+            <!-- 12-Digit UTR Input -->
+            <label class="form-label" style="font-weight: 800; font-size: 13px;">
+              <span>2. Enter 12-Digit UPI UTR / Transaction ID</span>
+              <span class="form-label-hint">Found in Paytm / PhonePe / GPay receipt</span>
+            </label>
+            <div style="position: relative; margin-bottom: 18px;">
+              <input type="text" class="form-input" id="add-funds-utr-input" placeholder="e.g. 423981029381 (12 digits)" maxlength="16" style="padding-right: 120px; font-family: var(--font-mono); font-size: 14.5px; min-height: 48px; border-radius: 12px;" />
+              <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 7px; top: 7px; height: 34px; padding: 0 12px; font-size: 11.5px; font-weight: 700; border-radius: 8px;" onclick="CustomerApp.pasteSampleUtr()">
+                Paste Sample
+              </button>
+            </div>
+
+            <!-- Refraction Action Button -->
+            <button class="btn btn-primary btn-block btn-lg btn-refraction" id="btn-verify-deposit" onclick="CustomerApp.handleDeposit()" style="height: 52px; font-size: 16px; border-radius: 14px;">
+              <span>⚡ Verify & Add Funds to Wallet</span>
+            </button>
+          </div>
+
+          <!-- Trust Badges (No scary warnings) -->
+          <div class="trust-badges-row">
+            <div class="trust-badge-item">
+              <span style="color: #10B981;">✓</span>
+              <span>Instant Automated Credit (0-60s)</span>
+            </div>
+            <div class="trust-badge-item">
+              <span style="color: #10B981;">🛡️</span>
+              <span>100% Safe Paytm Verified Merchant</span>
+            </div>
+            <div class="trust-badge-item">
+              <span style="color: #6C5CE7;">⚡</span>
+              <span>0% Surcharge / Zero Fee</span>
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 14px;">
+            By adding funds, you agree to our <a href="#" onclick="CustomerApp.openTermsModal(); return false;" style="color: var(--primary); font-weight: 700; text-decoration: underline;">Terms & Conditions</a>
+          </div>
         </div>
 
         <div>
