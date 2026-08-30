@@ -659,12 +659,21 @@ const CustomerApp = {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       const getPriority = (str) => {
-        if (str.includes('india')) return 0; // Top priority for Indian Services
-        if (str.includes('followers')) return 1;
-        if (str.includes('likes')) return 2;
-        if (str.includes('views')) return 3;
-        if (str.includes('comments')) return 4;
-        return 5;
+        if (str.includes('cheapest') && str.includes('selling')) return 0;
+        if (str.includes('newly arrived')) return 1;
+        if (str.includes('indian followers')) return 2;
+        if (str.includes('comments indian')) return 3;
+        if (str.includes('random & custom comments')) return 4;
+        if (str.includes('likes [cheapest')) return 5;
+        if (str.includes('shares & saves')) return 6;
+        if (str.includes('country targeted')) return 7;
+        if (str.includes('youtube subscribers')) return 8;
+        if (str.includes('india')) return 9;
+        if (str.includes('followers')) return 10;
+        if (str.includes('likes')) return 11;
+        if (str.includes('views')) return 12;
+        if (str.includes('comments')) return 13;
+        return 14;
       };
       const pA = getPriority(aLower);
       const pB = getPriority(bLower);

@@ -85,7 +85,7 @@ window.SMM_MOCK = {
       status: 'active',
       balance: 0.00,
       currency: 'USD',
-      activeServices: 14,
+      activeServices: 67,
       lastSync: 'Live Connected',
       apiUrl: 'https://worldofsmm.com/api/v2',
       apiKeyMasked: '46b91d••••••••3a1a'
