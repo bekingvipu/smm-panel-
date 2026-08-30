@@ -219,6 +219,7 @@ class SmmStateStore {
   }
 
   setCustomerTab(tab) {
+    if (tab === 'dashboard') tab = 'home';
     this.customerTab = tab;
     localStorage.setItem('smm_active_customer_tab', tab);
     try {

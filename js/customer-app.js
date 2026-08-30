@@ -12,10 +12,11 @@ const CustomerApp = {
 
     let contentHtml = '';
     if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
-    else if (tab === 'home') contentHtml = this.renderHomeTab(store);
+    else if (tab === 'home' || tab === 'dashboard') contentHtml = this.renderHomeTab(store);
     else if (tab === 'orders') contentHtml = this.renderOrdersTab(store);
     else if (tab === 'wallet') contentHtml = this.renderWalletTab(store);
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
+    else contentHtml = this.renderNewOrderTab(store);
 
     container.innerHTML = `
       <!-- Desktop Header (Screens >= 768px) -->
@@ -627,6 +628,10 @@ const CustomerApp = {
 
   // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
   renderNewOrderTab(store) {
+    const rawServices = window.JAP_SERVICES || [];
+    const plat = this.currentPlatform || 'instagram';
+    const query = (this.searchQuery || '').trim().toLowerCase();
+
     // Exclude unwanted services/categories: JAP EXCLUSIVE and AI Growth Package
     const isExcluded = (s) => {
       const cat = (s.category || '').toLowerCase();
