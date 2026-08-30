@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Admin Console — LikeX System Management</title>
+  <meta name="robots" content="noindex, nofollow" />
+  
+  <!-- Site Icon / Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32x32.png" />
+  <link rel="icon" type="image/png" href="assets/likex-favicon.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="assets/apple-touch-icon.png" />
+  <link rel="shortcut icon" href="favicon.ico" />
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="css/design-system.css" />
+  <link rel="stylesheet" href="css/device-frame.css" />
+  <link rel="stylesheet" href="css/mobile-customer.css" />
+  <link rel="stylesheet" href="css/admin-console.css" />
+</head>
+<body>
+
+  <!-- Full Viewport Production Application Container -->
+  <div id="app-root">
+    <div id="screen-container" class="production-canvas"></div>
+  </div>
+
+  <!-- Generic Interactive Modal & Bottom Sheet -->
+  <div id="generic-modal-backdrop" class="modal-backdrop">
+    <div id="generic-modal-sheet" class="modal-sheet"></div>
+  </div>
+
+  <!-- Floating Toast Notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Force Admin Persona Flag for native /admin URL -->
+  <script>
+    window.FORCE_ADMIN_PERSONA = true;
+  </script>
+
+  <!-- JavaScript Modules -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-client.js"></script>
+  <script src="js/jap-catalog.js"></script>
+  <script src="js/mock-data.js"></script>
+  <script src="js/state-store.js"></script>
+  <script src="js/customer-app.js"></script>
+  <script src="js/admin-app.js"></script>
+  <script src="js/main.js"></script>
+
+</body>
+</html>

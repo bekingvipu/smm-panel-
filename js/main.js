@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
     const hash = window.location.hash;
 
-    if (path.startsWith('/admin') || hash === '#admin') {
+    if (window.FORCE_ADMIN_PERSONA || path.startsWith('/admin') || hash === '#admin') {
       store.persona = 'admin';
       // Clean up hash if present
       if (hash) {
@@ -24,6 +24,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Clean Navigation Helper
   window.navigateToRoute = (route) => {
+    if (route === '/admin') {
+      if (!window.location.pathname.startsWith('/admin') && !window.location.pathname.includes('admin.html')) {
+        window.location.href = '/admin';
+        return;
+      }
+    } else if (route === '/') {
+      if (window.location.pathname.startsWith('/admin') || window.location.pathname.includes('admin.html')) {
+        window.location.href = '/';
+        return;
+      }
+    }
+
     if (window.location.pathname !== route) {
       window.history.pushState(null, '', route);
     }

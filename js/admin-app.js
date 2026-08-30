@@ -1,49 +1,75 @@
-const AdminApp = {
-  isSignUpMode: false,
+async function sha256Hex(message) {
+  const msgUint8 = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
+const AdminApp = {
   isAdminAuthenticated() {
-    return sessionStorage.getItem('likex_admin_authenticated') === 'true';
+    return sessionStorage.getItem('likex_super_admin_auth') === 'true';
   },
 
   logoutAdmin() {
-    sessionStorage.removeItem('likex_admin_authenticated');
-    sessionStorage.removeItem('likex_admin_email');
-    window.store.showToast('Admin session locked.', 'info');
+    sessionStorage.removeItem('likex_super_admin_auth');
+    sessionStorage.removeItem('likex_super_admin_user');
+    window.store.showToast('Super Admin session locked.', 'info');
     window.navigateToRoute('/');
   },
 
   async handleAdminLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('admin-email-input')?.value.trim();
-    const password = document.getElementById('admin-pass-input')?.value;
+    const passwordInput = document.getElementById('admin-master-password');
+    const password = passwordInput ? passwordInput.value : '';
     const errBox = document.getElementById('admin-auth-error');
     const submitBtn = document.getElementById('btn-admin-submit');
 
-    if (!email || !password) return;
+    if (!password) {
+      if (errBox) {
+        errBox.textContent = 'Please enter the Master Admin Password.';
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>Verifying Supabase Credentials... ⏳</span>';
+    submitBtn.innerHTML = '<span>Verifying with Supabase... ⏳</span>';
+    if (errBox) errBox.style.display = 'none';
 
     try {
       if (!window.supabaseClient) {
-        throw new Error('Supabase client is initializing. Please refresh and retry.');
+        throw new Error('Supabase client connection error. Please refresh the page.');
       }
 
-      const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-        email: email.toLowerCase(),
-        password: password
-      });
+      const inputHash = await sha256Hex(password);
+
+      // Verify directly against the Admin record in Supabase
+      const { data, error } = await window.supabaseClient
+        .from('users')
+        .select('id, username, email, role, password_hash')
+        .eq('role', 'admin')
+        .limit(1);
 
       if (error) throw error;
 
-      if (data && data.user) {
-        sessionStorage.setItem('likex_admin_authenticated', 'true');
-        sessionStorage.setItem('likex_admin_email', data.user.email);
-        window.store.showToast(`Admin Console Unlocked. Welcome, ${data.user.email}! 🛡️`, 'success');
-        this.render(document.getElementById('screen-container'));
+      if (!data || data.length === 0) {
+        throw new Error('No Admin account found in Supabase database.');
       }
+
+      const adminRow = data[0];
+
+      if (adminRow.password_hash !== inputHash) {
+        throw new Error('Access Denied: Incorrect Master Admin Password.');
+      }
+
+      // Success! Unlocking Super Admin Console
+      sessionStorage.setItem('likex_super_admin_auth', 'true');
+      sessionStorage.setItem('likex_super_admin_user', adminRow.username || 'super_admin');
+      window.store.showToast('Super Admin Console Unlocked! 🛡️', 'success');
+      this.render(document.getElementById('screen-container'));
     } catch (err) {
       if (errBox) {
-        errBox.textContent = err.message || 'Invalid admin credentials. Access Denied.';
+        errBox.textContent = err.message || 'Authentication failed. Access Denied.';
         errBox.style.display = 'block';
       }
       submitBtn.disabled = false;
@@ -51,103 +77,118 @@ const AdminApp = {
     }
   },
 
-  async handleAdminSignUp(e) {
-    e.preventDefault();
-    const email = document.getElementById('admin-email-input')?.value.trim();
-    const password = document.getElementById('admin-pass-input')?.value;
-    const errBox = document.getElementById('admin-auth-error');
-    const submitBtn = document.getElementById('btn-admin-submit');
+  openChangePasswordModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
 
-    if (!email || !password || password.length < 6) {
-      if (errBox) {
-        errBox.textContent = 'Password must be at least 6 characters.';
-        errBox.style.display = 'block';
-      }
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title">🔑 Change Master Admin Password</h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+      <div id="change-pass-error" style="display: none; background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px;"></div>
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Current Master Password</label>
+          <input type="password" class="form-input" id="curr-admin-pass" placeholder="Enter current password" style="height: 46px;" />
+        </div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">New Master Password</label>
+          <input type="password" class="form-input" id="new-admin-pass" placeholder="Enter new strong password" minlength="6" style="height: 46px;" />
+        </div>
+        <button class="btn btn-primary btn-block btn-lg" id="btn-save-admin-pass" onclick="AdminApp.saveNewAdminPassword()" style="margin-top: 6px;">
+          Update Password in Supabase 💾
+        </button>
+      </div>
+    `;
+    modal.classList.add('active');
+  },
+
+  async saveNewAdminPassword() {
+    const currPass = document.getElementById('curr-admin-pass')?.value;
+    const newPass = document.getElementById('new-admin-pass')?.value;
+    const errBox = document.getElementById('change-pass-error');
+    const btn = document.getElementById('btn-save-admin-pass');
+
+    if (!currPass || !newPass) {
+      if (errBox) { errBox.textContent = 'Please fill in both password fields.'; errBox.style.display = 'block'; }
+      return;
+    }
+    if (newPass.length < 6) {
+      if (errBox) { errBox.textContent = 'New password must be at least 6 characters.'; errBox.style.display = 'block'; }
       return;
     }
 
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>Registering Admin via Supabase... ⏳</span>';
+    btn.disabled = true;
+    btn.innerHTML = '<span>Updating Supabase... ⏳</span>';
 
     try {
-      if (!window.supabaseClient) {
-        throw new Error('Supabase client is initializing.');
+      const currHash = await sha256Hex(currPass);
+      const newHash = await sha256Hex(newPass);
+
+      const { data, error: selectErr } = await window.supabaseClient
+        .from('users')
+        .select('password_hash')
+        .eq('role', 'admin')
+        .limit(1);
+
+      if (selectErr || !data || data.length === 0 || data[0].password_hash !== currHash) {
+        throw new Error('Current master password is incorrect.');
       }
 
-      const { data, error } = await window.supabaseClient.auth.signUp({
-        email: email.toLowerCase(),
-        password: password,
-        options: {
-          data: { role: 'admin' }
-        }
-      });
+      const { error: updateErr } = await window.supabaseClient
+        .from('users')
+        .update({ password_hash: newHash })
+        .eq('role', 'admin');
 
-      if (error) throw error;
+      if (updateErr) throw updateErr;
 
-      sessionStorage.setItem('likex_admin_authenticated', 'true');
-      sessionStorage.setItem('likex_admin_email', email);
-      window.store.showToast('Admin account created and verified! Welcome! 🛡️', 'success');
-      this.render(document.getElementById('screen-container'));
+      CustomerApp.closeModal();
+      window.store.showToast('Master Admin Password successfully updated in Supabase! 🔒', 'success');
     } catch (err) {
       if (errBox) {
-        errBox.textContent = err.message || 'Registration failed.';
+        errBox.textContent = err.message || 'Failed to update password.';
         errBox.style.display = 'block';
       }
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>Create & Unlock Admin 🔐</span>';
+      btn.disabled = false;
+      btn.innerHTML = '<span>Update Password in Supabase 💾</span>';
     }
   },
 
   renderAdminLogin(container) {
-    const isSignUp = this.isSignUpMode;
     container.innerHTML = `
       <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body); padding: 24px 16px;">
-        <div class="card" style="width: 100%; max-width: 420px; padding: 36px 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
-          <div style="text-align: center; margin-bottom: 24px;">
-            <div style="width: 58px; height: 58px; margin: 0 auto 14px; background: linear-gradient(135deg, #4F46E5, #9333EA); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);">
+        <div class="card" style="width: 100%; max-width: 420px; padding: 38px 28px; box-shadow: 0 20px 45px rgba(0,0,0,0.12); border: 1.5px solid var(--border-color); border-radius: var(--radius-xl);">
+          <div style="text-align: center; margin-bottom: 26px;">
+            <div style="width: 60px; height: 60px; margin: 0 auto 16px; background: linear-gradient(135deg, #4F46E5, #9333EA); border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 30px; box-shadow: 0 8px 24px rgba(79, 70, 229, 0.35);">
               🛡️
             </div>
-            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0;">
-              ${isSignUp ? 'Set Up Admin Account' : 'LikeX Admin Portal'}
+            <h2 style="font-size: 22px; font-weight: 900; color: var(--text-main); margin: 0;">
+              LikeX Super Admin Console
             </h2>
             <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
-              ${isSignUp ? 'Register initial admin credentials on Supabase' : 'Secure Supabase Enterprise Authentication'}
+              Master Security Verification
             </p>
           </div>
 
           <div id="admin-auth-error" style="display: none; background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 16px;"></div>
 
-          <form onsubmit="AdminApp.${isSignUp ? 'handleAdminSignUp(event)' : 'handleAdminLogin(event)'}" style="display: flex; flex-direction: column; gap: 16px;">
+          <form onsubmit="AdminApp.handleAdminLogin(event)" style="display: flex; flex-direction: column; gap: 16px;">
             <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" style="font-size: 12.5px; font-weight: 700;">Admin Email</label>
-              <input type="email" id="admin-email-input" class="form-input" placeholder="admin@likex.in" required style="height: 48px;" autofocus />
-            </div>
-
-            <div class="form-group" style="margin-bottom: 0;">
-              <label class="form-label" style="font-size: 12.5px; font-weight: 700;">Admin Password</label>
-              <input type="password" id="admin-pass-input" class="form-input" placeholder="••••••••••••" required minlength="6" style="height: 48px;" />
+              <label class="form-label" style="font-size: 12.5px; font-weight: 700;">Master Admin Password</label>
+              <input type="password" id="admin-master-password" class="form-input" placeholder="Enter Master Admin Password" required style="height: 48px; font-size: 15px;" autofocus />
             </div>
 
             <button type="submit" id="btn-admin-submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 4px; height: 50px; font-weight: 800; font-size: 15px;">
-              <span>${isSignUp ? 'Create & Unlock Admin 🔐' : 'Unlock Admin Console 🔐'}</span>
+              <span>Unlock Admin Console 🔐</span>
             </button>
 
             <button type="button" class="btn btn-outline btn-block btn-sm" onclick="window.navigateToRoute('/')" style="margin-top: 4px;">
               ← Return to Customer Storefront
             </button>
 
-            <div style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.5;">
-              ${isSignUp ? `
-                Already have an admin account? 
-                <a href="#" onclick="AdminApp.isSignUpMode = false; AdminApp.render(document.getElementById('screen-container')); return false;" style="color: var(--primary); font-weight: 700; text-decoration: underline;">
-                  Sign In
-                </a>
-              ` : `
-                First-time setup on Supabase? 
-                <a href="#" onclick="AdminApp.isSignUpMode = true; AdminApp.render(document.getElementById('screen-container')); return false;" style="color: var(--primary); font-weight: 700; text-decoration: underline;">
-                  Click here to register admin
-                </a>
-              `}
+            <div style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin-top: 8px; line-height: 1.5;">
+              🔒 Encrypted via SHA-256 cryptographic verification against Supabase PostgreSQL database.
             </div>
           </form>
         </div>
@@ -240,11 +281,14 @@ const AdminApp = {
               <button class="btn btn-sm btn-secondary" onclick="window.navigateToRoute('/')">
                 Exit to Storefront
               </button>
+              <button class="btn btn-sm btn-outline" style="border-color: var(--primary); color: var(--primary);" onclick="AdminApp.openChangePasswordModal()" title="Change Master Admin Password">
+                🔑 Password
+              </button>
               <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error);" onclick="AdminApp.logoutAdmin()" title="Lock Admin Console">
                 🔒 Lock
               </button>
               <div class="admin-user-pill">
-                <span class="admin-user-name">${adminEmail.split('@')[0]} (Admin)</span>
+                <span class="admin-user-name">Super Admin 🛡️</span>
               </div>
             </div>
           </header>
