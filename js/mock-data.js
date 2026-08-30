@@ -72,10 +72,23 @@ window.SMM_MOCK = {
       displayName: 'JustAnotherPanel (JAP Wholesale)',
       status: 'active',
       balance: 0.00,
+      currency: 'USD',
       activeServices: 5803,
       lastSync: 'Live Connected',
       apiUrl: 'https://justanotherpanel.com/api/v2',
       apiKeyMasked: '30265a••••••••4a63'
+    },
+    {
+      id: 'p2',
+      name: 'WorldOfSMM',
+      displayName: 'WorldOfSMM (India Local Provider 🇮🇳)',
+      status: 'active',
+      balance: 0.00,
+      currency: 'USD',
+      activeServices: 14,
+      lastSync: 'Live Connected',
+      apiUrl: 'https://worldofsmm.com/api/v2',
+      apiKeyMasked: '46b91d••••••••3a1a'
     }
   ],
 

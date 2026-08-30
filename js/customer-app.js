@@ -659,6 +659,7 @@ const CustomerApp = {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       const getPriority = (str) => {
+        if (str.includes('india')) return 0; // Top priority for Indian Services
         if (str.includes('followers')) return 1;
         if (str.includes('likes')) return 2;
         if (str.includes('views')) return 3;

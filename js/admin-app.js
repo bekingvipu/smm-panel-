@@ -470,16 +470,20 @@ const AdminApp = {
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 style="font-size: 24px; font-weight: 800;">Provider Management</h2>
-          <p style="font-size: 13.5px;">Manage and monitor your external SMM API connections.</p>
+          <p style="font-size: 13.5px;">Manage and monitor your dual upstream SMM API connections (JAP + WorldOfSMM).</p>
         </div>
       </div>
 
       <div class="provider-cards-grid">
-        ${providers.map(p => `
-          <div class="provider-card status-active">
+        ${providers.map(p => {
+          const isZeroBalance = !p.balance || p.balance <= 0.001;
+          const inrApprox = ((p.balance || 0) * 87).toFixed(0);
+
+          return `
+          <div class="provider-card status-active" style="${isZeroBalance ? 'border-color: rgba(245, 158, 11, 0.4);' : ''}">
             <div class="provider-card-header">
               <div class="provider-identity">
-                <div class="provider-avatar-box">❖</div>
+                <div class="provider-avatar-box">${p.id === 'p2' ? '🇮🇳' : '❖'}</div>
                 <div class="provider-title-box">
                   <h3>${p.displayName}</h3>
                   <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
@@ -490,30 +494,39 @@ const AdminApp = {
                   </div>
                 </div>
               </div>
-              <span class="badge badge-neutral">${p.lastSync}</span>
+              <span class="badge badge-neutral">${p.lastSync || 'Live API'}</span>
             </div>
 
             <div class="provider-stats-row">
               <div class="provider-stat-col">
                 <span class="provider-stat-label">Account Balance</span>
-                <span class="provider-stat-val">
+                <span class="provider-stat-val" style="color: ${isZeroBalance ? '#DC2626' : 'var(--success)'}; font-weight: 800;">
                   $${p.balance !== null ? p.balance.toFixed(2) : '0.00'} USD
                 </span>
+                <span style="font-size: 11px; color: var(--text-muted);">≈ ₹${inrApprox} INR</span>
               </div>
               <div class="provider-stat-col">
-                <span class="provider-stat-label">Active Services</span>
+                <span class="provider-stat-label">Curated Services</span>
                 <span class="provider-stat-val">${p.activeServices}</span>
+                <span style="font-size: 11px; color: var(--text-muted);">${p.id === 'p2' ? 'Zero Duplicates (Indian)' : 'Global Wholesale'}</span>
               </div>
             </div>
 
+            ${isZeroBalance ? `
+              <div style="margin: 10px 0; padding: 8px 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 12px; color: #B45309; display: flex; align-items: center; gap: 6px;">
+                <span>⚠️</span>
+                <span><strong>Zero Balance:</strong> Top up on ${p.name} ${p.id === 'p2' ? 'via UPI/Paytm' : 'via Crypto'} to fulfill live orders.</span>
+              </div>
+            ` : ''}
+
             <div class="provider-card-actions">
-              <span style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);">${p.apiUrl}</span>
+              <span style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono); overflow: hidden; text-overflow: ellipsis; max-width: 190px;">${p.apiUrl}</span>
               <button class="btn btn-sm btn-secondary" onclick="store.testProviderConnection('${p.id}')">
                 Test Connection
               </button>
             </div>
           </div>
-        `).join('')}
+        `}).join('')}
       </div>
     `;
   },
@@ -573,6 +586,7 @@ const AdminApp = {
             <tr>
               <th>Order ID</th>
               <th>Customer Service</th>
+              <th>Provider Origin</th>
               <th>Target URL</th>
               <th>Quantity</th>
               <th>Charge</th>
@@ -580,18 +594,47 @@ const AdminApp = {
             </tr>
           </thead>
           <tbody>
-            ${orders.map(o => `
+            ${orders.map(o => {
+              const isWos = o.provider === 'worldofsmm' || (o.serviceId && String(o.serviceId).startsWith('wos-'));
+              const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
+
+              return `
               <tr>
                 <td style="font-family: var(--font-mono); font-weight: 700;">#${o.id}</td>
-                <td>${o.serviceName}</td>
-                <td style="font-family: var(--font-mono); font-size: 11.5px; max-width: 200px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                <td>
+                  <strong>${o.serviceName}</strong>
+                  ${o.comments ? `<div style="font-size: 11px; color: var(--primary); font-weight: 600;">💬 Custom Comments Included</div>` : ''}
+                </td>
+                <td>
+                  ${isWos ? `
+                    <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+                      🇮🇳 WorldOfSMM
+                    </span>
+                  ` : `
+                    <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #1D4ED8; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+                      🌐 JAP
+                    </span>
+                  `}
+                  <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 3px;">
+                    ${o.providerOrderId || 'Prov Order #'+o.id}
+                  </div>
+                </td>
+                <td style="font-family: var(--font-mono); font-size: 11.5px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
                   ${o.target}
                 </td>
                 <td>${Number(o.quantity).toLocaleString()}</td>
                 <td><strong style="color: var(--primary);">${store.formatMoney(o.amount)}</strong></td>
-                <td><span class="badge badge-primary">${o.status}</span></td>
+                <td>
+                  ${isLow ? `
+                    <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
+                      ⚠️ Low Balance (Needs Fund)
+                    </span>
+                  ` : `
+                    <span class="badge badge-primary">${o.status}</span>
+                  `}
+                </td>
               </tr>
-            `).join('')}
+            `}).join('')}
           </tbody>
         </table>
       </div>

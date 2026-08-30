@@ -1,4 +1,4 @@
-// Vercel Serverless Function to proxy JustAnotherPanel (JAP) API with CORS
+// Vercel Serverless Function to proxy JustAnotherPanel (JAP) and WorldOfSMM APIs with CORS
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -8,8 +8,18 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const JAP_API_URL = 'https://justanotherpanel.com/api/v2';
-  const JAP_API_KEY = '30265a24da9de364919a246b151c4a63';
+  const PROVIDERS = {
+    jap: {
+      name: 'JustAnotherPanel',
+      url: 'https://justanotherpanel.com/api/v2',
+      key: '30265a24da9de364919a246b151c4a63'
+    },
+    worldofsmm: {
+      name: 'WorldOfSMM',
+      url: 'https://worldofsmm.com/api/v2',
+      key: '46b91da29d8e95bad51d3aa3eb8c3a1a'
+    }
+  };
 
   // Parse request params
   let paramsObj = {};
@@ -24,45 +34,61 @@ export default async function handler(req, res) {
   }
 
   const action = paramsObj.action || 'balance';
+  const requestedProvider = (paramsObj.provider || 'jap').toLowerCase();
 
-  const formData = new URLSearchParams();
-  formData.append('key', JAP_API_KEY);
-  formData.append('action', action);
+  // Helper to query an upstream provider
+  const callProvider = async (providerConfig, customParams = {}) => {
+    const formData = new URLSearchParams();
+    formData.append('key', providerConfig.key);
+    formData.append('action', customParams.action || action);
 
-  if (paramsObj.service) formData.append('service', String(paramsObj.service));
-  if (paramsObj.link) formData.append('link', String(paramsObj.link));
-  if (paramsObj.quantity) formData.append('quantity', String(paramsObj.quantity));
-  if (paramsObj.comments) formData.append('comments', String(paramsObj.comments));
-  if (paramsObj.order) formData.append('order', String(paramsObj.order));
-  if (paramsObj.refill) formData.append('refill', String(paramsObj.refill));
+    if (customParams.service || paramsObj.service) formData.append('service', String(customParams.service || paramsObj.service));
+    if (customParams.link || paramsObj.link) formData.append('link', String(customParams.link || paramsObj.link));
+    if (customParams.quantity || paramsObj.quantity) formData.append('quantity', String(customParams.quantity || paramsObj.quantity));
+    if (customParams.comments || paramsObj.comments) formData.append('comments', String(customParams.comments || paramsObj.comments));
+    if (customParams.order || paramsObj.order) formData.append('order', String(customParams.order || paramsObj.order));
+    if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-  try {
-    const upstreamResponse = await fetch(JAP_API_URL, {
+    const response = await fetch(providerConfig.url, {
       method: 'POST',
       body: formData,
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (compatible; SMMPro/2.0)'
+        'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
       }
     });
+    return await response.json();
+  };
 
-    const data = await upstreamResponse.json();
+  try {
+    // Multi-balance check
+    if (action === 'balance' && (requestedProvider === 'all' || requestedProvider === 'both')) {
+      const [japRes, wosRes] = await Promise.allSettled([
+        callProvider(PROVIDERS.jap, { action: 'balance' }),
+        callProvider(PROVIDERS.worldofsmm, { action: 'balance' })
+      ]);
 
-    // When resellers fetch services, automatically apply LikeX profit markup (100% markup)
-    if (action === 'services' && Array.isArray(data)) {
-      const markupMultiplier = 2.0; // Wholesale cost x 2 (100% profit markup)
-      const transformedServices = data.map(s => {
-        const wholesaleRate = parseFloat(s.rate) || 0;
-        return {
-          ...s,
-          rate: (wholesaleRate * markupMultiplier).toFixed(4)
-        };
+      return res.status(200).json({
+        jap: japRes.status === 'fulfilled' ? japRes.value : { error: 'Failed to reach JAP' },
+        worldofsmm: wosRes.status === 'fulfilled' ? wosRes.value : { error: 'Failed to reach WorldOfSMM' }
       });
-      return res.status(200).json(transformedServices);
     }
 
-    return res.status(200).json(data);
+    const providerKey = requestedProvider in PROVIDERS ? requestedProvider : 'jap';
+    const providerConfig = PROVIDERS[providerKey];
+
+    const data = await callProvider(providerConfig);
+
+    // Attach provider key to response for clear origin tracking
+    return res.status(200).json({
+      ...data,
+      provider: providerKey,
+      providerName: providerConfig.name
+    });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to communicate with upstream provider API: ' + error.message });
+    return res.status(500).json({ 
+      error: 'Upstream provider connection error: ' + error.message,
+      provider: requestedProvider 
+    });
   }
 }

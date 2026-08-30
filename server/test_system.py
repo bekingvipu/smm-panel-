@@ -78,6 +78,10 @@ class SmmSystemTestSuite(unittest.TestCase):
 
     def test_04_refill_engine_eligibility_and_dispatch(self):
         """Verify smart refill engine restricts to completed orders and prevents duplicates"""
+        # Ensure order #48285 is eligible for the test and clear any prior refill requests
+        self.db.execute("DELETE FROM refill_requests WHERE order_id = 48285")
+        self.db.execute("UPDATE orders SET refill_eligible = 1, refill_status = 'Available', refill_deadline = datetime('now', '+30 days') WHERE id = 48285")
+        self.db.commit()
         # Order #48285 is Completed and has refill warranty
         res = RefillEngine.request_refill(self.db, order_id=48285, user_id=1)
         self.assertTrue(res['success'])

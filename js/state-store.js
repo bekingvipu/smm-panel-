@@ -91,17 +91,27 @@ class SmmStateStore {
 
   async initServerSync() {
     try {
-      const balanceRes = await fetch('/api/provider?action=balance');
+      const balanceRes = await fetch('/api/provider?action=balance&provider=all');
       if (balanceRes.ok) {
         const balData = await balanceRes.json();
-        if (balData && balData.balance !== undefined) {
-          const liveBal = parseFloat(balData.balance) || 0.00;
-          const japProv = this.data.providers.find(p => p.id === 'p1');
-          if (japProv) {
-            japProv.balance = liveBal;
-            japProv.lastSync = 'Just now (Live JAP)';
+        if (balData) {
+          if (balData.jap && balData.jap.balance !== undefined) {
+            const japBal = parseFloat(balData.jap.balance) || 0.00;
+            const japProv = this.data.providers.find(p => p.id === 'p1');
+            if (japProv) {
+              japProv.balance = japBal;
+              japProv.lastSync = 'Live Sync (JAP API)';
+            }
+            this.data.adminStats.providerBalance = japBal;
           }
-          this.data.adminStats.providerBalance = liveBal;
+          if (balData.worldofsmm && balData.worldofsmm.balance !== undefined) {
+            const wosBal = parseFloat(balData.worldofsmm.balance) || 0.00;
+            const wosProv = this.data.providers.find(p => p.id === 'p2');
+            if (wosProv) {
+              wosProv.balance = wosBal;
+              wosProv.lastSync = 'Live Sync (WorldOfSMM API)';
+            }
+          }
           this.notify();
         }
       }
@@ -361,15 +371,29 @@ class SmmStateStore {
       return { success: false, message: 'Insufficient balance' };
     }
 
-    // Try sending live order to JustAnotherPanel
+    // Determine provider & raw service id
+    let targetProvider = 'jap';
+    let rawServiceId = serviceId;
+    if (String(serviceId).startsWith('wos-')) {
+      targetProvider = 'worldofsmm';
+      rawServiceId = String(serviceId).replace('wos-', '');
+    }
+
+    const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM 🇮🇳' : 'JustAnotherPanel';
+
+    // Try sending live order to appropriate upstream provider
     let liveOrderId = null;
+    let isLowBalance = false;
+    let upstreamError = null;
+
     try {
       const liveRes = await fetch('/api/provider', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          provider: targetProvider,
           action: 'add',
-          service: String(serviceId),
+          service: String(rawServiceId),
           link: target,
           quantity: quantity,
           comments: comments || undefined
@@ -378,34 +402,48 @@ class SmmStateStore {
       if (liveRes.ok) {
         const liveData = await liveRes.json();
         if (liveData.order) {
-          liveOrderId = liveData.order;
+          liveOrderId = String(liveData.order);
+        } else if (liveData.error) {
+          upstreamError = liveData.error;
+          const errLower = String(liveData.error).toLowerCase();
+          if (errLower.includes('balance') || errLower.includes('funds') || errLower.includes('not enough')) {
+            isLowBalance = true;
+          }
         }
       }
     } catch (e) {}
 
     this.data.customer.balance -= totalCost;
-    const newOrderId = liveOrderId || String(48292 + Math.floor(Math.random() * 900));
+    const assignedOrderId = liveOrderId || String(48292 + Math.floor(Math.random() * 900));
 
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
     const newOrder = {
-      id: newOrderId,
+      id: assignedOrderId,
       serviceId: serviceId,
+      rawServiceId: rawServiceId,
       serviceName: serviceName || `Service #${serviceId}`,
+      provider: targetProvider,
+      providerName: providerDisplayName,
+      providerOrderId: liveOrderId || (isLowBalance ? 'Pending Balance' : `Dispatched (#${assignedOrderId})`),
+      isLowBalance: isLowBalance,
+      upstreamError: upstreamError,
       platform: 'smm',
       target: target,
       quantity: Number(quantity),
       amount: totalCost,
       comments: comments || undefined,
-      status: 'Processing',
+      status: isLowBalance ? 'Pending (Low Provider Balance)' : 'Processing',
       createdAt: now,
       date: formattedDate,
       startCount: 0,
       currentCount: 0,
       remains: Number(quantity),
       refillEligible: false,
-      refillReason: 'Order is dispatching to JAP server'
+      refillReason: isLowBalance 
+        ? `Upstream ${providerDisplayName} balance low. Order queued for topup.` 
+        : `Order is dispatching to ${providerDisplayName} server`
     };
 
     this.data.orders.unshift(newOrder);
@@ -413,7 +451,7 @@ class SmmStateStore {
     this.data.transactions.unshift({
       id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
       type: 'Order Deduction',
-      description: `Payment for Order #${newOrderId}`,
+      description: `Payment for Order #${assignedOrderId} (${providerDisplayName})`,
       amount: -totalCost,
       balanceAfter: this.data.customer.balance,
       status: 'Success',
@@ -426,8 +464,8 @@ class SmmStateStore {
     this.data.recentActivity.unshift({
       id: `act-${now}`,
       type: 'order',
-      title: `New Order #${newOrderId}`,
-      sub: `${serviceName} - ${this.data.customer.name.split(' ')[0]}`,
+      title: `New Order #${assignedOrderId}`,
+      sub: `${serviceName} - ${providerDisplayName}`,
       amount: this.formatMoney(totalCost),
       time: formattedDate,
       icon: '🛒'
@@ -439,11 +477,15 @@ class SmmStateStore {
     this.data.adminStats.profit += (totalCost * (profitMargin / (1 + profitMargin)));
 
     if (!options.silent) {
-      this.showToast(`Order #${newOrderId} placed successfully! Routed via JAP API.`, 'success');
+      if (isLowBalance) {
+        this.showToast(`Order #${assignedOrderId} placed! Upstream ${providerDisplayName} balance low. Admin notified.`, 'warning');
+      } else {
+        this.showToast(`Order #${assignedOrderId} placed successfully! Routed via ${providerDisplayName}.`, 'success');
+      }
       this.setCustomerTab('orders');
     }
     this.notify();
-    return { success: true, orderId: newOrderId, totalCost };
+    return { success: true, orderId: assignedOrderId, totalCost };
   }
 
   async requestRefill(orderId) {
@@ -454,7 +496,11 @@ class SmmStateStore {
       await fetch('/api/provider', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'refill', order: orderId })
+        body: JSON.stringify({ 
+          provider: order.provider || 'jap',
+          action: 'refill', 
+          order: order.providerOrderId || orderId 
+        })
       });
     } catch (e) {}
 
@@ -472,12 +518,12 @@ class SmmStateStore {
       dropCount: Math.max(0, (order.startCount + order.quantity) - order.currentCount),
       requestedAt: 'Just now',
       status: 'Pending',
-      provider: 'JustAnotherPanel (JAP)'
+      provider: order.providerName || 'JustAnotherPanel'
     };
 
     this.data.refillQueue.unshift(refillItem);
     this.saveUserData();
-    this.showToast(`Refill requested for Order #${order.id}! Dispatched to JAP.`, 'refill');
+    this.showToast(`Refill requested for Order #${order.id}! Dispatched to ${order.providerName || 'Provider'}.`, 'refill');
     this.notify();
   }
 
@@ -488,24 +534,41 @@ class SmmStateStore {
       return;
     }
 
+    const numericAmount = parseFloat(amountInUsd);
+    if (isNaN(numericAmount) || numericAmount <= 0) {
+      this.showToast('Please enter a valid amount', 'error');
+      return;
+    }
+
+    this.data.customer.balance += numericAmount;
+
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
-    this.data.customer.balance += Number(amountInUsd);
     this.data.transactions.unshift({
-      id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-      type: 'Deposit',
-      description: `Funds Added via ${method}`,
-      amount: Number(amountInUsd),
+      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
+      type: 'Wallet Deposit',
+      description: `Manual Topup via ${method}`,
+      amount: numericAmount,
       balanceAfter: this.data.customer.balance,
       status: 'Success',
       createdAt: now,
       date: formattedDate
     });
 
+    this.data.recentActivity.unshift({
+      id: `act-${now}`,
+      type: 'deposit',
+      title: 'Wallet Recharged',
+      sub: `${method} • Confirmed`,
+      amount: `+${this.formatMoney(numericAmount)}`,
+      time: formattedDate,
+      icon: '⚡'
+    });
+
     this.saveUserData();
 
-    this.showToast(`Successfully added ${this.formatMoney(amountInUsd)} to wallet!`, 'success');
+    this.showToast(`Successfully added ${this.formatMoney(numericAmount)} to wallet!`, 'success');
     this.notify();
   }
 
@@ -515,21 +578,20 @@ class SmmStateStore {
 
     this.showToast(`Pinging ${provider.displayName} API endpoint...`, 'info');
 
-    if (provider.id === 'p1') {
-      try {
-        const res = await fetch('/api/provider?action=balance');
-        if (res.ok) {
-          const json = await res.json();
-          if (json.balance !== undefined) {
-            provider.balance = parseFloat(json.balance);
-            provider.lastSync = 'Just now (Live API)';
-            this.showToast(`Connected to JustAnotherPanel! Live Balance: $${json.balance} ${json.currency || 'USD'}`, 'success');
-            this.notify();
-            return;
-          }
+    const providerParam = provider.id === 'p2' ? 'worldofsmm' : 'jap';
+    try {
+      const res = await fetch(`/api/provider?action=balance&provider=${providerParam}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.balance !== undefined) {
+          provider.balance = parseFloat(json.balance);
+          provider.lastSync = 'Just now (Live API)';
+          this.showToast(`Connected to ${provider.displayName}! Live Balance: $${json.balance} ${json.currency || 'USD'}`, 'success');
+          this.notify();
+          return;
         }
-      } catch (e) {}
-    }
+      }
+    } catch (e) {}
 
     setTimeout(() => {
       this.showToast(`Connection to ${provider.displayName} verified! Ping 84ms, Balance $${provider.balance.toFixed(2)}`, 'success');
