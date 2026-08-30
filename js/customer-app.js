@@ -20,9 +20,8 @@ const CustomerApp = {
     container.innerHTML = `
       <!-- Desktop Header (Screens >= 768px) -->
       <nav class="desktop-navbar">
-        <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')">
-          <span style="background: var(--primary); color: white; width: 32px; height: 32px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center; font-size: 16px;">⚡</span>
-          <span>SMM Pro</span>
+        <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')" title="LikeX Home">
+          <img src="assets/likex-logo-tight.png" alt="LikeX" class="desktop-brand-logo-img" />
         </div>
 
         <div class="desktop-nav-links">
@@ -74,9 +73,8 @@ const CustomerApp = {
           <button class="drawer-hamburger-btn" onclick="CustomerApp.openSideDrawer()" title="Menu">
             ☰
           </button>
-          <div class="customer-brand-name" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
-            <span style="color: var(--primary);">⚡</span>
-            <span>SMM Pro</span>
+          <div class="customer-brand-name" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; cursor: pointer;" title="LikeX Home">
+            <img src="assets/likex-logo-tight.png" alt="LikeX" class="mobile-brand-logo-img" />
           </div>
         </div>
 

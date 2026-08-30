@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.title = 'Admin Console — SMM Pro System Management';
       AdminApp.render(screenContainer);
     } else {
-      document.title = 'SMM Pro — Social Media Marketing Growth Panel';
+      document.title = 'LikeX — #1 Social Media Marketing Growth Panel | likex.in';
       CustomerApp.render(screenContainer);
     }
   };
