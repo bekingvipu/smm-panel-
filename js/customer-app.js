@@ -1452,64 +1452,202 @@ const CustomerApp = {
 
   openAuthModal(defaultTab = 'login') {
     const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
+    this.renderAuthModalEmailStep();
+    modal.classList.add('active');
+  },
 
+  renderAuthModalEmailStep(errorMessage = '') {
+    const sheet = document.getElementById('generic-modal-sheet');
     sheet.innerHTML = `
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">${defaultTab === 'login' ? 'Customer Sign In' : 'Create Free Account'}</h3>
-          <p style="font-size: 12.5px; color: var(--text-secondary);">Access orders, deposit funds & activate delivery.</p>
+          <h3 class="modal-title">Welcome to LikeX</h3>
+          <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Sign in or create account to place orders & add funds</p>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        ${errorMessage ? `
+          <div style="background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+            ⚠️ ${errorMessage}
+          </div>
+        ` : ''}
+
+        <!-- 1. Google One-Click Sign-In Button -->
+        <button class="btn btn-block" onclick="CustomerApp.handleGoogleAuth()" style="display: flex; align-items: center; justify-content: center; gap: 12px; background: #ffffff; color: #3c4043; border: 1px solid #dadce0; padding: 12px 16px; border-radius: 12px; font-size: 14px; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.08); cursor: pointer; transition: all 0.2s ease;">
+          <svg width="20" height="20" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          Continue with Google
+        </button>
+
+        <!-- Divider -->
+        <div style="display: flex; align-items: center; margin: 4px 0; gap: 12px;">
+          <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+          <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">OR EMAIL OTP</span>
+          <div style="flex: 1; height: 1px; background: var(--border-color);"></div>
+        </div>
+
+        <!-- 2. Email OTP Input Form -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-size: 12px; font-weight: 600;">Gmail / Email Address</label>
+          <input type="email" class="form-input" id="auth-email-input" placeholder="e.g. yourname@gmail.com" style="height: 44px; font-size: 14px;" onkeypress="if(event.key==='Enter') CustomerApp.sendOtpRequest()" />
+        </div>
+
+        <button class="btn btn-primary btn-block btn-lg" id="btn-send-otp" onclick="CustomerApp.sendOtpRequest()">
+          <span>Send 6-Digit OTP ✉️</span>
+        </button>
+
+        <div style="font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.5;">
+          By continuing, you agree to our 
+          <a href="/terms" target="_blank" style="color: var(--primary); text-decoration: underline;">Terms</a> and 
+          <a href="/privacy" target="_blank" style="color: var(--primary); text-decoration: underline;">Privacy Policy</a>.
+        </div>
+
+        <!-- Demo Quick Login Fallback -->
+        <div style="text-align: center; border-top: 1px dashed var(--border-color); padding-top: 12px;">
+          <button class="btn btn-outline btn-block" onclick="CustomerApp.quickDemoLogin()">
+            ⚡ 1-Click Fast Demo Login (Vipul Kumar)
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  renderAuthModalVerifyStep(email, errorMessage = '') {
+    const sheet = document.getElementById('generic-modal-sheet');
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">Verify OTP Code</h3>
+          <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
+            We sent a 6-digit code to <strong>${email}</strong>
+          </p>
         </div>
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 16px;">
-        <div style="display: flex; border-bottom: 2px solid var(--border-color); gap: 16px;">
-          <button class="btn btn-sm ${defaultTab === 'login' ? 'btn-primary' : 'btn-secondary'}" onclick="CustomerApp.openAuthModal('login')">
-            Sign In
-          </button>
-          <button class="btn btn-sm ${defaultTab === 'register' ? 'btn-primary' : 'btn-secondary'}" onclick="CustomerApp.openAuthModal('register')">
-            Register New Account
-          </button>
-        </div>
-
-        ${defaultTab === 'register' ? `
-          <div class="form-group" style="margin-bottom: 0;">
-            <label class="form-label">Full Name</label>
-            <input type="text" class="form-input" id="auth-name-input" placeholder="e.g. Vipul Kumar" value="Vipul Kumar" />
+        ${errorMessage ? `
+          <div style="background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 12px; border-radius: 8px; font-size: 13px;">
+            ⚠️ ${errorMessage}
           </div>
         ` : ''}
 
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Email Address</label>
-          <input type="email" class="form-input" id="auth-email-input" placeholder="name@example.com" value="vipul@demo.com" />
+          <label class="form-label" style="font-size: 12px; font-weight: 600; text-align: center; display: block;">Enter 6-Digit OTP</label>
+          <input 
+            type="text" 
+            class="form-input" 
+            id="auth-otp-input" 
+            maxlength="6" 
+            placeholder="• • • • • •" 
+            style="height: 52px; font-size: 24px; font-weight: 800; letter-spacing: 8px; text-align: center; font-family: var(--font-mono);" 
+            autofocus 
+            onkeypress="if(event.key==='Enter') CustomerApp.verifyOtpRequest('${email}')"
+          />
         </div>
 
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Password</label>
-          <input type="password" class="form-input" id="auth-password-input" placeholder="••••••••" value="password123" />
-        </div>
-
-        <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.handleAuthSubmit('${defaultTab}')">
-          <span>${defaultTab === 'login' ? 'Sign In' : 'Create Account'}</span>
+        <button class="btn btn-primary btn-block btn-lg" id="btn-verify-otp" onclick="CustomerApp.verifyOtpRequest('${email}')">
+          <span>Verify & Sign In 🚀</span>
         </button>
 
-        <div style="text-align: center; border-top: 1px dashed var(--border-color); padding-top: 12px;">
-          <button class="btn btn-outline btn-block" onclick="CustomerApp.quickDemoLogin()">
-            ⚡ 1-Click Fast Login (Vipul Kumar)
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 0 4px;">
+          <button class="btn btn-sm btn-ghost" onclick="CustomerApp.renderAuthModalEmailStep()" style="color: var(--text-secondary); padding: 0; background: none; border: none; cursor: pointer;">
+            ← Change Email
+          </button>
+          <button class="btn btn-sm btn-ghost" onclick="CustomerApp.resendOtp('${email}')" style="color: var(--primary); font-weight: 700; padding: 0; background: none; border: none; cursor: pointer;">
+            Resend OTP 🔄
           </button>
         </div>
       </div>
     `;
-
-    modal.classList.add('active');
+    setTimeout(() => {
+      const input = document.getElementById('auth-otp-input');
+      if (input) input.focus();
+    }, 100);
   },
 
-  handleAuthSubmit(mode) {
-    const email = document.getElementById('auth-email-input').value || 'vipul@demo.com';
-    const name = document.getElementById('auth-name-input') ? document.getElementById('auth-name-input').value : 'Vipul Kumar';
-    window.store.login(name, email);
-    this.closeModal();
+  handleGoogleAuth() {
+    if (window.signInWithGoogle) {
+      window.signInWithGoogle();
+    } else {
+      window.store.showToast('Google Sign-In service initializing...', 'info');
+    }
+  },
+
+  async sendOtpRequest() {
+    const input = document.getElementById('auth-email-input');
+    const email = input ? input.value.trim() : '';
+    if (!email || !email.includes('@')) {
+      this.renderAuthModalEmailStep('Please enter a valid Gmail / Email address');
+      return;
+    }
+
+    const btn = document.getElementById('btn-send-otp');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Sending OTP... ⏳</span>';
+    }
+
+    if (window.sendEmailOtp) {
+      const { data, error } = await window.sendEmailOtp(email);
+      if (error) {
+        this.renderAuthModalEmailStep(error.message || 'Failed to send OTP. Please try again.');
+        return;
+      }
+      window.store.showToast(`6-Digit OTP sent to ${email}! Check your inbox.`, 'success');
+      this.renderAuthModalVerifyStep(email);
+    } else {
+      window.store.showToast(`Demo OTP mode for ${email}`, 'info');
+      this.renderAuthModalVerifyStep(email);
+    }
+  },
+
+  async resendOtp(email) {
+    if (window.sendEmailOtp) {
+      const { data, error } = await window.sendEmailOtp(email);
+      if (error) {
+        window.store.showToast(error.message || 'Failed to resend OTP', 'error');
+      } else {
+        window.store.showToast('New OTP sent to your email! ✉️', 'success');
+      }
+    }
+  },
+
+  async verifyOtpRequest(email) {
+    const input = document.getElementById('auth-otp-input');
+    const otp = input ? input.value.trim() : '';
+    if (!otp || otp.length < 6) {
+      this.renderAuthModalVerifyStep(email, 'Please enter complete 6-digit OTP code');
+      return;
+    }
+
+    const btn = document.getElementById('btn-verify-otp');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>Verifying... ⏳</span>';
+    }
+
+    if (window.verifyEmailOtp) {
+      const { data, error } = await window.verifyEmailOtp(email, otp);
+      if (error) {
+        this.renderAuthModalVerifyStep(email, error.message || 'Invalid or expired OTP code');
+        return;
+      }
+
+      const user = data?.user;
+      const name = user?.user_metadata?.full_name || email.split('@')[0];
+      window.store.login(name, email);
+      this.closeModal();
+    } else {
+      window.store.login(email.split('@')[0], email);
+      this.closeModal();
+    }
   },
 
   quickDemoLogin() {

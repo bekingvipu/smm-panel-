@@ -23,6 +23,16 @@ class SmmStateStore {
       this.data.customer.avatar = savedAvatar;
     }
 
+    // Restore saved user authentication state
+    const savedLoggedIn = localStorage.getItem('smm_user_logged_in');
+    if (savedLoggedIn === 'true') {
+      this.data.isLoggedIn = true;
+      const savedName = localStorage.getItem('smm_user_name');
+      const savedEmail = localStorage.getItem('smm_user_email');
+      if (savedName) this.data.customer.name = savedName;
+      if (savedEmail) this.data.customer.email = savedEmail;
+    }
+
     this.initServerSync();
   }
 
@@ -79,16 +89,32 @@ class SmmStateStore {
     this.subscribers.forEach(fn => fn(this));
   }
 
-  login(name = 'Vipul Kumar', email = 'vipul@demo.com') {
+  login(name = 'Vipul Kumar', email = 'vipul@demo.com', avatar = null, showToast = true) {
     this.data.isLoggedIn = true;
     this.data.customer.name = name;
     this.data.customer.email = email;
-    this.showToast(`Welcome back, ${name}! You are now signed in.`, 'success');
+    if (avatar) {
+      this.data.customer.avatar = avatar;
+      localStorage.setItem('smm_customer_avatar', avatar);
+    }
+    localStorage.setItem('smm_user_logged_in', 'true');
+    localStorage.setItem('smm_user_name', name);
+    localStorage.setItem('smm_user_email', email);
+
+    if (showToast) {
+      this.showToast(`Welcome back, ${name}! You are now signed in. 🚀`, 'success');
+    }
     this.notify();
   }
 
   logout() {
     this.data.isLoggedIn = false;
+    localStorage.removeItem('smm_user_logged_in');
+    localStorage.removeItem('smm_user_name');
+    localStorage.removeItem('smm_user_email');
+    if (window.supabaseClient) {
+      window.supabaseClient.auth.signOut().catch(() => {});
+    }
     this.showToast('You have signed out. Browsing in guest mode.', 'info');
     this.notify();
   }
