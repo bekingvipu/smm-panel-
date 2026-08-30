@@ -17,7 +17,20 @@ class SmmStateStore {
       this.data.adminStats.globalMarkupPercent = 100; // Default 100% (2X) until changed by admin
     }
 
+    // Restore saved customer avatar
+    const savedAvatar = localStorage.getItem('smm_customer_avatar');
+    if (savedAvatar) {
+      this.data.customer.avatar = savedAvatar;
+    }
+
     this.initServerSync();
+  }
+
+  setCustomerAvatar(avatarUrl) {
+    this.data.customer.avatar = avatarUrl;
+    localStorage.setItem('smm_customer_avatar', avatarUrl);
+    this.notify();
+    this.showToast('Profile avatar updated successfully! 🌟', 'success');
   }
 
   // Dynamic profit calculation (never hardcoded)
@@ -145,7 +158,7 @@ class SmmStateStore {
     }, 3500);
   }
 
-  async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost }) {
+  async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost }, options = {}) {
     if (!this.data.isLoggedIn) {
       this.showToast('Please sign in or create an account to place an order.', 'error');
       CustomerApp.openAuthModal();
@@ -229,9 +242,12 @@ class SmmStateStore {
     const profitMargin = (Number(this.data.adminStats.globalMarkupPercent) || 100) / 100;
     this.data.adminStats.profit += (totalCost * (profitMargin / (1 + profitMargin)));
 
-    this.showToast(`Order #${newOrderId} placed successfully! Routed via JAP API.`, 'success');
-    this.setCustomerTab('orders');
-    return { success: true, orderId: newOrderId };
+    if (!options.silent) {
+      this.showToast(`Order #${newOrderId} placed successfully! Routed via JAP API.`, 'success');
+      this.setCustomerTab('orders');
+    }
+    this.notify();
+    return { success: true, orderId: newOrderId, totalCost };
   }
 
   async requestRefill(orderId) {

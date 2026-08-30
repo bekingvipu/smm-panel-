@@ -102,13 +102,21 @@ const CustomerApp = {
       <!-- Slide-Out Side Menu Drawer -->
       <div id="side-drawer-backdrop" class="side-drawer-backdrop" onclick="CustomerApp.handleBackdropClick(event)">
         <aside class="side-drawer-panel">
-          <!-- Drawer Header -->
+          <!-- Drawer Header with Avatar Customizer -->
           <div class="drawer-header">
             <div class="drawer-user-info">
-              <img src="${store.data.customer.avatar}" class="drawer-avatar" alt="Avatar" />
-              <div>
-                <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">${isLoggedIn ? store.data.customer.name : 'Guest Visitor'}</div>
+              <div class="drawer-avatar-wrap" onclick="CustomerApp.openAvatarPickerModal()" title="Click to Change Cartoon Avatar">
+                <img src="${store.data.customer.avatar}" class="drawer-avatar" alt="Avatar" />
+                <span class="drawer-avatar-edit-badge" title="Change Avatar">✏️</span>
+              </div>
+              <div onclick="CustomerApp.openAvatarPickerModal()" style="cursor: pointer;">
+                <div style="font-weight: 800; font-size: 15.5px; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                  <span>${isLoggedIn ? store.data.customer.name : 'Guest Visitor'}</span>
+                </div>
                 <div style="font-size: 12px; color: var(--text-secondary);">${isLoggedIn ? store.data.customer.email : 'Public Catalog Browsing'}</div>
+                <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--primary); margin-top: 2px; background: var(--primary-light); padding: 2px 8px; border-radius: 999px;">
+                  <span>🎨 Change Avatar</span>
+                </div>
               </div>
             </div>
             <button class="drawer-close-btn" onclick="CustomerApp.closeSideDrawer()">&times;</button>
@@ -384,6 +392,29 @@ const CustomerApp = {
     modal.classList.add('active');
   },
 
+  getPlatformIconSvg(platId) {
+    switch (platId) {
+      case 'instagram':
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" fill="#E1306C"/></svg>';
+      case 'tiktok':
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64c.298-.002.595.042.88.13V9.4a6.33 6.33 0 0 0-1-.08A6.34 6.34 0 0 0 3 15.66a6.34 6.34 0 0 0 10.86 4.43c.03-.03.07-.05.1-.08V11.2a8.16 8.16 0 0 0 5.63 2.26v-3.5a4.85 4.85 0 0 1-3.77-3.27h3.77V6.69z" fill="#25F4EE"/></svg>';
+      case 'youtube':
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" fill="#FF0000"/></svg>';
+      case 'facebook':
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" fill="#1877F2"/></svg>';
+      case 'telegram':
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.643-.204-.657-.643.136-.953l11.57-4.458c.538-.196 1.006.128.832.943z" fill="#229ED9"/></svg>';
+      case 'twitter':
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" fill="currentColor"/></svg>';
+      case 'spotify':
+        return '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm5.508 17.308c-.22.359-.684.475-1.043.255-2.859-1.747-6.457-2.143-10.697-1.173-.41.094-.82-.162-.913-.572-.094-.41.162-.82.572-.913 4.636-1.06 8.608-.611 11.827 1.36.359.22.475.684.254 1.043zm1.47-3.268c-.276.449-.865.592-1.314.316-3.272-2.011-8.26-2.594-12.13-1.419-.505.153-1.04-.135-1.193-.64-.153-.505.135-1.04.64-1.193 4.417-1.34 9.914-.687 13.681 1.622.449.276.592.865.316 1.314zm.126-3.411c-3.924-2.33-10.395-2.545-14.15-1.405-.602.183-1.24-.162-1.423-.764-.183-.602.162-1.24.764-1.423 4.316-1.31 11.455-1.06 15.98 1.626.54.321.716 1.02.395 1.56-.321.54-1.02.716-1.56.395z" fill="#1DB954"/></svg>';
+      case 'other':
+        return '🌐';
+      default:
+        return '⚡';
+    }
+  },
+
   // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
   renderNewOrderTab(store) {
     const rawServices = window.JAP_SERVICES || [];
@@ -414,19 +445,33 @@ const CustomerApp = {
     const activeService = activePackages[0] || {};
     const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
 
+    const platforms = [
+      { id: 'all', label: 'All (5,803)', icon: '⚡' },
+      { id: 'instagram', label: 'Instagram', icon: this.getPlatformIconSvg('instagram') },
+      { id: 'tiktok', label: 'TikTok', icon: this.getPlatformIconSvg('tiktok') },
+      { id: 'youtube', label: 'YouTube', icon: this.getPlatformIconSvg('youtube') },
+      { id: 'facebook', label: 'Facebook', icon: this.getPlatformIconSvg('facebook') },
+      { id: 'telegram', label: 'Telegram', icon: this.getPlatformIconSvg('telegram') },
+      { id: 'twitter', label: 'Twitter / X', icon: this.getPlatformIconSvg('twitter') },
+      { id: 'spotify', label: 'Spotify', icon: this.getPlatformIconSvg('spotify') },
+      { id: 'other', label: 'Other', icon: '🌐' }
+    ];
+
     return `
-      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 10px;">
-          <div>
-            <h2 style="font-size: 24px; font-weight: 800;">Place New Order</h2>
-            <p style="font-size: 14px;">Instant automated delivery across 5,803 live wholesale services.</p>
+      <div class="order-premium-card" style="max-width: 840px; margin: 0 auto; width: 100%;">
+        <!-- Header Banner with Live Services Pulse -->
+        <div class="order-hero-banner">
+          <div class="order-title-group">
+            <h2><span>✨</span> <span>Place New Order</span></h2>
+            <p class="order-title-sub">Instant automated delivery across wholesale global servers.</p>
           </div>
-          <span class="badge badge-primary" style="font-size: 13px; padding: 6px 12px;">
-            5,803 Services Active
-          </span>
+          <div class="live-services-pill">
+            <span class="live-pulse-dot"></span>
+            <span>5,803 Services Active</span>
+          </div>
         </div>
 
-        <!-- Clean Instant Search Box (Single Magnifying Glass, No Double Icon) -->
+        <!-- Frosted Instant Search Box with Clear Button -->
         <div class="form-group" style="margin-bottom: 0;">
           <div style="position: relative;">
             <input 
@@ -435,36 +480,38 @@ const CustomerApp = {
               id="service-search-input" 
               placeholder="Search service name, ID (e.g. 10349), or keyword..." 
               value="${this.searchQuery}" 
-              style="padding-left: 42px; min-height: 44px;" 
+              style="padding-left: 42px; padding-right: 36px; min-height: 48px; font-size: 14.5px; border-radius: 14px;" 
               oninput="CustomerApp.handleSearch(this.value)" 
             />
-            <span style="position: absolute; left: 14px; top: 13px; font-size: 15px; color: var(--text-muted); pointer-events: none;">🔍</span>
+            <span style="position: absolute; left: 14px; top: 14px; font-size: 16px; color: var(--text-muted); pointer-events: none;">🔍</span>
+            ${this.searchQuery ? `
+              <button type="button" onclick="CustomerApp.clearSearch()" style="position: absolute; right: 12px; top: 12px; border: none; background: var(--bg-hover); color: var(--text-secondary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 800;">✕</button>
+            ` : ''}
           </div>
         </div>
 
-        <!-- Platform Filter Tabs -->
+        <!-- Platform Filter Tabs with Branded SVGs -->
         <div class="form-group" style="margin-bottom: 4px;">
-          <label class="form-label">Platform</label>
-          <div class="platform-chips-scroll" id="new-order-platform-chips">
-            <button class="platform-chip ${plat === 'all' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('all')">All (5,803)</button>
-            <button class="platform-chip ${plat === 'instagram' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('instagram')">Instagram</button>
-            <button class="platform-chip ${plat === 'tiktok' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('tiktok')">TikTok</button>
-            <button class="platform-chip ${plat === 'youtube' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('youtube')">YouTube</button>
-            <button class="platform-chip ${plat === 'facebook' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('facebook')">Facebook</button>
-            <button class="platform-chip ${plat === 'telegram' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('telegram')">Telegram</button>
-            <button class="platform-chip ${plat === 'twitter' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('twitter')">Twitter / X</button>
-            <button class="platform-chip ${plat === 'spotify' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('spotify')">Spotify</button>
-            <button class="platform-chip ${plat === 'other' ? 'active' : ''}" onclick="CustomerApp.selectPlatform('other')">Other</button>
+          <label class="form-label" style="font-weight: 800; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">
+            Select Platform
+          </label>
+          <div class="platform-chips-scroll-pro" id="new-order-platform-chips">
+            ${platforms.map(p => `
+              <button class="platform-chip-pro ${plat === p.id ? 'active' : ''}" onclick="CustomerApp.selectPlatform('${p.id}')">
+                <span class="chip-icon-svg" style="display: flex; align-items: center;">${p.icon}</span>
+                <span>${p.label}</span>
+              </button>
+            `).join('')}
           </div>
         </div>
 
-        <!-- 1st Box: Category Dropdown (JAP 242 Categories) -->
+        <!-- 1st Box: Category Dropdown -->
         <div class="form-group">
           <label class="form-label">
-            <span>1. Select Category</span>
-            <span class="form-label-hint">${categories.length} Categories available</span>
+            <span style="font-weight: 800;">1. Select Category</span>
+            <span class="form-label-hint" style="background: rgba(108, 92, 231, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 999px; font-weight: 700;">${categories.length} Categories</span>
           </label>
-          <select class="form-select" id="new-order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)">
+          <select class="form-select" id="new-order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)" style="min-height: 48px; border-radius: 12px; font-weight: 600;">
             ${categories.map(c => `
               <option value="${c}" ${c === this.currentCategory ? 'selected' : ''}>
                 ${c}
@@ -476,10 +523,10 @@ const CustomerApp = {
         <!-- 2nd Box: Service Package & Rates Dropdown -->
         <div class="form-group">
           <label class="form-label">
-            <span>2. Select Service Package (with Selling Rates)</span>
-            <span class="form-label-hint">${activePackages.length} Packages</span>
+            <span style="font-weight: 800;">2. Select Service Package (with Selling Rates)</span>
+            <span class="form-label-hint" style="background: rgba(108, 92, 231, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 999px; font-weight: 700;">${activePackages.length} Packages</span>
           </label>
-          <select class="form-select" id="new-order-service-select">
+          <select class="form-select" id="new-order-service-select" style="min-height: 48px; border-radius: 12px; font-weight: 600;">
             ${activePackages.map(s => {
               const sp = store.getSellingPrice(s.cost);
               return `
@@ -491,95 +538,113 @@ const CustomerApp = {
           </select>
         </div>
 
-        <!-- Service Specification Card -->
-        <div class="service-details-card" id="service-details-box">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <strong style="color: var(--primary); font-size: 14px;">Service Details</strong>
-            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge">
-              ${activeService.refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty'}
+        <!-- High-Tech VIP Service Details Terminal -->
+        <div class="vip-spec-card" id="service-details-box">
+          <div class="vip-spec-header">
+            <div class="vip-spec-title">
+              <span>⚡</span>
+              <span>Service Guarantee & Live Specs</span>
+            </div>
+            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge" style="font-size: 12px; padding: 5px 12px; border-radius: 999px;">
+              ${activeService.refill ? '🛡️ Refill Guarantee Active (365D)' : 'No Refill Warranty'}
             </span>
           </div>
-          <div id="service-detail-name" style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin-top: 6px;">
+          <div id="service-detail-name" style="font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.4;">
             ${activeService.name || ''}
           </div>
-          <div class="service-meta-grid" style="margin-top: 10px;">
-            <div class="meta-item">
-              <span class="meta-item-label">Min Limit</span>
-              <span class="meta-item-val" id="service-detail-min">${(activeService.min || 10).toLocaleString()}</span>
+          <div class="vip-spec-grid">
+            <div class="spec-tile">
+              <span class="spec-tile-label">Wholesale Rate</span>
+              <span class="spec-tile-val" id="service-detail-rate" style="color: var(--primary); font-size: 16px;">${store.formatMoney(sellingPrice)}/1K</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-item-label">Max Limit</span>
-              <span class="meta-item-val" id="service-detail-max">${(activeService.max || 100000).toLocaleString()}</span>
+            <div class="spec-tile">
+              <span class="spec-tile-label">Min Limit</span>
+              <span class="spec-tile-val" id="service-detail-min">${(activeService.min || 10).toLocaleString()}</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-item-label">Rate / 1K</span>
-              <span class="meta-item-val" id="service-detail-rate" style="color: var(--primary); font-weight: 800;">${store.formatMoney(sellingPrice)}</span>
+            <div class="spec-tile">
+              <span class="spec-tile-label">Max Limit</span>
+              <span class="spec-tile-val" id="service-detail-max">${(activeService.max || 100000).toLocaleString()}</span>
             </div>
-            <div class="meta-item">
-              <span class="meta-item-label">Service ID</span>
-              <span class="meta-item-val" id="service-detail-id" style="font-family: var(--font-mono);">#${activeService.id || '—'}</span>
+            <div class="spec-tile">
+              <span class="spec-tile-label">Service ID</span>
+              <span class="spec-tile-val" id="service-detail-id">#${activeService.id || '—'}</span>
             </div>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); border-top: 1px dashed rgba(108, 92, 231, 0.2); padding-top: 10px;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #059669;">🚀 Speed: ~50,000 - 200,000 / Day</span>
+            <span>•</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">⚡ Start: Instant (0 - 15 mins)</span>
+            <span>•</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">⭐ High Retention Drop Protection</span>
           </div>
         </div>
 
         <!-- Target Link / Username -->
         <div class="form-group">
           <label class="form-label">
-            <span>Target Link / Profile</span>
+            <span style="font-weight: 800;">Target Link / Profile Username</span>
             <span class="form-label-hint">Public profiles or links only</span>
           </label>
           <div style="position: relative;">
-            <input type="url" class="form-input" id="new-order-target" placeholder="https://instagram.com/yourprofile" value="https://instagram.com/creator_daily" />
-            <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 6px; top: 6px; height: 34px; padding: 0 12px;" onclick="CustomerApp.pasteSampleLink()">
+            <input type="url" class="form-input" id="new-order-target" placeholder="https://instagram.com/your_profile" value="https://instagram.com/creator_daily" style="min-height: 48px; border-radius: 12px; padding-right: 80px;" />
+            <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 6px; top: 7px; height: 34px; padding: 0 14px; border-radius: 8px; font-weight: 700;" onclick="CustomerApp.pasteSampleLink()">
               Paste
             </button>
           </div>
         </div>
 
-        <!-- Quantity -->
+        <!-- Quantity with Interactive Steppers -->
         <div class="form-group">
           <label class="form-label">
-            <span>Quantity</span>
-            <span class="form-label-hint" id="qty-limits-hint">Min: ${(activeService.min || 10).toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
+            <span style="font-weight: 800;">Order Quantity</span>
+            <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${(activeService.min || 10).toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="${activeService.min || 10}" max="${activeService.max || 100000}" step="100" />
-          <div class="qty-preset-chips">
-            <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(500)">+500</button>
-            <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
-            <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(2500)">+2,500</button>
-            <button type="button" class="qty-preset-btn" onclick="CustomerApp.setQty(5000)">+5,000</button>
+          <input type="number" class="form-input" id="new-order-quantity" value="1000" min="${activeService.min || 10}" max="${activeService.max || 100000}" step="100" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" />
+          <div class="qty-steppers-bar">
+            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(500)">+500</button>
+            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
+            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(2500)">+2,500</button>
+            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(5000)">+5,000</button>
+            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(10000)">+10,000</button>
+            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(${activeService.max || 100000})" style="color: var(--primary); font-weight: 800;">MAX</button>
           </div>
         </div>
 
-        <!-- Price Calculation Summary Box -->
-        <div class="calculation-summary-card">
-          <div class="calc-row">
-            <span>Unit Rate (per 1,000):</span>
-            <strong id="calc-rate-label">${store.formatMoney(sellingPrice)}</strong>
+        <!-- Luxury Receipt & Price Calculation Summary -->
+        <div class="receipt-calc-card">
+          <div class="receipt-row">
+            <span>Service Unit Rate:</span>
+            <strong id="calc-rate-label" style="color: var(--text-main); font-family: var(--font-mono);">${store.formatMoney(sellingPrice)} / 1,000</strong>
           </div>
-          <div class="calc-row">
+          <div class="receipt-row">
             <span>Current Wallet Balance:</span>
-            <span>${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Guest Mode (Sign in to view balance)'}</span>
+            <strong style="color: var(--text-main);">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Guest Mode (Sign in to view)'}</strong>
           </div>
-          <div class="calc-row total-row">
-            <span>Total Charge:</span>
-            <span id="calc-total-label">${store.formatMoney((sellingPrice / 1000) * 1000)}</span>
+          <div class="receipt-row total-charge-row">
+            <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Total Charge:</span>
+            <span class="receipt-total-amount" id="calc-total-label">${store.formatMoney((sellingPrice / 1000) * 1000)}</span>
           </div>
-          <div id="balance-check-status" style="margin-top: 4px;">
+          <div id="balance-check-status" style="margin-top: 2px;">
             ${store.data.isLoggedIn ? `
-              <span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>
+              <span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>
             ` : `
-              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary);">ℹ️ Sign in required to place order</span>
+              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">ℹ️ Sign in required to place order</span>
             `}
           </div>
         </div>
 
-        <!-- Submit Button -->
-        <button class="btn btn-primary btn-lg btn-block" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()">
-          <span>${store.data.isLoggedIn ? 'Confirm & Place Order' : '🔑 Sign In to Place Order'}</span>
+        <!-- Submit Button with Refraction Glare Animation -->
+        <button class="btn btn-primary btn-lg btn-block btn-refraction" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()" style="height: 52px; border-radius: 14px; font-size: 16px;">
+          <span>${store.data.isLoggedIn ? '⚡ Confirm & Place Order' : '🔑 Sign In to Place Order'}</span>
         </button>
       </div>
     `;
+  },
+
+  clearSearch() {
+    this.searchQuery = '';
+    const screenContainer = document.getElementById('screen-container');
+    this.render(screenContainer);
   },
 
   selectPlatform(plat) {
@@ -662,7 +727,7 @@ const CustomerApp = {
     }
   },
 
-  handlePlaceOrder() {
+  async handlePlaceOrder() {
     const store = window.store;
     if (!store.data.isLoggedIn) {
       this.openAuthModal('login');
@@ -675,7 +740,7 @@ const CustomerApp = {
     const serviceId = serviceSelect.value;
     const serviceName = selectedOpt.getAttribute('data-name') || `Service #${serviceId}`;
     const wholesaleCost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
-    const target = document.getElementById('new-order-target').value;
+    const target = document.getElementById('new-order-target').value.trim();
     const quantity = Number(document.getElementById('new-order-quantity').value);
 
     if (!target) {
@@ -688,7 +753,83 @@ const CustomerApp = {
       return;
     }
 
-    store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity });
+    const unitSellingPrice = store.getSellingPrice(wholesaleCost);
+    const totalCost = (unitSellingPrice / 1000) * quantity;
+    if (store.data.customer.balance < totalCost) {
+      store.showToast('Insufficient wallet balance. Please add funds first!', 'error');
+      store.setCustomerTab('wallet');
+      return;
+    }
+
+    const submitBtn = document.getElementById('btn-submit-order');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>⚡ Processing Order Refraction...</span>';
+    }
+
+    const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity }, { silent: true });
+
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>⚡ Confirm & Place Order</span>';
+    }
+
+    if (res && res.success) {
+      CustomerApp.showOrderCelebrationModal({
+        orderId: res.orderId,
+        serviceName,
+        target,
+        quantity,
+        totalCost: res.totalCost || totalCost
+      });
+    }
+  },
+
+  showOrderCelebrationModal({ orderId, serviceName, target, quantity, totalCost }) {
+    const store = window.store;
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="order-success-overlay">
+        <div class="success-check-refraction">
+          <span>✓</span>
+        </div>
+
+        <div>
+          <h3 style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">Order Confirmed & Placed! ✨</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px;">Live automated delivery has initiated</p>
+        </div>
+
+        <div style="background: var(--bg-subtle); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 16px 18px; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Order Number</span>
+            <span style="font-family: var(--font-mono); font-weight: 900; color: var(--primary); font-size: 16px;">#${orderId}</span>
+          </div>
+          <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main); line-height: 1.3;">
+            ${serviceName}
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-secondary); border-top: 1px dashed var(--border-color); padding-top: 8px;">
+            <span>Quantity: <strong style="color: var(--text-main);">${Number(quantity).toLocaleString()}</strong></span>
+            <span>Total Paid: <strong style="color: #059669;">${store.formatMoney(totalCost)}</strong></span>
+          </div>
+          <div style="font-size: 11.5px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+            🔗 Target: ${target}
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 6px;">
+          <button class="btn btn-primary btn-block btn-refraction" onclick="CustomerApp.closeModal(); store.setCustomerTab('orders')">
+            📊 Track in Orders History
+          </button>
+          <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal();">
+            ➕ Place Another Order
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
   },
 
   setQty(val) {
@@ -1193,10 +1334,16 @@ const CustomerApp = {
       </div>
 
       <div style="display: flex; flex-direction: column; gap: 16px; align-items: center; text-align: center;">
-        <img src="${store.data.customer.avatar}" style="width: 72px; height: 72px; border-radius: 50%; border: 3px solid var(--primary);" />
+        <div class="drawer-avatar-wrap" onclick="CustomerApp.openAvatarPickerModal()" title="Click to Change Cartoon Avatar" style="display: inline-block;">
+          <img src="${store.data.customer.avatar}" style="width: 76px; height: 76px; border-radius: 50%; border: 3px solid var(--primary); object-fit: cover;" />
+          <span class="drawer-avatar-edit-badge" style="width: 26px; height: 26px; font-size: 13px;">✏️</span>
+        </div>
         <div>
           <h4 style="font-size: 17px; font-weight: 800;">${store.data.customer.name}</h4>
-          <p style="font-size: 13px;">${store.data.customer.email}</p>
+          <p style="font-size: 13px; color: var(--text-secondary);">${store.data.customer.email}</p>
+          <button class="btn btn-sm btn-outline" style="margin-top: 6px; font-size: 11.5px; border-radius: 999px; padding: 4px 14px; font-weight: 700;" onclick="CustomerApp.openAvatarPickerModal()">
+            🎨 Choose Cartoon Avatar
+          </button>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%;">
@@ -1225,6 +1372,51 @@ const CustomerApp = {
     `;
 
     modal.classList.add('active');
+  },
+
+  openAvatarPickerModal() {
+    this.closeSideDrawer();
+    const store = window.store;
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    const avatars = window.SMM_CARTOON_AVATARS || [];
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">🎨 Choose Cartoon Avatar</h3>
+          <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">Pick your custom 3D character profile</p>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div class="avatar-picker-grid">
+          ${avatars.map(a => {
+            const isSelected = store.data.customer.avatar === a.url;
+            return `
+              <div class="avatar-pick-card ${isSelected ? 'active' : ''}" onclick="CustomerApp.selectAvatar('${a.url}')">
+                <img src="${a.url}" class="avatar-pick-img" alt="${a.name}" />
+                <div class="avatar-pick-title">${a.name}</div>
+                <span class="badge ${isSelected ? 'badge-primary' : 'badge-neutral'}" style="font-size: 10px; padding: 2px 6px;">${a.badge}</span>
+                ${isSelected ? '<span class="avatar-active-badge">✓</span>' : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <button class="btn btn-primary btn-block btn-refraction" style="margin-top: 8px;" onclick="CustomerApp.closeModal()">
+          ✓ Done (Save Avatar)
+        </button>
+      </div>
+    `;
+
+    modal.classList.add('active');
+  },
+
+  selectAvatar(url) {
+    window.store.setCustomerAvatar(url);
+    this.openAvatarPickerModal(); // refresh to show active selection checkmark
   },
 
   openTicketChat(ticketId) {

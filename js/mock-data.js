@@ -1,3 +1,42 @@
+window.SMM_CARTOON_AVATARS = [
+  {
+    id: 'cyber-hero',
+    name: 'Cyber Ninja',
+    badge: '⚡ VIP',
+    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Klaus&backgroundColor=6366f1'
+  },
+  {
+    id: 'neon-girl',
+    name: 'Neon Diva',
+    badge: '🌸 Popular',
+    url: 'https://api.dicebear.com/7.x/lorelei/svg?seed=Sophie&backgroundColor=ec4899'
+  },
+  {
+    id: 'astro-boy',
+    name: 'Space Astro',
+    badge: '🚀 Cosmic',
+    url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Cosmo&backgroundColor=3b82f6'
+  },
+  {
+    id: 'street-pro',
+    name: 'Cool Hustler',
+    badge: '🕶️ Street',
+    url: 'https://api.dicebear.com/7.x/micah/svg?seed=Jack&backgroundColor=10b981'
+  },
+  {
+    id: 'gold-king',
+    name: 'Golden King',
+    badge: '👑 Elite',
+    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Alexander&backgroundColor=f59e0b'
+  },
+  {
+    id: 'robo-bot',
+    name: 'AI CyberBot',
+    badge: '🤖 Mech',
+    url: 'https://api.dicebear.com/7.x/bottts/svg?seed=Sparky&backgroundColor=8b5cf6'
+  }
+];
+
 window.SMM_MOCK = {
   currency: 'INR',
   exchangeRate: 83.0,
@@ -6,7 +45,7 @@ window.SMM_MOCK = {
   customer: {
     name: 'Vipul Kumar',
     email: 'vipul@demo.com',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+    avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Klaus&backgroundColor=6366f1',
     balance: 500.00, // ₹500
     spent: 1250.00,
     ordersCount: 8

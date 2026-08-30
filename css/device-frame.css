@@ -27,35 +27,60 @@
   gap: 24px;
 }
 
-/* Desktop Production Navbar */
+/* Desktop Production Navbar (Option A: Frosted Glassmorphism & Ambient Glow) */
 .desktop-navbar {
   display: none; /* Shown on screens >= 768px */
-  height: 70px;
-  background-color: var(--bg-surface);
-  border-bottom: 1px solid var(--border-color);
+  height: 72px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-bottom: 1px solid rgba(108, 92, 231, 0.16);
+  box-shadow: 0 4px 24px -2px rgba(108, 92, 231, 0.08), 0 1px 2px rgba(0, 0, 0, 0.03);
   position: sticky;
   top: 0;
   z-index: 100;
-  padding: 0 28px;
+  padding: 0 32px;
   align-items: center;
   justify-content: space-between;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+[data-theme="dark"] .desktop-navbar {
+  background: rgba(14, 16, 27, 0.88);
+  border-bottom: 1px solid rgba(139, 124, 246, 0.2);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
 }
 
 .desktop-nav-brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 20px;
-  font-weight: 800;
-  color: var(--primary);
+  font-size: 21px;
+  font-weight: 900;
   text-decoration: none;
   cursor: pointer;
+  letter-spacing: -0.03em;
+}
+
+.desktop-nav-brand span:first-child {
+  filter: drop-shadow(0 2px 8px rgba(108, 92, 231, 0.5));
+  font-size: 22px;
+}
+
+.desktop-nav-brand span:last-child {
+  background: linear-gradient(135deg, #6C5CE7 0%, #8B5CF6 50%, #EC4899 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .desktop-nav-links {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  background: rgba(108, 92, 231, 0.04);
+  padding: 5px 6px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(108, 92, 231, 0.08);
 }
 
 .desktop-nav-link {
@@ -63,29 +88,72 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-secondary);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   text-decoration: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .desktop-nav-link:hover {
-  background-color: var(--bg-subtle);
+  background-color: var(--bg-hover);
   color: var(--text-main);
+  transform: translateY(-1px);
 }
 
 .desktop-nav-link.active {
-  background-color: var(--primary-light);
+  background: linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(139, 92, 246, 0.18));
   color: var(--primary);
+  border: 1px solid rgba(108, 92, 231, 0.3);
+  box-shadow: 0 2px 10px rgba(108, 92, 231, 0.15);
+  font-weight: 700;
 }
 
 .desktop-nav-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
+}
+
+/* Glowing Fintech Balance Pill */
+.header-balance-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #6C5CE7 0%, #4F46E5 100%);
+  color: #FFFFFF;
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(108, 92, 231, 0.35);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.header-balance-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(108, 92, 231, 0.45);
+}
+
+.header-balance-val {
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.add-plus-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.25);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .nav-balance-pill {
@@ -104,19 +172,19 @@
   color: var(--text-main);
 }
 
-/* Breakpoint Media Queries */
+/* Strict Breakpoint Media Queries */
 @media (min-width: 768px) {
   .desktop-navbar {
-    display: flex;
+    display: flex !important;
   }
   .customer-header {
-    display: none; /* Hide mobile-only top header on desktop */
+    display: none !important; /* Strictly hide mobile header on desktop */
   }
   .customer-bottom-nav {
-    display: none; /* Hide mobile bottom nav on desktop */
+    display: none !important; /* Strictly hide mobile bottom nav on desktop */
   }
   .customer-container {
-    padding-bottom: 0;
+    padding-bottom: 0 !important;
   }
   .quick-actions-grid {
     grid-template-columns: repeat(4, 1fr);
@@ -134,13 +202,18 @@
 
 @media (max-width: 767px) {
   .desktop-navbar {
-    display: none;
+    display: none !important;
   }
   .customer-header {
-    display: flex;
+    display: flex !important;
   }
   .customer-bottom-nav {
-    display: flex;
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 9999 !important;
   }
   .customer-desktop-container {
     padding: 16px 14px 84px;
