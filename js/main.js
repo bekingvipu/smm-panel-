@@ -9,17 +9,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (window.FORCE_ADMIN_PERSONA || path.startsWith('/admin') || hash === '#admin') {
       store.persona = 'admin';
-      // Clean up hash if present
+      // Clean up hash if present while preserving query params
       if (hash) {
-        window.history.replaceState(null, '', '/admin');
+        window.history.replaceState(null, '', '/admin' + window.location.search);
       }
     } else {
       store.persona = 'customer';
-      // Clean up hash if present (e.g. likex.in/#)
+      // Clean up hash if present while preserving query params
       if (hash) {
-        window.history.replaceState(null, '', '/');
+        window.history.replaceState(null, '', '/' + window.location.search);
       }
     }
+
+    // Synchronize active tab from URL parameter if present
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      if (tabParam) {
+        if (store.persona === 'customer' && store.customerTab !== tabParam) {
+          store.customerTab = tabParam;
+        } else if (store.persona === 'admin' && store.adminTab !== tabParam) {
+          store.adminTab = tabParam;
+        }
+      }
+    } catch (e) {}
   };
 
   // Clean Navigation Helper

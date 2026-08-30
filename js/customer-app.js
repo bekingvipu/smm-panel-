@@ -627,22 +627,45 @@ const CustomerApp = {
 
   // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
   renderNewOrderTab(store) {
-    const rawServices = window.JAP_SERVICES || [];
-    const plat = this.currentPlatform || 'instagram';
-    const query = (this.searchQuery || '').trim().toLowerCase();
+    // Exclude unwanted services/categories: JAP EXCLUSIVE and AI Growth Package
+    const isExcluded = (s) => {
+      const cat = (s.category || '').toLowerCase();
+      const name = (s.name || '').toLowerCase();
+      if (cat.includes('jap exclusive') || name.includes('jap exclusive')) return true;
+      if (cat.includes('ai growth') || name.includes('ai growth')) return true;
+      return false;
+    };
 
-    let filteredServices = rawServices;
+    let filteredServices = rawServices.filter(s => !isExcluded(s));
+
     if (query) {
-      filteredServices = rawServices.filter(s => 
+      filteredServices = filteredServices.filter(s => 
         String(s.id).includes(query) || 
         s.name.toLowerCase().includes(query) ||
         s.category.toLowerCase().includes(query)
       );
     } else if (plat !== 'all') {
-      filteredServices = rawServices.filter(s => s.platform === plat);
+      filteredServices = filteredServices.filter(s => s.platform === plat);
     }
 
-    const categories = [...new Set(filteredServices.map(s => s.category))];
+    // Get unique categories and smartly prioritize Followers, Likes, Views
+    const rawCategories = [...new Set(filteredServices.map(s => s.category))];
+    const categories = rawCategories.sort((a, b) => {
+      const aLower = a.toLowerCase();
+      const bLower = b.toLowerCase();
+      const getPriority = (str) => {
+        if (str.includes('followers')) return 1;
+        if (str.includes('likes')) return 2;
+        if (str.includes('views')) return 3;
+        if (str.includes('comments')) return 4;
+        return 5;
+      };
+      const pA = getPriority(aLower);
+      const pB = getPriority(bLower);
+      if (pA !== pB) return pA - pB;
+      return a.localeCompare(b);
+    });
+
     if (!categories.includes(this.currentCategory) && categories.length > 0) {
       this.currentCategory = categories[0];
     }
@@ -651,6 +674,13 @@ const CustomerApp = {
     if (activePackages.length === 0 && filteredServices.length > 0) {
       activePackages = filteredServices;
     }
+
+    // Sort Lowest Price First (Low to High: ascending by cost)
+    activePackages.sort((a, b) => {
+      const costA = parseFloat(a.cost) || 0;
+      const costB = parseFloat(b.cost) || 0;
+      return costA - costB;
+    });
 
     const activeService = activePackages[0] || {};
     const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
@@ -1421,7 +1451,7 @@ const CustomerApp = {
               ${badgeText}
             </span>
           </div>
-          <span class="order-history-date">${order.date || 'Today'}</span>
+          <span class="order-history-date">${store.formatOrderDisplayDate ? store.formatOrderDisplayDate(order) : (order.date || 'Today')}</span>
         </div>
 
         <div class="order-history-title-text">${order.serviceName}</div>

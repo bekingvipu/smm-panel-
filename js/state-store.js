@@ -3,8 +3,26 @@ class SmmStateStore {
     this.data = JSON.parse(JSON.stringify(window.SMM_MOCK));
     this.deviceMode = 'desktop';
     this.persona = 'customer';
-    this.customerTab = 'new_order';
-    this.adminTab = 'dashboard';
+    // Restore active customer and admin tabs from URL query or localStorage
+    let initialCustomerTab = 'new_order';
+    let initialAdminTab = 'dashboard';
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlTab = urlParams.get('tab');
+      const savedCustomerTab = localStorage.getItem('smm_active_customer_tab');
+      const savedAdminTab = localStorage.getItem('smm_active_admin_tab');
+
+      if (urlTab) {
+        initialCustomerTab = urlTab;
+        initialAdminTab = urlTab;
+      } else {
+        if (savedCustomerTab) initialCustomerTab = savedCustomerTab;
+        if (savedAdminTab) initialAdminTab = savedAdminTab;
+      }
+    } catch (e) {}
+
+    this.customerTab = initialCustomerTab;
+    this.adminTab = initialAdminTab;
     this.theme = 'light';
     this.currency = localStorage.getItem('smm_currency') || 'INR'; // Always default to INR
     this.subscribers = [];
@@ -202,12 +220,50 @@ class SmmStateStore {
 
   setCustomerTab(tab) {
     this.customerTab = tab;
+    localStorage.setItem('smm_active_customer_tab', tab);
+    try {
+      const url = new URL(window.location);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState(null, '', url);
+    } catch (e) {}
     this.notify();
   }
 
   setAdminTab(tab) {
     this.adminTab = tab;
+    localStorage.setItem('smm_active_admin_tab', tab);
+    try {
+      const url = new URL(window.location);
+      url.searchParams.set('tab', tab);
+      window.history.replaceState(null, '', url);
+    } catch (e) {}
     this.notify();
+  }
+
+  // Real timestamp formatting helpers
+  formatRealDate(timestamp = Date.now()) {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return 'Recently';
+    return d.toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
+
+  formatOrderDisplayDate(order) {
+    if (!order) return 'Recently';
+    const ts = order.createdAt;
+    if (!ts) return order.date || 'Recently';
+    const now = Date.now();
+    const diffMs = now - Number(ts);
+    const diffMins = Math.floor(diffMs / (1000 * 60));
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    return this.formatRealDate(ts);
   }
 
   setTheme(theme) {
@@ -296,6 +352,9 @@ class SmmStateStore {
     this.data.customer.balance -= totalCost;
     const newOrderId = liveOrderId || String(48292 + Math.floor(Math.random() * 900));
 
+    const now = Date.now();
+    const formattedDate = this.formatRealDate(now);
+
     const newOrder = {
       id: newOrderId,
       serviceId: serviceId,
@@ -305,7 +364,8 @@ class SmmStateStore {
       quantity: Number(quantity),
       amount: totalCost,
       status: 'Processing',
-      date: 'Just now',
+      createdAt: now,
+      date: formattedDate,
       startCount: 0,
       currentCount: 0,
       remains: Number(quantity),
@@ -322,18 +382,19 @@ class SmmStateStore {
       amount: -totalCost,
       balanceAfter: this.data.customer.balance,
       status: 'Success',
-      date: 'Just now'
+      createdAt: now,
+      date: formattedDate
     });
 
     this.saveUserData();
 
     this.data.recentActivity.unshift({
-      id: `act-${Date.now()}`,
+      id: `act-${now}`,
       type: 'order',
       title: `New Order #${newOrderId}`,
       sub: `${serviceName} - ${this.data.customer.name.split(' ')[0]}`,
       amount: this.formatMoney(totalCost),
-      time: 'Just now',
+      time: formattedDate,
       icon: '🛒'
     });
 
@@ -392,6 +453,9 @@ class SmmStateStore {
       return;
     }
 
+    const now = Date.now();
+    const formattedDate = this.formatRealDate(now);
+
     this.data.customer.balance += Number(amountInUsd);
     this.data.transactions.unshift({
       id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -400,7 +464,8 @@ class SmmStateStore {
       amount: Number(amountInUsd),
       balanceAfter: this.data.customer.balance,
       status: 'Success',
-      date: 'Just now'
+      createdAt: now,
+      date: formattedDate
     });
 
     this.saveUserData();
