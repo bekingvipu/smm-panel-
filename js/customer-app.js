@@ -459,15 +459,19 @@ const CustomerApp = {
 
     return `
       <div class="order-premium-card" style="max-width: 840px; margin: 0 auto; width: 100%;">
-        <!-- Header Banner with Live Services Pulse -->
-        <div class="order-hero-banner">
-          <div class="order-title-group">
-            <h2><span>✨</span> <span>Place New Order</span></h2>
-            <p class="order-title-sub">Instant automated delivery across wholesale global servers.</p>
+        <!-- Header Banner Matching Image 3 -->
+        <div class="order-hero-banner-pro">
+          <h1 class="order-hero-title">Place New Order</h1>
+          <div class="order-hero-accent-line">
+            <span class="order-hero-accent-bar"></span>
+            <span class="order-hero-accent-dot"></span>
           </div>
-          <div class="live-services-pill">
-            <span class="live-pulse-dot"></span>
-            <span>5,803 Services Active</span>
+          <p class="order-hero-sub">Instant automated delivery across wholesale global servers.</p>
+          <div>
+            <div class="order-hero-pill-badge">
+              <span class="order-hero-pill-dot"></span>
+              <span><strong>5,803</strong> Services Active</span>
+            </div>
           </div>
         </div>
 

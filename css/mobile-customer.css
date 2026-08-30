@@ -1566,3 +1566,245 @@
   gap: 5px;
   font-weight: 600;
 }
+
+/* ==========================================================================
+   FLOATING WHATSAPP BUTTON WITH EXPANDING PULSE RINGS
+   ========================================================================== */
+.floating-whatsapp-btn {
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-whatsapp-btn:hover {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.wa-icon-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 26px rgba(37, 211, 102, 0.45), 0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+  border: 2.5px solid #FFFFFF;
+}
+
+.wa-pulse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(37, 211, 102, 0.5);
+  animation: wa-ring-expand 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.wa-pulse-ring-2 {
+  animation-delay: 1.2s;
+}
+
+@keyframes wa-ring-expand {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  60% {
+    transform: scale(1.5);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
+
+.wa-tooltip-pill {
+  background: var(--bg-surface);
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  border: 1px solid var(--border-color);
+  opacity: 0;
+  transform: translateX(10px);
+  pointer-events: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.floating-whatsapp-btn:hover .wa-tooltip-pill {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Position above mobile bottom nav */
+@media (max-width: 767px) {
+  .floating-whatsapp-btn {
+    bottom: 84px !important;
+    right: 18px !important;
+  }
+  .wa-icon-wrap {
+    width: 52px;
+    height: 52px;
+  }
+  .wa-pulse-ring {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+/* ==========================================================================
+   PLACE NEW ORDER HERO BANNER (MATCHING IMAGE 3)
+   ========================================================================== */
+.order-hero-banner-pro {
+  position: relative;
+  text-align: center;
+  padding: 42px 24px 34px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: 
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(108, 92, 231, 0.16) 0%, rgba(139, 92, 246, 0.06) 55%, transparent 100%),
+    var(--bg-surface);
+  border: 1.5px solid rgba(108, 92, 231, 0.18);
+  box-shadow: 0 12px 36px -6px rgba(108, 92, 231, 0.09), 0 2px 6px rgba(0, 0, 0, 0.02);
+  margin-bottom: 24px;
+}
+
+[data-theme="dark"] .order-hero-banner-pro {
+  background: 
+    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(108, 92, 231, 0.26) 0%, rgba(139, 92, 246, 0.1) 60%, transparent 100%),
+    rgba(23, 25, 42, 0.88);
+  border-color: rgba(139, 124, 246, 0.28);
+}
+
+/* Subtle dot grid pattern in top-left & top-right corners */
+.order-hero-banner-pro::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 140px;
+  height: 120px;
+  background-image: radial-gradient(rgba(108, 92, 231, 0.28) 1.5px, transparent 1.5px);
+  background-size: 15px 15px;
+  mask-image: radial-gradient(ellipse at 0% 0%, black 50%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at 0% 0%, black 50%, transparent 85%);
+  pointer-events: none;
+}
+
+.order-hero-banner-pro::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 140px;
+  height: 120px;
+  background-image: radial-gradient(rgba(108, 92, 231, 0.28) 1.5px, transparent 1.5px);
+  background-size: 15px 15px;
+  mask-image: radial-gradient(ellipse at 100% 0%, black 50%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse at 100% 0%, black 50%, transparent 85%);
+  pointer-events: none;
+}
+
+.order-hero-title {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+  color: #0F172A;
+  margin: 0;
+  line-height: 1.15;
+}
+
+[data-theme="dark"] .order-hero-title {
+  color: #F8FAFC;
+}
+
+.order-hero-accent-line {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.order-hero-accent-bar {
+  width: 48px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6C5CE7, #8B5CF6);
+}
+
+.order-hero-accent-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #8B5CF6;
+}
+
+.order-hero-sub {
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-top: 12px;
+  font-weight: 500;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.4;
+}
+
+.order-hero-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(108, 92, 231, 0.09);
+  border: 1.5px solid rgba(108, 92, 231, 0.3);
+  border-radius: 999px;
+  padding: 8px 24px;
+  margin-top: 20px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--primary);
+  box-shadow: 0 4px 18px rgba(108, 92, 231, 0.14);
+  transition: all 0.2s ease;
+}
+
+.order-hero-pill-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--primary);
+  box-shadow: 0 0 10px var(--primary);
+  animation: pulse-purple 2s infinite ease-in-out;
+}
+
+@media (max-width: 767px) {
+  .order-hero-banner-pro {
+    padding: 28px 18px 24px;
+  }
+  .order-hero-title {
+    font-size: 27px;
+  }
+  .order-hero-sub {
+    font-size: 13.5px;
+  }
+  .order-hero-pill-badge {
+    font-size: 13.5px;
+    padding: 6px 18px;
+    margin-top: 16px;
+  }
+}
