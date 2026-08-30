@@ -1425,112 +1425,138 @@ const CustomerApp = {
     `;
   },
 
-  // 5. 24/7 WHATSAPP LIVE SUPPORT DESK (0 STORAGE, ZERO LAG)
+  // 5. 24/7 WHATSAPP LIVE SUPPORT DESK (CENTERED & ULTRA-PREMIUM)
   renderSupportTab(store) {
     const userEmail = store.data.isLoggedIn ? store.data.customer.email : '';
     const recentOrders = store.data.orders || [];
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
-        <!-- Header Hero -->
-        <div class="card" style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.12)); border: 1.5px solid #25D366; border-radius: var(--radius-xl); padding: 28px 22px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
-            <div>
-              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 211, 102, 0.18); color: #075E54; font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px;">
-                <span style="width: 8px; height: 8px; border-radius: 50%; background: #25D366; box-shadow: 0 0 8px #25D366;"></span>
-                <span>24/7 LIVE SUPPORT ACTIVE</span>
-              </div>
-              <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin: 0;">Help & Customer Desk</h2>
-              <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
-                Need instant refill, payment verification, or order speedup? Direct 1-on-1 WhatsApp assistance.
-              </p>
-            </div>
+      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 720px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
+        
+        <!-- Premium Hero Card (Centered) -->
+        <div class="card" style="text-align: center; background: linear-gradient(145deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.14)); border: 1.5px solid rgba(37, 211, 102, 0.4); border-radius: 24px; padding: 34px 22px; box-shadow: 0 12px 30px rgba(37, 211, 102, 0.12); position: relative; overflow: hidden;">
+          
+          <!-- Live Status Badge -->
+          <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(37, 211, 102, 0.16); border: 1px solid rgba(37, 211, 102, 0.35); color: #075E54; font-size: 11.5px; font-weight: 800; padding: 6px 16px; border-radius: 999px; margin-bottom: 14px; letter-spacing: 0.5px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #25D366; box-shadow: 0 0 10px #25D366; display: inline-block;"></span>
+            <span>24/7 LIVE SUPPORT ACTIVE</span>
+          </div>
+
+          <!-- Main Heading -->
+          <h2 style="font-size: 26px; font-weight: 900; color: var(--text-main); margin: 0; letter-spacing: -0.5px;">
+            Help & Customer Desk
+          </h2>
+          
+          <!-- Subtitle -->
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin: 10px auto 0; max-width: 440px; line-height: 1.6;">
+            Need instant refill, payment verification, or order speedup? Get direct 1-on-1 WhatsApp assistance.
+          </p>
+
+          <!-- Primary WhatsApp Button -->
+          <div style="margin-top: 22px; display: flex; justify-content: center;">
             <a 
               href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need assistance with my account' + (userEmail ? ' (' + userEmail + ')' : ''))}" 
               target="_blank" 
               rel="noopener noreferrer" 
               class="btn" 
-              style="background: #25D366; color: #ffffff; font-weight: 800; font-size: 15px; padding: 12px 24px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);"
+              style="background: linear-gradient(135deg, #25D366, #128C7E); color: #ffffff; font-weight: 800; font-size: 15.5px; padding: 13px 32px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; gap: 10px; text-decoration: none; box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4); transition: transform 0.2s;"
             >
-              <span>💬</span>
+              <span style="font-size: 20px;">💬</span>
               <span>Chat on WhatsApp</span>
             </a>
           </div>
+
+          <!-- Quick Micro Info -->
+          <div style="font-size: 12px; color: var(--text-muted); margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+            <span>⚡ Dedicated Support Agent Online</span>
+            <span>•</span>
+            <span>Avg Reply: <strong>~90 sec</strong></span>
+          </div>
         </div>
 
-        <!-- Support Categories Grid -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
-          <!-- 1. Order Refill -->
-          <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-radius: var(--radius-lg);">
-            <div>
-              <div style="font-size: 28px; margin-bottom: 8px;">🔄</div>
-              <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">Order Refill & Speedup</div>
-              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
-                Followers or likes dropped? Send your Order ID for instant priority refill.
-              </div>
+        <!-- Centered Quick Actions Section -->
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          
+          <!-- 1. Order Refill Card -->
+          <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(59, 130, 246, 0.12); color: #2563EB; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.18);">
+              🔄
             </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+              Order Refill & Speedup
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 420px; line-height: 1.5;">
+              Followers or likes dropped? Send your Order ID for instant priority refill.
+            </p>
             <a 
               href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
               target="_blank" 
               rel="noopener noreferrer"
-              class="btn btn-outline btn-block btn-sm"
-              style="border-color: #25D366; color: #128C7E; font-weight: 700; text-decoration: none; text-align: center;"
+              class="btn btn-outline btn-block"
+              style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
             >
               Request Refill on WhatsApp →
             </a>
           </div>
 
-          <!-- 2. UPI & Payment Help -->
-          <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-radius: var(--radius-lg);">
-            <div>
-              <div style="font-size: 28px; margin-bottom: 8px;">💳</div>
-              <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">UPI & Payment Credit</div>
-              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
-                Paid via Paytm, PhonePe, or GPay? Send screenshot & UTR number for instant wallet top-up.
-              </div>
+          <!-- 2. UPI & Payment Card -->
+          <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18);">
+              💳
             </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+              UPI & Payment Credit
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 420px; line-height: 1.5;">
+              Paid via Paytm, PhonePe, or GPay? Send screenshot & UTR number for instant wallet top-up.
+            </p>
             <a 
               href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
               target="_blank" 
               rel="noopener noreferrer"
-              class="btn btn-outline btn-block btn-sm"
-              style="border-color: #25D366; color: #128C7E; font-weight: 700; text-decoration: none; text-align: center;"
+              class="btn btn-outline btn-block"
+              style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
             >
               Send Payment Screenshot →
             </a>
           </div>
 
-          <!-- 3. Bulk & Custom Inquiries -->
-          <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-radius: var(--radius-lg);">
-            <div>
-              <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
-              <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">Bulk Discount & API</div>
-              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
-                Placing massive agency orders or connecting via API? Talk with our wholesale team.
-              </div>
+          <!-- 3. Bulk & Wholesale Inquiry -->
+          <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(168, 85, 247, 0.12); color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(168, 85, 247, 0.18);">
+              ⚡
             </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+              Bulk Discount & API Integration
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 420px; line-height: 1.5;">
+              Placing massive agency orders or connecting via API? Talk with our wholesale team.
+            </p>
             <a 
               href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
               target="_blank" 
               rel="noopener noreferrer"
-              class="btn btn-outline btn-block btn-sm"
-              style="border-color: #25D366; color: #128C7E; font-weight: 700; text-decoration: none; text-align: center;"
+              class="btn btn-outline btn-block"
+              style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
             >
               Inquire Wholesale Rates →
             </a>
           </div>
         </div>
 
-        <!-- Official Support Hours Card -->
-        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 18px 22px;">
-          <div>
-            <div style="font-size: 14px; font-weight: 800; color: var(--text-main);">Official WhatsApp Helpline</div>
-            <div style="font-size: 13px; color: #128C7E; font-weight: 700; margin-top: 2px;">+91 9837371137</div>
+        <!-- Centered Official Helpline Footer -->
+        <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; background: var(--bg-surface);">
+          <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
+            Official WhatsApp Helpline
           </div>
-          <div style="font-size: 12px; color: var(--text-muted);">
-            Avg Response Time: <strong>under 2 minutes</strong> ⚡
+          <div style="font-size: 20px; font-weight: 900; color: #128C7E; margin: 4px 0;">
+            +91 9837371137
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary);">
+            Available 24 Hours • 7 Days a Week
           </div>
         </div>
+
       </div>
     `;
   },
