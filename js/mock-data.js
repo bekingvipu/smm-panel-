@@ -52,17 +52,17 @@ window.SMM_MOCK = {
   },
 
   adminStats: {
-    totalCustomers: 1240,
-    customersTrend: -2.4,
-    totalOrders: 45000,
-    ordersTrend: 12.5,
-    revenue: 12500,
-    revenueTrend: 8.1,
-    profit: 4200,
-    profitTrend: 4.2,
+    totalCustomers: 1,
+    customersTrend: 0.0,
+    totalOrders: 0,
+    ordersTrend: 0.0,
+    revenue: 0.00,
+    revenueTrend: 0.0,
+    profit: 0.00,
+    profitTrend: 0.0,
     providerBalance: 0.00,
     providerBalanceStatus: 'Live Connected',
-    globalMarkupPercent: 120 // 120% default profit margin
+    globalMarkupPercent: 100
   },
 
   providers: [

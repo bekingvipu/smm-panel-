@@ -192,7 +192,7 @@ const CustomerApp = {
                 <div class="drawer-item-left"><span class="drawer-item-icon">🔔</span> <span>Notifications</span></div>
                 <span class="badge badge-primary" style="font-size: 10px;">New</span>
               </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); window.location.hash='#admin';">
+              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); window.navigateToRoute('/admin');">
                 <div class="drawer-item-left"><span class="drawer-item-icon">🛡️</span> <span>Admin Console</span></div>
                 <span style="font-size: 11px; color: var(--text-muted);">Admin</span>
               </li>
@@ -1425,61 +1425,111 @@ const CustomerApp = {
     `;
   },
 
-  // 5. SUPPORT TAB
+  // 5. 24/7 WHATSAPP LIVE SUPPORT DESK (0 STORAGE, ZERO LAG)
   renderSupportTab(store) {
-    if (!store.data.isLoggedIn) {
-      return `
-        <div class="card" style="text-align: center; padding: 40px 20px; max-width: 500px; margin: 40px auto;">
-          <span style="font-size: 48px;">💬</span>
-          <h3 style="font-size: 20px; font-weight: 800; margin-top: 14px;">Sign In for Support</h3>
-          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px;">
-            Submit support tickets and chat with our 24/7 team.
-          </p>
-          <button class="btn btn-primary btn-block" style="margin-top: 20px;" onclick="CustomerApp.openAuthModal('login')">
-            🔑 Sign In / Create Account
-          </button>
-        </div>
-      `;
-    }
+    const userEmail = store.data.isLoggedIn ? store.data.customer.email : '';
+    const recentOrders = store.data.orders || [];
 
-    const tickets = store.data.supportTickets;
     return `
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 800px; margin: 0 auto; width: 100%;">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <div>
-            <h2 style="font-size: 24px; font-weight: 800;">Support Desk</h2>
-            <p style="font-size: 13.5px;">Have questions about an order or delivery speed? We respond in minutes.</p>
+        <!-- Header Hero -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.12)); border: 1.5px solid #25D366; border-radius: var(--radius-xl); padding: 28px 22px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 211, 102, 0.18); color: #075E54; font-size: 11.5px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #25D366; box-shadow: 0 0 8px #25D366;"></span>
+                <span>24/7 LIVE SUPPORT ACTIVE</span>
+              </div>
+              <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin: 0;">Help & Customer Desk</h2>
+              <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+                Need instant refill, payment verification, or order speedup? Direct 1-on-1 WhatsApp assistance.
+              </p>
+            </div>
+            <a 
+              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need assistance with my account' + (userEmail ? ' (' + userEmail + ')' : ''))}" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="btn" 
+              style="background: #25D366; color: #ffffff; font-weight: 800; font-size: 15px; padding: 12px 24px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35);"
+            >
+              <span>💬</span>
+              <span>Chat on WhatsApp</span>
+            </a>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="CustomerApp.openNewTicketModal()">
-            ＋ New Ticket
-          </button>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-          ${tickets.length === 0 ? `
-            <div class="card" style="text-align: center; padding: 48px 20px; border-radius: var(--radius-lg);">
-              <div style="font-size: 44px; margin-bottom: 12px;">💬</div>
-              <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main);">No Support Tickets</h3>
-              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 400px; margin-left: auto; margin-right: auto;">
-                Have questions about your order, need a refill, or payment assistance? Raise a ticket and we will respond promptly!
-              </p>
-              <button class="btn btn-primary btn-md" style="margin-top: 18px;" onclick="CustomerApp.openNewTicketModal()">
-                ＋ Create Support Ticket
-              </button>
-            </div>
-          ` : tickets.map(ticket => `
-            <div class="card" style="display: flex; flex-direction: column; gap: 12px; cursor: pointer;" onclick="CustomerApp.openTicketChat('${ticket.id}')">
-              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">${ticket.subject}</div>
-                <span class="badge ${ticket.status === 'Answered' ? 'badge-success' : 'badge-warning'}">
-                  ${ticket.status}
-                </span>
-              </div>
-              <div style="font-size: 12.5px; color: var(--text-secondary);">
-                Ticket #${ticket.id} ${ticket.linkedOrderId ? `• Linked to Order #${ticket.linkedOrderId}` : ''}
+        <!-- Support Categories Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+          <!-- 1. Order Refill -->
+          <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-radius: var(--radius-lg);">
+            <div>
+              <div style="font-size: 28px; margin-bottom: 8px;">🔄</div>
+              <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">Order Refill & Speedup</div>
+              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
+                Followers or likes dropped? Send your Order ID for instant priority refill.
               </div>
             </div>
-          `).join('')}
+            <a 
+              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="btn btn-outline btn-block btn-sm"
+              style="border-color: #25D366; color: #128C7E; font-weight: 700; text-decoration: none; text-align: center;"
+            >
+              Request Refill on WhatsApp →
+            </a>
+          </div>
+
+          <!-- 2. UPI & Payment Help -->
+          <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-radius: var(--radius-lg);">
+            <div>
+              <div style="font-size: 28px; margin-bottom: 8px;">💳</div>
+              <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">UPI & Payment Credit</div>
+              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
+                Paid via Paytm, PhonePe, or GPay? Send screenshot & UTR number for instant wallet top-up.
+              </div>
+            </div>
+            <a 
+              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="btn btn-outline btn-block btn-sm"
+              style="border-color: #25D366; color: #128C7E; font-weight: 700; text-decoration: none; text-align: center;"
+            >
+              Send Payment Screenshot →
+            </a>
+          </div>
+
+          <!-- 3. Bulk & Custom Inquiries -->
+          <div class="card" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between; gap: 14px; border-radius: var(--radius-lg);">
+            <div>
+              <div style="font-size: 28px; margin-bottom: 8px;">⚡</div>
+              <div style="font-size: 16px; font-weight: 800; color: var(--text-main);">Bulk Discount & API</div>
+              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; line-height: 1.5;">
+                Placing massive agency orders or connecting via API? Talk with our wholesale team.
+              </div>
+            </div>
+            <a 
+              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="btn btn-outline btn-block btn-sm"
+              style="border-color: #25D366; color: #128C7E; font-weight: 700; text-decoration: none; text-align: center;"
+            >
+              Inquire Wholesale Rates →
+            </a>
+          </div>
+        </div>
+
+        <!-- Official Support Hours Card -->
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; padding: 18px 22px;">
+          <div>
+            <div style="font-size: 14px; font-weight: 800; color: var(--text-main);">Official WhatsApp Helpline</div>
+            <div style="font-size: 13px; color: #128C7E; font-weight: 700; margin-top: 2px;">+91 9837371137</div>
+          </div>
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Avg Response Time: <strong>under 2 minutes</strong> ⚡
+          </div>
         </div>
       </div>
     `;
@@ -1722,9 +1772,9 @@ const CustomerApp = {
           <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal(); store.setCustomerTab('wallet')">
             Manage Wallet & Funds
           </button>
-          <a href="#admin" class="btn btn-outline btn-block" onclick="CustomerApp.closeModal();" style="text-decoration: none;">
+          <button class="btn btn-outline btn-block" onclick="CustomerApp.closeModal(); window.navigateToRoute('/admin');">
             🛡️ Open Admin Console
-          </a>
+          </button>
           <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error); margin-top: 4px;" onclick="CustomerApp.closeModal(); window.signOutUser();">
             Sign Out (Switch to Guest Mode)
           </button>
@@ -1778,75 +1828,6 @@ const CustomerApp = {
   selectAvatar(url) {
     window.store.setCustomerAvatar(url);
     this.openAvatarPickerModal(); // refresh to show active selection checkmark
-  },
-
-  openTicketChat(ticketId) {
-    const ticket = window.store.data.supportTickets.find(t => String(t.id) === String(ticketId));
-    if (!ticket) return;
-
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <div>
-          <h3 class="modal-title">${ticket.subject}</h3>
-          <div style="font-size: 12px; color: var(--text-secondary);">Ticket #${ticket.id}</div>
-        </div>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-
-      <div class="ticket-chat-container" id="ticket-chat-thread">
-        ${ticket.messages.map(m => `
-          <div class="chat-bubble ${m.sender === 'customer' ? 'customer-bubble' : 'admin-bubble'}">
-            <div>${m.text}</div>
-            <div class="chat-bubble-time">${m.time}</div>
-          </div>
-        `).join('')}
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  openNewTicketModal() {
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-
-    sheet.innerHTML = `
-      <div class="modal-header">
-        <h3 class="modal-title">Create Support Ticket</h3>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Subject</label>
-          <input type="text" class="form-input" id="new-ticket-subject" placeholder="e.g. Refill inquiry or Order question" />
-        </div>
-        <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label">Message</label>
-          <textarea class="form-textarea" id="new-ticket-msg" rows="4" placeholder="Describe your issue or order ID..."></textarea>
-        </div>
-        <button class="btn btn-primary btn-block" onclick="CustomerApp.submitNewTicket()">
-          Submit Ticket
-        </button>
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  submitNewTicket() {
-    const subjInput = document.getElementById('new-ticket-subject');
-    const msgInput = document.getElementById('new-ticket-msg');
-    const subject = (subjInput?.value || '').trim();
-    const msg = (msgInput?.value || '').trim();
-    if (!subject || !msg) {
-      window.store.showToast('Please provide both subject and message', 'error');
-      return;
-    }
-    window.store.createSupportTicket(subject, msg);
-    CustomerApp.closeModal();
   },
 
   openNotifications() {

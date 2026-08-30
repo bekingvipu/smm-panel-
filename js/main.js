@@ -2,24 +2,44 @@ document.addEventListener('DOMContentLoaded', () => {
   const store = window.store;
   const screenContainer = document.getElementById('screen-container');
 
-  // URL Hash Router: #admin or default customer storefront
-  const syncRouteFromHash = () => {
+  // URL Path & Hash Router: supports /admin or legacy #admin
+  const syncRoute = () => {
+    const path = window.location.pathname;
     const hash = window.location.hash;
-    if (hash === '#admin') {
+
+    if (path.startsWith('/admin') || hash === '#admin') {
       store.persona = 'admin';
+      // Clean up hash if present
+      if (hash) {
+        window.history.replaceState(null, '', '/admin');
+      }
     } else {
       store.persona = 'customer';
+      // Clean up hash if present (e.g. likex.in/#)
+      if (hash) {
+        window.history.replaceState(null, '', '/');
+      }
     }
+  };
+
+  // Clean Navigation Helper
+  window.navigateToRoute = (route) => {
+    if (window.location.pathname !== route) {
+      window.history.pushState(null, '', route);
+    }
+    syncRoute();
+    renderApp();
+    window.scrollTo(0, 0);
   };
 
   // Main Render Loop
   const renderApp = () => {
     // 1. Sync Route
-    syncRouteFromHash();
+    syncRoute();
 
     // 2. Set Page Title dynamically
     if (store.persona === 'admin') {
-      document.title = 'Admin Console — SMM Pro System Management';
+      document.title = 'Admin Console — LikeX System Management';
       AdminApp.render(screenContainer);
     } else {
       document.title = 'LikeX — #1 Social Media Marketing Growth Panel | likex.in';
@@ -27,9 +47,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   };
 
-  // Listen to hash changes (e.g. clicking #admin or #customer)
+  // Listen to popstate (browser back/forward) & legacy hashchange
+  window.addEventListener('popstate', () => {
+    syncRoute();
+    renderApp();
+    window.scrollTo(0, 0);
+  });
   window.addEventListener('hashchange', () => {
-    syncRouteFromHash();
+    syncRoute();
     renderApp();
     window.scrollTo(0, 0);
   });
@@ -48,6 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial render
-  syncRouteFromHash();
+  syncRoute();
   renderApp();
 });

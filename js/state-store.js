@@ -111,7 +111,6 @@ class SmmStateStore {
     if (!email) return;
     const balKey = this._getUserStorageKey(email, 'balance');
     const ordersKey = this._getUserStorageKey(email, 'orders');
-    const ticketsKey = this._getUserStorageKey(email, 'tickets');
     const txnsKey = this._getUserStorageKey(email, 'txns');
 
     const savedBal = localStorage.getItem(balKey);
@@ -119,9 +118,6 @@ class SmmStateStore {
 
     const savedOrders = localStorage.getItem(ordersKey);
     this.data.orders = savedOrders ? JSON.parse(savedOrders) : [];
-
-    const savedTickets = localStorage.getItem(ticketsKey);
-    this.data.supportTickets = savedTickets ? JSON.parse(savedTickets) : [];
 
     const savedTxns = localStorage.getItem(txnsKey);
     this.data.transactions = savedTxns ? JSON.parse(savedTxns) : [];
@@ -136,39 +132,7 @@ class SmmStateStore {
 
     localStorage.setItem(this._getUserStorageKey(email, 'balance'), this.data.customer.balance.toFixed(4));
     localStorage.setItem(this._getUserStorageKey(email, 'orders'), JSON.stringify(this.data.orders));
-    localStorage.setItem(this._getUserStorageKey(email, 'tickets'), JSON.stringify(this.data.supportTickets));
     localStorage.setItem(this._getUserStorageKey(email, 'txns'), JSON.stringify(this.data.transactions));
-  }
-
-  createSupportTicket(subject, message, linkedOrderId = null) {
-    if (!this.data.isLoggedIn) {
-      this.showToast('Please sign in to raise a support ticket.', 'error');
-      CustomerApp.openAuthModal();
-      return null;
-    }
-
-    const ticketId = `TCK-${Math.floor(100 + Math.random() * 900)}`;
-    const newTicket = {
-      id: ticketId,
-      subject: subject || 'General Inquiry',
-      linkedOrderId: linkedOrderId || null,
-      status: 'Open',
-      updatedAt: 'Just now',
-      messages: [
-        {
-          id: `m-${Date.now()}`,
-          sender: 'customer',
-          text: message || '',
-          time: 'Just now'
-        }
-      ]
-    };
-
-    this.data.supportTickets.unshift(newTicket);
-    this.saveUserData();
-    this.showToast(`Support Ticket #${ticketId} created! Our team will reply shortly.`, 'success');
-    this.notify();
-    return newTicket;
   }
 
   login(name, email, avatar = null, showToast = true) {

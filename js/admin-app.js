@@ -1,7 +1,169 @@
 const AdminApp = {
+  isSignUpMode: false,
+
+  isAdminAuthenticated() {
+    return sessionStorage.getItem('likex_admin_authenticated') === 'true';
+  },
+
+  logoutAdmin() {
+    sessionStorage.removeItem('likex_admin_authenticated');
+    sessionStorage.removeItem('likex_admin_email');
+    window.store.showToast('Admin session locked.', 'info');
+    window.navigateToRoute('/');
+  },
+
+  async handleAdminLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('admin-email-input')?.value.trim();
+    const password = document.getElementById('admin-pass-input')?.value;
+    const errBox = document.getElementById('admin-auth-error');
+    const submitBtn = document.getElementById('btn-admin-submit');
+
+    if (!email || !password) return;
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>Verifying Supabase Credentials... ⏳</span>';
+
+    try {
+      if (!window.supabaseClient) {
+        throw new Error('Supabase client is initializing. Please refresh and retry.');
+      }
+
+      const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: password
+      });
+
+      if (error) throw error;
+
+      if (data && data.user) {
+        sessionStorage.setItem('likex_admin_authenticated', 'true');
+        sessionStorage.setItem('likex_admin_email', data.user.email);
+        window.store.showToast(`Admin Console Unlocked. Welcome, ${data.user.email}! 🛡️`, 'success');
+        this.render(document.getElementById('screen-container'));
+      }
+    } catch (err) {
+      if (errBox) {
+        errBox.textContent = err.message || 'Invalid admin credentials. Access Denied.';
+        errBox.style.display = 'block';
+      }
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Unlock Admin Console 🔐</span>';
+    }
+  },
+
+  async handleAdminSignUp(e) {
+    e.preventDefault();
+    const email = document.getElementById('admin-email-input')?.value.trim();
+    const password = document.getElementById('admin-pass-input')?.value;
+    const errBox = document.getElementById('admin-auth-error');
+    const submitBtn = document.getElementById('btn-admin-submit');
+
+    if (!email || !password || password.length < 6) {
+      if (errBox) {
+        errBox.textContent = 'Password must be at least 6 characters.';
+        errBox.style.display = 'block';
+      }
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span>Registering Admin via Supabase... ⏳</span>';
+
+    try {
+      if (!window.supabaseClient) {
+        throw new Error('Supabase client is initializing.');
+      }
+
+      const { data, error } = await window.supabaseClient.auth.signUp({
+        email: email.toLowerCase(),
+        password: password,
+        options: {
+          data: { role: 'admin' }
+        }
+      });
+
+      if (error) throw error;
+
+      sessionStorage.setItem('likex_admin_authenticated', 'true');
+      sessionStorage.setItem('likex_admin_email', email);
+      window.store.showToast('Admin account created and verified! Welcome! 🛡️', 'success');
+      this.render(document.getElementById('screen-container'));
+    } catch (err) {
+      if (errBox) {
+        errBox.textContent = err.message || 'Registration failed.';
+        errBox.style.display = 'block';
+      }
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<span>Create & Unlock Admin 🔐</span>';
+    }
+  },
+
+  renderAdminLogin(container) {
+    const isSignUp = this.isSignUpMode;
+    container.innerHTML = `
+      <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-body); padding: 24px 16px;">
+        <div class="card" style="width: 100%; max-width: 420px; padding: 36px 28px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); border: 1px solid var(--border-color); border-radius: var(--radius-xl);">
+          <div style="text-align: center; margin-bottom: 24px;">
+            <div style="width: 58px; height: 58px; margin: 0 auto 14px; background: linear-gradient(135deg, #4F46E5, #9333EA); border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 8px 20px rgba(79, 70, 229, 0.35);">
+              🛡️
+            </div>
+            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0;">
+              ${isSignUp ? 'Set Up Admin Account' : 'LikeX Admin Portal'}
+            </h2>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px;">
+              ${isSignUp ? 'Register initial admin credentials on Supabase' : 'Secure Supabase Enterprise Authentication'}
+            </p>
+          </div>
+
+          <div id="admin-auth-error" style="display: none; background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 16px;"></div>
+
+          <form onsubmit="AdminApp.${isSignUp ? 'handleAdminSignUp(event)' : 'handleAdminLogin(event)'}" style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 12.5px; font-weight: 700;">Admin Email</label>
+              <input type="email" id="admin-email-input" class="form-input" placeholder="admin@likex.in" required style="height: 48px;" autofocus />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-size: 12.5px; font-weight: 700;">Admin Password</label>
+              <input type="password" id="admin-pass-input" class="form-input" placeholder="••••••••••••" required minlength="6" style="height: 48px;" />
+            </div>
+
+            <button type="submit" id="btn-admin-submit" class="btn btn-primary btn-block btn-lg" style="margin-top: 4px; height: 50px; font-weight: 800; font-size: 15px;">
+              <span>${isSignUp ? 'Create & Unlock Admin 🔐' : 'Unlock Admin Console 🔐'}</span>
+            </button>
+
+            <button type="button" class="btn btn-outline btn-block btn-sm" onclick="window.navigateToRoute('/')" style="margin-top: 4px;">
+              ← Return to Customer Storefront
+            </button>
+
+            <div style="font-size: 11.5px; color: var(--text-muted); text-align: center; margin-top: 10px; line-height: 1.5;">
+              ${isSignUp ? `
+                Already have an admin account? 
+                <a href="#" onclick="AdminApp.isSignUpMode = false; AdminApp.render(document.getElementById('screen-container')); return false;" style="color: var(--primary); font-weight: 700; text-decoration: underline;">
+                  Sign In
+                </a>
+              ` : `
+                First-time setup on Supabase? 
+                <a href="#" onclick="AdminApp.isSignUpMode = true; AdminApp.render(document.getElementById('screen-container')); return false;" style="color: var(--primary); font-weight: 700; text-decoration: underline;">
+                  Click here to register admin
+                </a>
+              `}
+            </div>
+          </form>
+        </div>
+      </div>
+    `;
+  },
+
   render(container) {
+    if (!this.isAdminAuthenticated()) {
+      this.renderAdminLogin(container);
+      return;
+    }
+
     const store = window.store;
     const tab = store.adminTab;
+    const adminEmail = sessionStorage.getItem('likex_admin_email') || 'Super Admin';
 
     let contentHtml = '';
     if (tab === 'dashboard') contentHtml = this.renderDashboard(store);
@@ -47,14 +209,14 @@ const AdminApp = {
             </li>
             <li class="admin-nav-item ${tab === 'support' ? 'active' : ''}" onclick="store.setAdminTab('support')">
               <span class="nav-icon">💬</span>
-              <span>Support</span>
+              <span>WhatsApp Support</span>
             </li>
           </ul>
 
           <div class="admin-sidebar-footer" style="display: flex; flex-direction: column; gap: 8px;">
-            <a href="#customer" class="btn btn-secondary btn-sm btn-block" style="text-decoration: none;">
+            <button class="btn btn-secondary btn-sm btn-block" onclick="window.navigateToRoute('/')">
               ← Customer View
-            </a>
+            </button>
             <span>v2.4.0 • System Management</span>
           </div>
         </aside>
@@ -75,11 +237,14 @@ const AdminApp = {
               <button class="header-icon-btn" onclick="store.showToast('Upstream JAP API responding normally', 'info')">
                 <span>🔔</span>
               </button>
-              <a href="#customer" class="btn btn-sm btn-secondary" style="text-decoration: none;">
+              <button class="btn btn-sm btn-secondary" onclick="window.navigateToRoute('/')">
                 Exit to Storefront
-              </a>
+              </button>
+              <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error);" onclick="AdminApp.logoutAdmin()" title="Lock Admin Console">
+                🔒 Lock
+              </button>
               <div class="admin-user-pill">
-                <span class="admin-user-name">Vipul (Super Admin)</span>
+                <span class="admin-user-name">${adminEmail.split('@')[0]} (Admin)</span>
               </div>
             </div>
           </header>
@@ -110,7 +275,7 @@ const AdminApp = {
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">👥</div>
-            <span class="badge badge-success">+14%</span>
+            <span class="badge badge-success">Active</span>
           </div>
           <div class="kpi-label">Total Customers</div>
           <div class="kpi-value">${stats.totalCustomers.toLocaleString()}</div>
@@ -119,7 +284,7 @@ const AdminApp = {
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">🛍️</div>
-            <span class="badge badge-success">+${stats.ordersTrend}%</span>
+            <span class="badge badge-primary">Live</span>
           </div>
           <div class="kpi-label">Total Orders</div>
           <div class="kpi-value">${stats.totalOrders.toLocaleString()}</div>
@@ -128,7 +293,7 @@ const AdminApp = {
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--success-light); color: var(--success);">$</div>
-            <span class="badge badge-success">+${stats.revenueTrend}%</span>
+            <span class="badge badge-success">Real-Time</span>
           </div>
           <div class="kpi-label">Revenue</div>
           <div class="kpi-value">${store.formatMoney(stats.revenue, 0)}</div>
@@ -137,7 +302,7 @@ const AdminApp = {
         <div class="kpi-card">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">📈</div>
-            <span class="badge badge-success">+${stats.profitTrend}%</span>
+            <span class="badge badge-success">Active</span>
           </div>
           <div class="kpi-label">Profit Markup Setting</div>
           <div class="kpi-value">+${stats.globalMarkupPercent}%</div>
@@ -148,7 +313,7 @@ const AdminApp = {
             <div class="kpi-icon-box" style="background: var(--warning-light); color: var(--warning);">🏛️</div>
             <span class="badge badge-success">${stats.providerBalanceStatus}</span>
           </div>
-          <div class="kpi-label">JAP Balance</div>
+          <div class="kpi-label">JAP Wholesale Balance</div>
           <div class="kpi-value">$${stats.providerBalance.toFixed(2)} USD</div>
         </div>
       </div>
@@ -390,25 +555,37 @@ const AdminApp = {
   },
 
   renderAdminSupport(store) {
-    const tickets = store.data.supportTickets;
-
     return `
-      <div style="display: flex; flex-direction: column; gap: 12px;">
-        ${tickets.length === 0 ? `
-          <div class="card" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
-            No open support tickets. All customer queries resolved!
-          </div>
-        ` : tickets.map(t => `
-          <div class="card" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="CustomerApp.openTicketChat('${t.id}')">
+      <div style="display: flex; flex-direction: column; gap: 18px;">
+        <div class="card" style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(18, 140, 126, 0.15)); border: 1.5px solid #25D366; border-radius: var(--radius-xl); padding: 28px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
-              <div style="font-size: 15px; font-weight: 700;">${t.subject}</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                Ticket #${t.id} • Customer: ${store.data.customer.name || 'User'}
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 211, 102, 0.2); color: #075E54; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px;">
+                <span>🟢</span> <span>WHATSAPP SUPPORT CENTER</span>
               </div>
+              <h2 style="font-size: 22px; font-weight: 900; margin: 0; color: var(--text-main);">24/7 WhatsApp Customer Helpline</h2>
+              <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+                Helpline: <strong>+91 9837371137</strong> • Zero server storage overhead, real-time messaging & instant screenshot verification.
+              </p>
             </div>
-            <span class="badge badge-success">${t.status}</span>
+            <a 
+              href="https://wa.me/919837371137" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="btn" 
+              style="background: #25D366; color: #fff; font-weight: 800; font-size: 15px; padding: 12px 24px; border-radius: 9999px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 18px rgba(37, 211, 102, 0.4);"
+            >
+              <span>💬</span> <span>Open WhatsApp Web</span>
+            </a>
           </div>
-        `).join('')}
+        </div>
+
+        <div class="card" style="padding: 24px;">
+          <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 10px; color: var(--text-main);">Support Protocol</h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;">
+            Customer inquiries regarding <strong>Order Refills</strong>, <strong>UPI Payment Manual Top-ups</strong>, and <strong>Service Inquiries</strong> are routed directly to your official WhatsApp number (<strong>+91 9837371137</strong>). Customers receive automatic pre-formatted templates with their Order IDs and Transaction IDs.
+          </p>
+        </div>
       </div>
     `;
   }
