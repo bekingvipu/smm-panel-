@@ -1539,14 +1539,14 @@ const CustomerApp = {
         ` : ''}
 
         <div class="form-group" style="margin-bottom: 0;">
-          <label class="form-label" style="font-size: 12px; font-weight: 600; text-align: center; display: block;">Enter 6-Digit OTP</label>
+          <label class="form-label" style="font-size: 12px; font-weight: 600; text-align: center; display: block;">Enter Verification Code</label>
           <input 
             type="text" 
             class="form-input" 
             id="auth-otp-input" 
-            maxlength="6" 
+            maxlength="8" 
             placeholder="• • • • • •" 
-            style="height: 52px; font-size: 24px; font-weight: 800; letter-spacing: 8px; text-align: center; font-family: var(--font-mono);" 
+            style="height: 52px; font-size: 24px; font-weight: 800; letter-spacing: 6px; text-align: center; font-family: var(--font-mono);" 
             autofocus 
             onkeypress="if(event.key==='Enter') CustomerApp.verifyOtpRequest('${email}')"
           />
