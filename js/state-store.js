@@ -6,8 +6,9 @@ class SmmStateStore {
     this.customerTab = 'new_order';
     this.adminTab = 'dashboard';
     this.theme = 'light';
-    this.currency = 'INR';
+    this.currency = localStorage.getItem('smm_currency') || 'INR'; // Always default to INR
     this.subscribers = [];
+    this._isLoggingOut = false;
 
     // Restore saved profit markup percentage (NOT HARDCODED)
     const savedMarkup = localStorage.getItem('smm_global_markup');
@@ -25,12 +26,23 @@ class SmmStateStore {
 
     // Restore saved user authentication state
     const savedLoggedIn = localStorage.getItem('smm_user_logged_in');
-    if (savedLoggedIn === 'true') {
+    const savedEmail = localStorage.getItem('smm_user_email');
+    if (savedLoggedIn === 'true' && savedEmail) {
       this.data.isLoggedIn = true;
       const savedName = localStorage.getItem('smm_user_name');
-      const savedEmail = localStorage.getItem('smm_user_email');
-      if (savedName) this.data.customer.name = savedName;
-      if (savedEmail) this.data.customer.email = savedEmail;
+      this.data.customer.name = savedName || savedEmail.split('@')[0];
+      this.data.customer.email = savedEmail;
+      this.loadUserData(savedEmail);
+    } else {
+      this.data.isLoggedIn = false;
+      this.data.customer.name = 'Guest Visitor';
+      this.data.customer.email = '';
+      this.data.customer.balance = 0.00;
+      this.data.customer.spent = 0.00;
+      this.data.customer.ordersCount = 0;
+      this.data.orders = [];
+      this.data.supportTickets = [];
+      this.data.transactions = [];
     }
 
     this.initServerSync();
@@ -89,34 +101,129 @@ class SmmStateStore {
     this.subscribers.forEach(fn => fn(this));
   }
 
-  login(name = 'Vipul Kumar', email = 'vipul@demo.com', avatar = null, showToast = true) {
+  _getUserStorageKey(email, key) {
+    if (!email) return null;
+    const safeKey = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    return `smm_user_${safeKey}_${key}`;
+  }
+
+  loadUserData(email) {
+    if (!email) return;
+    const balKey = this._getUserStorageKey(email, 'balance');
+    const ordersKey = this._getUserStorageKey(email, 'orders');
+    const ticketsKey = this._getUserStorageKey(email, 'tickets');
+    const txnsKey = this._getUserStorageKey(email, 'txns');
+
+    const savedBal = localStorage.getItem(balKey);
+    this.data.customer.balance = savedBal !== null ? parseFloat(savedBal) : 0.00;
+
+    const savedOrders = localStorage.getItem(ordersKey);
+    this.data.orders = savedOrders ? JSON.parse(savedOrders) : [];
+
+    const savedTickets = localStorage.getItem(ticketsKey);
+    this.data.supportTickets = savedTickets ? JSON.parse(savedTickets) : [];
+
+    const savedTxns = localStorage.getItem(txnsKey);
+    this.data.transactions = savedTxns ? JSON.parse(savedTxns) : [];
+
+    this.data.customer.ordersCount = this.data.orders.length;
+    this.data.customer.spent = this.data.orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+  }
+
+  saveUserData() {
+    const email = this.data.customer.email;
+    if (!email || !this.data.isLoggedIn) return;
+
+    localStorage.setItem(this._getUserStorageKey(email, 'balance'), this.data.customer.balance.toFixed(4));
+    localStorage.setItem(this._getUserStorageKey(email, 'orders'), JSON.stringify(this.data.orders));
+    localStorage.setItem(this._getUserStorageKey(email, 'tickets'), JSON.stringify(this.data.supportTickets));
+    localStorage.setItem(this._getUserStorageKey(email, 'txns'), JSON.stringify(this.data.transactions));
+  }
+
+  createSupportTicket(subject, message, linkedOrderId = null) {
+    if (!this.data.isLoggedIn) {
+      this.showToast('Please sign in to raise a support ticket.', 'error');
+      CustomerApp.openAuthModal();
+      return null;
+    }
+
+    const ticketId = `TCK-${Math.floor(100 + Math.random() * 900)}`;
+    const newTicket = {
+      id: ticketId,
+      subject: subject || 'General Inquiry',
+      linkedOrderId: linkedOrderId || null,
+      status: 'Open',
+      updatedAt: 'Just now',
+      messages: [
+        {
+          id: `m-${Date.now()}`,
+          sender: 'customer',
+          text: message || '',
+          time: 'Just now'
+        }
+      ]
+    };
+
+    this.data.supportTickets.unshift(newTicket);
+    this.saveUserData();
+    this.showToast(`Support Ticket #${ticketId} created! Our team will reply shortly.`, 'success');
+    this.notify();
+    return newTicket;
+  }
+
+  login(name, email, avatar = null, showToast = true) {
+    if (!email) return;
     this.data.isLoggedIn = true;
-    this.data.customer.name = name;
+    this.data.customer.name = name || email.split('@')[0];
     this.data.customer.email = email;
     if (avatar) {
       this.data.customer.avatar = avatar;
       localStorage.setItem('smm_customer_avatar', avatar);
     }
     localStorage.setItem('smm_user_logged_in', 'true');
-    localStorage.setItem('smm_user_name', name);
+    localStorage.setItem('smm_user_name', this.data.customer.name);
     localStorage.setItem('smm_user_email', email);
 
+    // Load this specific user's isolated balance and history
+    this.loadUserData(email);
+
     if (showToast) {
-      this.showToast(`Welcome back, ${name}! You are now signed in. 🚀`, 'success');
+      this.showToast(`Welcome back, ${this.data.customer.name}! You are now signed in. 🚀`, 'success');
     }
     this.notify();
   }
 
-  logout() {
+  logout(triggerSupabaseSignOut = true) {
+    if (this._isLoggingOut) return;
+    if (!this.data.isLoggedIn && !localStorage.getItem('smm_user_logged_in')) return;
+
+    this._isLoggingOut = true;
+
+    // Reset customer state to clean guest defaults
     this.data.isLoggedIn = false;
+    this.data.customer.name = 'Guest Visitor';
+    this.data.customer.email = '';
+    this.data.customer.balance = 0.00;
+    this.data.customer.spent = 0.00;
+    this.data.customer.ordersCount = 0;
+    this.data.orders = [];
+    this.data.supportTickets = [];
+    this.data.transactions = [];
+
     localStorage.removeItem('smm_user_logged_in');
     localStorage.removeItem('smm_user_name');
     localStorage.removeItem('smm_user_email');
-    if (window.supabaseClient) {
+
+    if (triggerSupabaseSignOut && window.supabaseClient) {
       window.supabaseClient.auth.signOut().catch(() => {});
     }
+
     this.showToast('You have signed out. Browsing in guest mode.', 'info');
     this.notify();
+
+    setTimeout(() => {
+      this._isLoggingOut = false;
+    }, 150);
   }
 
   setDeviceMode(mode) {
@@ -146,7 +253,8 @@ class SmmStateStore {
   }
 
   setCurrency(curr) {
-    this.currency = curr;
+    this.currency = curr || 'INR';
+    localStorage.setItem('smm_currency', this.currency);
     this.notify();
   }
 
@@ -253,6 +361,8 @@ class SmmStateStore {
       date: 'Just now'
     });
 
+    this.saveUserData();
+
     this.data.recentActivity.unshift({
       id: `act-${Date.now()}`,
       type: 'order',
@@ -306,6 +416,7 @@ class SmmStateStore {
     };
 
     this.data.refillQueue.unshift(refillItem);
+    this.saveUserData();
     this.showToast(`Refill requested for Order #${order.id}! Dispatched to JAP.`, 'refill');
     this.notify();
   }
@@ -327,6 +438,8 @@ class SmmStateStore {
       status: 'Success',
       date: 'Just now'
     });
+
+    this.saveUserData();
 
     this.showToast(`Successfully added ${this.formatMoney(amountInUsd)} to wallet!`, 'success');
     this.notify();

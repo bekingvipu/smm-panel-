@@ -43,12 +43,12 @@ window.SMM_MOCK = {
   isLoggedIn: false, // Default: Guest Mode (Browse without signup)
   
   customer: {
-    name: 'Vipul Kumar',
-    email: 'vipul@demo.com',
+    name: 'Guest Visitor',
+    email: '',
     avatar: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Klaus&backgroundColor=6366f1',
-    balance: 500.00, // ₹500
-    spent: 1250.00,
-    ordersCount: 8
+    balance: 0.00,
+    spent: 0.00,
+    ordersCount: 0
   },
 
   adminStats: {
@@ -390,104 +390,9 @@ window.SMM_MOCK = {
     }
   ],
 
-  orders: [
-    {
-      id: '48291',
-      serviceId: 'ig-fol-1',
-      serviceName: 'Instagram Followers [Refill: 30D] - Basic Fast (₹25 me 1000)',
-      platform: 'instagram',
-      target: 'https://instagram.com/fashion_trendz',
-      quantity: 1000,
-      amount: 0.30,
-      status: 'Processing',
-      date: 'Today, 20:50',
-      startCount: 12400,
-      currentCount: 12400,
-      remains: 1000,
-      refillEligible: false,
-      refillReason: 'Order is still processing'
-    },
-    {
-      id: '48285',
-      serviceId: 'ig-fol-2',
-      serviceName: 'Instagram Followers [Refill: 30D] - High Quality Real (₹50 me 1000)',
-      platform: 'instagram',
-      target: 'https://instagram.com/fitness_dan',
-      quantity: 1000,
-      amount: 0.60,
-      status: 'Completed',
-      date: '27 Aug 2026',
-      startCount: 1020,
-      currentCount: 1850,
-      remains: 0,
-      refillEligible: true,
-      refillDaysLeft: 28,
-      refillStatus: 'Available',
-      refillHistory: []
-    }
-  ],
-
-  refillQueue: [
-    {
-      id: 'ref-901',
-      orderId: '48285',
-      serviceName: 'Instagram Followers [Refill: 30D] - High Quality Real (₹50 me 1000)',
-      customerName: 'Vipul Kumar (vipul@demo.com)',
-      startCount: 1020,
-      targetCount: 2020,
-      currentCount: 1850,
-      dropCount: 170,
-      requestedAt: '10 mins ago',
-      status: 'Pending',
-      provider: 'JustAnotherPanel (JAP)'
-    }
-  ],
-
-  transactions: [
-    {
-      id: 'TXN-901',
-      type: 'Deposit',
-      description: 'Funds Added via UPI / Instant Pay',
-      amount: 500.00,
-      balanceAfter: 500.00,
-      status: 'Success',
-      date: '28 Aug 2026, 11:20'
-    }
-  ],
-
-  supportTickets: [
-    {
-      id: 'TCK-104',
-      subject: 'Refill inquiry for order #48285',
-      linkedOrderId: '48285',
-      status: 'Answered',
-      updatedAt: '15m ago',
-      messages: [
-        {
-          id: 'm1',
-          sender: 'customer',
-          text: 'Hi, I saw a slight drop on #48285 from 2,020 to 1,850. I clicked request refill, can you confirm?',
-          time: '29 Aug, 20:30'
-        },
-        {
-          id: 'm2',
-          sender: 'admin',
-          text: 'Hello Vipul! We see your refill request in our queue. The upstream JAP provider is currently dispatching the top-up.',
-          time: '29 Aug, 20:45'
-        }
-      ]
-    }
-  ],
-
-  recentActivity: [
-    {
-      id: 'act-1',
-      type: 'order',
-      title: 'New Order #45001',
-      sub: 'IG Followers [Refill: 30D] - vipul',
-      amount: '₹25.00',
-      time: '2m ago',
-      icon: '🛒'
-    }
-  ]
+  orders: [],
+  refillQueue: [],
+  transactions: [],
+  supportTickets: [],
+  recentActivity: []
 };

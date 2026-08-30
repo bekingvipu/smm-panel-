@@ -202,7 +202,7 @@ const CustomerApp = {
           <!-- Section 4: Account Actions -->
           <div class="drawer-section" style="border-bottom: none; margin-top: auto;">
             ${isLoggedIn ? `
-              <button class="btn btn-outline btn-block btn-sm" style="color: var(--error); border-color: var(--error);" onclick="CustomerApp.closeSideDrawer(); store.logout();">
+              <button class="btn btn-outline btn-block btn-sm" style="color: var(--error); border-color: var(--error);" onclick="CustomerApp.closeSideDrawer(); window.signOutUser();">
                 Sign Out
               </button>
             ` : `
@@ -1087,7 +1087,14 @@ const CustomerApp = {
       </div>
 
       <div class="mobile-orders-list">
-        ${recentOrders.map(order => this.renderHistoryCard(order, store)).join('')}
+        ${recentOrders.length > 0 ? recentOrders.map(order => this.renderHistoryCard(order, store)).join('') : `
+          <div class="card" style="text-align: center; padding: 28px 16px; color: var(--text-secondary); border-radius: var(--radius-lg);">
+            <div style="font-size: 32px; margin-bottom: 6px;">📦</div>
+            <div style="font-weight: 700; font-size: 14.5px; color: var(--text-main);">No Recent Orders</div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Browse our 5,800+ services and place your first order!</div>
+            <button class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="store.setCustomerTab('new_order')">Browse Services</button>
+          </div>
+        `}
       </div>
     `;
   },
@@ -1153,7 +1160,18 @@ const CustomerApp = {
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 4px;">
-          ${filtered.length === 0 ? `
+          ${allOrders.length === 0 ? `
+            <div class="card" style="text-align: center; padding: 48px 20px; border-radius: var(--radius-lg);">
+              <div style="font-size: 44px; margin-bottom: 12px;">🛒</div>
+              <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main);">No Orders Placed Yet</h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                You haven't placed any orders yet. Choose from our 5,800+ automated services to start growing!
+              </p>
+              <button class="btn btn-primary btn-md" style="margin-top: 18px;" onclick="store.setCustomerTab('new_order')">
+                Browse Services & Place Order
+              </button>
+            </div>
+          ` : filtered.length === 0 ? `
             <div class="card" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
               No orders found matching your search.
             </div>
@@ -1379,7 +1397,13 @@ const CustomerApp = {
           </div>
 
           <div style="display: flex; flex-direction: column; gap: 10px;">
-            ${transactions.map(txn => `
+            ${transactions.length === 0 ? `
+              <div class="card" style="text-align: center; padding: 28px 16px; color: var(--text-secondary);">
+                <div style="font-size: 32px; margin-bottom: 6px;">💳</div>
+                <div style="font-weight: 700; font-size: 14.5px; color: var(--text-main);">No Transactions Yet</div>
+                <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Your deposits and order payments will appear here.</div>
+              </div>
+            ` : transactions.map(txn => `
               <div class="card" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
                 <div>
                   <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${txn.description}</div>
@@ -1432,7 +1456,18 @@ const CustomerApp = {
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 12px;">
-          ${tickets.map(ticket => `
+          ${tickets.length === 0 ? `
+            <div class="card" style="text-align: center; padding: 48px 20px; border-radius: var(--radius-lg);">
+              <div style="font-size: 44px; margin-bottom: 12px;">💬</div>
+              <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main);">No Support Tickets</h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Have questions about your order, need a refill, or payment assistance? Raise a ticket and we will respond promptly!
+              </p>
+              <button class="btn btn-primary btn-md" style="margin-top: 18px;" onclick="CustomerApp.openNewTicketModal()">
+                ＋ Create Support Ticket
+              </button>
+            </div>
+          ` : tickets.map(ticket => `
             <div class="card" style="display: flex; flex-direction: column; gap: 12px; cursor: pointer;" onclick="CustomerApp.openTicketChat('${ticket.id}')">
               <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                 <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">${ticket.subject}</div>
@@ -1502,17 +1537,10 @@ const CustomerApp = {
           <span>Send 6-Digit OTP ✉️</span>
         </button>
 
-        <div style="font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.5;">
+        <div style="font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.5; padding-top: 4px;">
           By continuing, you agree to our 
           <a href="/terms" target="_blank" style="color: var(--primary); text-decoration: underline;">Terms</a> and 
           <a href="/privacy" target="_blank" style="color: var(--primary); text-decoration: underline;">Privacy Policy</a>.
-        </div>
-
-        <!-- Demo Quick Login Fallback -->
-        <div style="text-align: center; border-top: 1px dashed var(--border-color); padding-top: 12px;">
-          <button class="btn btn-outline btn-block" onclick="CustomerApp.quickDemoLogin()">
-            ⚡ 1-Click Fast Demo Login (Vipul Kumar)
-          </button>
         </div>
       </div>
     `;
@@ -1697,7 +1725,7 @@ const CustomerApp = {
           <a href="#admin" class="btn btn-outline btn-block" onclick="CustomerApp.closeModal();" style="text-decoration: none;">
             🛡️ Open Admin Console
           </a>
-          <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error); margin-top: 4px;" onclick="CustomerApp.closeModal(); store.logout();">
+          <button class="btn btn-sm btn-outline" style="color: var(--error); border-color: var(--error); margin-top: 4px;" onclick="CustomerApp.closeModal(); window.signOutUser();">
             Sign Out (Switch to Guest Mode)
           </button>
         </div>
@@ -1793,13 +1821,13 @@ const CustomerApp = {
       <div style="display: flex; flex-direction: column; gap: 14px;">
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Subject</label>
-          <input type="text" class="form-input" id="new-ticket-subject" value="Order inquiry" />
+          <input type="text" class="form-input" id="new-ticket-subject" placeholder="e.g. Refill inquiry or Order question" />
         </div>
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label">Message</label>
-          <textarea class="form-textarea" id="new-ticket-msg" rows="4" placeholder="How can we help?"></textarea>
+          <textarea class="form-textarea" id="new-ticket-msg" rows="4" placeholder="Describe your issue or order ID..."></textarea>
         </div>
-        <button class="btn btn-primary btn-block" onclick="CustomerApp.closeModal(); window.store.showToast('Ticket submitted!', 'success');">
+        <button class="btn btn-primary btn-block" onclick="CustomerApp.submitNewTicket()">
           Submit Ticket
         </button>
       </div>
@@ -1808,9 +1836,23 @@ const CustomerApp = {
     modal.classList.add('active');
   },
 
+  submitNewTicket() {
+    const subjInput = document.getElementById('new-ticket-subject');
+    const msgInput = document.getElementById('new-ticket-msg');
+    const subject = (subjInput?.value || '').trim();
+    const msg = (msgInput?.value || '').trim();
+    if (!subject || !msg) {
+      window.store.showToast('Please provide both subject and message', 'error');
+      return;
+    }
+    window.store.createSupportTicket(subject, msg);
+    CustomerApp.closeModal();
+  },
+
   openNotifications() {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
+    const orders = window.store.data.orders || [];
 
     sheet.innerHTML = `
       <div class="modal-header">
@@ -1818,10 +1860,16 @@ const CustomerApp = {
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
       <div style="display: flex; flex-direction: column; gap: 10px;">
-        <div class="card" style="padding: 14px; border-left: 4px solid var(--primary);">
-          <div style="font-weight: 700;">Order #48291 is now Processing</div>
-          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">5 mins ago</div>
-        </div>
+        ${orders.length > 0 ? orders.slice(0, 4).map(o => `
+          <div class="card" style="padding: 14px; border-left: 4px solid var(--primary);">
+            <div style="font-weight: 700;">Order #${o.id} is ${o.status}</div>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${o.date || 'Recently'}</div>
+          </div>
+        `).join('') : `
+          <div class="card" style="text-align: center; padding: 24px 16px; color: var(--text-muted);">
+            No new notifications.
+          </div>
+        `}
       </div>
     `;
 

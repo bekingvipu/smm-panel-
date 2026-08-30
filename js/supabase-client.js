@@ -91,17 +91,23 @@ window.verifyEmailOtp = async function(email, token) {
   }
 };
 
+let isAuthWorking = false;
+
 // 4. Sign Out User
 window.signOutUser = async function() {
+  if (isAuthWorking) return;
+  isAuthWorking = true;
   try {
     if (window.supabaseClient) {
       await window.supabaseClient.auth.signOut();
     }
   } catch (err) {
     console.warn('[LikeX Auth] Sign out error:', err);
-  }
-  if (window.store && window.store.logout) {
-    window.store.logout();
+  } finally {
+    if (window.store && window.store.data && window.store.data.isLoggedIn) {
+      window.store.logout(false); // Do not trigger supabase signOut again
+    }
+    isAuthWorking = false;
   }
 };
 
@@ -116,7 +122,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const u = session.user;
       const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
       const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
-      window.store.login(name, u.email, avatar, false); // silent login without duplicate toast
+      if (!window.store.data.isLoggedIn || window.store.data.customer.email !== u.email) {
+        window.store.login(name, u.email, avatar, false); // silent login without duplicate toast
+      }
     }
 
     // Subscribe to auth state updates
@@ -126,9 +134,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const u = session.user;
         const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
         const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
-        window.store.login(name, u.email, avatar, true);
+        if (!window.store.data.isLoggedIn || window.store.data.customer.email !== u.email) {
+          window.store.login(name, u.email, avatar, true);
+        }
       } else if (event === 'SIGNED_OUT' && window.store) {
-        window.store.logout();
+        if (window.store.data.isLoggedIn) {
+          window.store.logout(false); // Safe logout without re-triggering Supabase
+        }
       }
     });
   } catch (err) {

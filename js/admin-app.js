@@ -394,12 +394,16 @@ const AdminApp = {
 
     return `
       <div style="display: flex; flex-direction: column; gap: 12px;">
-        ${tickets.map(t => `
+        ${tickets.length === 0 ? `
+          <div class="card" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+            No open support tickets. All customer queries resolved!
+          </div>
+        ` : tickets.map(t => `
           <div class="card" style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="CustomerApp.openTicketChat('${t.id}')">
             <div>
               <div style="font-size: 15px; font-weight: 700;">${t.subject}</div>
               <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
-                Ticket #${t.id} • Customer: Vipul Kumar
+                Ticket #${t.id} • Customer: ${store.data.customer.name || 'User'}
               </div>
             </div>
             <span class="badge badge-success">${t.status}</span>
