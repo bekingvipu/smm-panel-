@@ -293,53 +293,128 @@ const CustomerApp = {
     sheet.innerHTML = `
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">💰 How to Earn Money Reselling</h3>
-          <p style="font-size: 12.5px; color: var(--text-secondary);">Start your own social media growth agency with zero investment!</p>
+          <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.35); color: #B45309; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 6px; letter-spacing: 0.5px;">
+            <span>🔥</span> <span>ZERO INVESTMENT • 300% MARGIN</span>
+          </div>
+          <h3 class="modal-title" style="font-size: 20px; font-weight: 900; color: var(--text-main);">
+            💰 How to Earn ₹20,000–₹50,000/Mo Reselling
+          </h3>
+          <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
+            Start your automated social media marketing agency with ₹0 upfront capital!
+          </p>
         </div>
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 16px;">
-        <!-- Step 1 to 4 Cards -->
-        <div class="card" style="padding: 14px; background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08)); border-left: 4px solid var(--primary);">
-          <div style="font-weight: 800; font-size: 15px; color: var(--primary);">Step 1: Pick a Cheap Wholesale Service</div>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            On SMM Pro, you get <strong>1,000 Instagram Followers for just ₹25</strong>, or <strong>1,000 Likes for ₹10</strong>.
+      <div style="display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto; padding-right: 4px;">
+        
+        <!-- Step 1 Card -->
+        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(99, 102, 241, 0.25); background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(168, 85, 247, 0.05));">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 12px; background: #6366F1; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);">
+                💎
+              </div>
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 1: Pick Wholesale Rates on LikeX</span>
+            </div>
+            <span class="badge badge-primary" style="font-size: 11px; font-weight: 800;">STEP 01</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+            On <strong>LikeX</strong>, you get direct wholesale rates: <strong>1,000 Instagram Followers for only ₹25</strong>, or <strong>1,000 Likes for ₹10</strong>.
           </p>
         </div>
 
-        <div class="card" style="padding: 14px; background: var(--bg-surface); border-left: 4px solid #10B981;">
-          <div style="font-weight: 800; font-size: 15px; color: #10B981;">Step 2: Share with Clients & Friends</div>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            Post on your WhatsApp Status, Instagram, or message local shops & creators offering Followers for <strong>₹99 per 1,000</strong>.
+        <!-- Step 2 Card -->
+        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(16, 185, 129, 0.25); background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(5, 150, 105, 0.05));">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 12px; background: #10B981; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
+                📢
+              </div>
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 2: Share with Clients & Creators</span>
+            </div>
+            <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">STEP 02</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+            Post on your WhatsApp Status, Instagram Story, or pitch to local businesses (cafes, clothing shops, fitness trainers) offering Followers for <strong>₹99 per 1,000</strong>.
           </p>
         </div>
 
-        <div class="card" style="padding: 14px; background: var(--bg-surface); border-left: 4px solid #F59E0B;">
-          <div style="font-weight: 800; font-size: 15px; color: #F59E0B;">Step 3: Collect ₹99 via UPI to Your Account</div>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            The customer pays you <strong>₹99 directly</strong> via GPay/PhonePe.
+        <!-- Step 3 Card -->
+        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(245, 158, 11, 0.25); background: linear-gradient(135deg, rgba(245, 158, 11, 0.05), rgba(217, 119, 6, 0.05));">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 12px; background: #F59E0B; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.35);">
+                💸
+              </div>
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 3: Collect Payment Directly via UPI</span>
+            </div>
+            <span class="badge badge-warning" style="font-size: 11px; font-weight: 800;">STEP 03</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+            Client pays you <strong>₹99 directly to your personal GPay, PhonePe, or Paytm</strong>. You collect 100% of the cash upfront with zero risk!
           </p>
         </div>
 
-        <div class="card" style="padding: 14px; background: var(--bg-surface); border-left: 4px solid #6366F1;">
-          <div style="font-weight: 800; font-size: 15px; color: #6366F1;">Step 4: Place Order on SMM Pro & Keep Profit!</div>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
-            You place the order on SMM Pro for ₹25 using their link. <br/>
-            <strong>You pocket ₹74 instant pure profit per order!</strong>
+        <!-- Step 4 Card -->
+        <div class="card" style="padding: 18px 16px; border-radius: 18px; border: 1.5px solid rgba(37, 211, 102, 0.4); background: linear-gradient(135deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.08));">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 36px; height: 36px; border-radius: 12px; background: #25D366; color: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.35);">
+                🚀
+              </div>
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Step 4: Place Order on LikeX & Keep Profit</span>
+            </div>
+            <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">STEP 04</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
+            Place the order on LikeX for ₹25 using your client's profile link. <br/>
+            <strong>You pocket ₹74 instant pure profit (300% margin) on every single order!</strong>
           </p>
         </div>
 
-        <!-- Profit Calculator Example -->
-        <div style="background: var(--bg-subtle); padding: 14px; border-radius: var(--radius-md); text-align: center;">
-          <div style="font-size: 12px; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Estimated Monthly Income</div>
-          <div style="font-size: 26px; font-weight: 900; color: var(--primary); margin: 6px 0;">₹22,200 / month</div>
-          <p style="font-size: 12px; color: var(--text-secondary);">(Based on just 10 orders per day at ₹74 profit each)</p>
+        <!-- Profit Calculator Breakdown Card -->
+        <div class="card" style="padding: 20px; border-radius: 20px; background: var(--bg-subtle); border: 1.5px dashed var(--primary); text-align: center;">
+          <div style="font-size: 11.5px; color: var(--primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;">
+            📊 Real Profit Math (Per Order)
+          </div>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 14px 0;">
+            <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 12px;">
+              <div style="font-size: 11px; color: var(--text-muted);">Client Pays</div>
+              <div style="font-size: 16px; font-weight: 900; color: var(--text-main); margin-top: 2px;">₹99</div>
+            </div>
+            <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 12px;">
+              <div style="font-size: 11px; color: var(--text-muted);">LikeX Cost</div>
+              <div style="font-size: 16px; font-weight: 900; color: #EF4444; margin-top: 2px;">- ₹25</div>
+            </div>
+            <div style="background: rgba(37, 211, 102, 0.12); border: 1px solid #25D366; padding: 10px 6px; border-radius: 12px;">
+              <div style="font-size: 11px; color: #075E54; font-weight: 700;">Your Profit</div>
+              <div style="font-size: 16px; font-weight: 900; color: #128C7E; margin-top: 2px;">+ ₹74</div>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-surface); border-radius: 14px; padding: 12px; margin-top: 10px;">
+            <div style="font-size: 12px; color: var(--text-muted);">Estimated Monthly Income Potential:</div>
+            <div style="font-size: 24px; font-weight: 900; color: var(--primary); margin: 4px 0;">
+              ₹22,200 to ₹44,400 / month
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-secondary);">
+              (Calculated on just 10 to 20 daily orders with zero inventory risk)
+            </div>
+          </div>
         </div>
 
-        <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.closeModal(); store.setCustomerTab('new_order');">
-          Browse Wholesale Services Now
+        <!-- Pro Selling Tip -->
+        <div style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.25); border-radius: 14px; padding: 14px; font-size: 12.5px; color: var(--text-main); line-height: 1.5;">
+          <strong>💡 Pro Tip:</strong> Local salons, gym trainers, restaurants, aspiring models, and YouTube creators buy followers and video views constantly. Create a simple WhatsApp business catalog or Instagram page and pitch them today!
+        </div>
+
+        <!-- Action Button -->
+        <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.closeModal(); store.setCustomerTab('new_order');" style="height: 50px; font-weight: 800; font-size: 15.5px; border-radius: 14px; box-shadow: var(--shadow-md);">
+          🚀 Start Earning Now — Explore Services
         </button>
+
       </div>
     `;
 
