@@ -3,6 +3,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
+    { "source": "/api/v2", "destination": "/api/provider.js" },
     { "source": "/admin", "destination": "/admin.html" }
   ]
 }

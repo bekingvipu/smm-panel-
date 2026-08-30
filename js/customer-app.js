@@ -347,39 +347,180 @@ const CustomerApp = {
   },
 
   // "RESELLER API V2" MODAL
+  getUserApiKey() {
+    const store = window.store;
+    if (!store.data.isLoggedIn) return null;
+    const email = store.data.customer.email || 'user';
+    const keyName = 'likex_api_key_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    let key = localStorage.getItem(keyName);
+    if (!key) {
+      const randHex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+      key = `lk_live_${randHex}`;
+      localStorage.setItem(keyName, key);
+    }
+    return key;
+  },
+
+  regenerateApiKey() {
+    const store = window.store;
+    if (!store.data.isLoggedIn) return;
+    const email = store.data.customer.email || 'user';
+    const keyName = 'likex_api_key_' + email.toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const randHex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    const newKey = `lk_live_${randHex}`;
+    localStorage.setItem(keyName, newKey);
+    store.showToast('New Reseller API Key created! ⚡', 'success');
+    this.openApiDocsModal();
+  },
+
+  copyUserApiKey() {
+    const key = this.getUserApiKey();
+    if (!key) {
+      window.store.showToast('Please sign in to access your API key', 'error');
+      return;
+    }
+    navigator.clipboard.writeText(key).then(() => {
+      window.store.showToast('Reseller API Key copied to clipboard! 📋', 'success');
+    }).catch(() => {
+      window.store.showToast('API Key: ' + key, 'info');
+    });
+  },
+
   openApiDocsModal() {
+    const store = window.store;
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
+    const isLoggedIn = store.data.isLoggedIn;
+    const apiKey = this.getUserApiKey();
+    const endpointUrl = 'https://likex.in/api/v2';
 
     sheet.innerHTML = `
       <div class="modal-header">
         <div>
-          <h3 class="modal-title">🔌 Reseller API Documentation (V2)</h3>
-          <p style="font-size: 12.5px; color: var(--text-secondary);">Standard SMM Provider API protocol for external panels & bots.</p>
+          <h3 class="modal-title" style="display: flex; align-items: center; gap: 8px;">
+            <span>🔌</span> <span>Reseller API Documentation (V2)</span>
+          </h3>
+          <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
+            Connect external panels, bots, or custom scripts to LikeX wholesale engine.
+          </p>
         </div>
         <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
       </div>
 
-      <div style="display: flex; flex-direction: column; gap: 14px;">
-        <div style="background: var(--bg-subtle); padding: 12px; border-radius: var(--radius-md); font-family: var(--font-mono); font-size: 12.5px;">
-          <div style="color: var(--text-muted); font-size: 11px; text-transform: uppercase;">HTTP POST Endpoint</div>
-          <strong style="color: var(--primary);">https://smm-panel-azure.vercel.app/api/provider</strong>
+      <div style="display: flex; flex-direction: column; gap: 16px; max-height: 75vh; overflow-y: auto; padding-right: 4px;">
+        
+        <!-- Live Endpoint Card -->
+        <div class="card" style="padding: 14px 16px; background: var(--bg-subtle); border: 1.5px solid var(--border-color); border-radius: var(--radius-lg);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+              Official HTTP POST Endpoint
+            </span>
+            <span class="badge badge-success" style="font-size: 10.5px;">v2 Active</span>
+          </div>
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+            <code style="font-family: var(--font-mono); font-size: 13.5px; color: var(--primary); font-weight: 700; word-break: break-all;">
+              ${endpointUrl}
+            </code>
+            <button class="btn btn-sm btn-secondary" onclick="navigator.clipboard.writeText('${endpointUrl}'); window.store.showToast('Endpoint URL copied! 📋', 'success');" style="padding: 4px 10px; font-size: 11.5px;">
+              Copy URL
+            </button>
+          </div>
         </div>
 
-        <div style="font-size: 13px; color: var(--text-secondary);">
-          Connect your custom scripts or external reseller panels to automatically fetch services, place orders, and check statuses.
+        <!-- API Key Generator Section -->
+        <div class="card" style="padding: 16px; border: 1.5px solid var(--primary-light); background: linear-gradient(135deg, rgba(99, 102, 241, 0.04), rgba(168, 85, 247, 0.04)); border-radius: var(--radius-lg);">
+          <div style="font-size: 12px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+            🔑 Your Secret Reseller API Key
+          </div>
+
+          ${isLoggedIn ? `
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input 
+                  type="text" 
+                  readonly 
+                  value="${apiKey}" 
+                  class="form-input" 
+                  style="font-family: var(--font-mono); font-size: 13px; font-weight: 700; background: var(--bg-surface); letter-spacing: 0.5px; height: 44px;" 
+                />
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                <button class="btn btn-primary btn-sm" onclick="CustomerApp.copyUserApiKey()" style="height: 38px; font-weight: 700;">
+                  📋 Copy Secret Key
+                </button>
+                <button class="btn btn-outline btn-sm" onclick="if(confirm('Are you sure you want to regenerate your API key? Previous key will stop working.')) CustomerApp.regenerateApiKey();" style="height: 38px; font-weight: 700;">
+                  ⚡ Regenerate Key
+                </button>
+              </div>
+
+              <div style="font-size: 11.5px; color: var(--text-muted); line-height: 1.4; margin-top: 2px;">
+                Wallet Balance: <strong style="color: var(--primary);">${store.formatMoney(store.data.customer.balance)}</strong>. Orders placed via API will be deducted from your LikeX wallet.
+              </div>
+            </div>
+          ` : `
+            <div style="text-align: center; padding: 14px 10px;">
+              <div style="font-size: 13px; color: var(--text-secondary); margin-bottom: 12px;">
+                Sign in to create your unique Reseller API Key and connect your panel.
+              </div>
+              <button class="btn btn-primary btn-block btn-sm" onclick="CustomerApp.closeModal(); CustomerApp.openAuthModal('login');">
+                🔑 Sign In to Generate API Key
+              </button>
+            </div>
+          `}
         </div>
 
-        <div class="card" style="padding: 12px; font-family: var(--font-mono); font-size: 12px; background: var(--bg-surface);">
-          <div><strong>1. Add Order:</strong> action=add&service=10349&link=URL&quantity=1000</div>
-          <div style="margin-top: 6px;"><strong>2. Check Status:</strong> action=status&order=48291</div>
-          <div style="margin-top: 6px;"><strong>3. Balance:</strong> action=balance</div>
-          <div style="margin-top: 6px;"><strong>4. Refill:</strong> action=refill&order=48291</div>
+        <!-- Profit / Resale Commission Notice -->
+        <div style="background: rgba(37, 211, 102, 0.08); border: 1px solid rgba(37, 211, 102, 0.3); border-radius: var(--radius-md); padding: 12px 14px; font-size: 12.5px; color: var(--text-main); line-height: 1.5;">
+          <strong>💰 Reseller Profit & Commission:</strong> All service rates fetched via <code>action=services</code> include your wholesale prices. You can set any price on your own panel or bot and keep 100% of your retail margin.
         </div>
 
-        <button class="btn btn-secondary btn-block" onclick="window.store.showToast('API Key copied to clipboard: sk_live_reseller_9901', 'success')">
-          📋 Copy Secret API Key
-        </button>
+        <!-- API Methods Reference Table -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="font-size: 13px; font-weight: 800; color: var(--text-main);">
+            Supported SMM v2 Actions
+          </div>
+
+          <!-- Method 1: Services -->
+          <div class="card" style="padding: 12px 14px; font-size: 12.5px; background: var(--bg-surface);">
+            <div style="font-weight: 800; color: var(--primary); margin-bottom: 4px;">1. Fetch All Services</div>
+            <code style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary);">action=services&key=YOUR_API_KEY</code>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Returns list of active services with IDs, names, rates per 1000, and limits.</div>
+          </div>
+
+          <!-- Method 2: Add Order -->
+          <div class="card" style="padding: 12px 14px; font-size: 12.5px; background: var(--bg-surface);">
+            <div style="font-weight: 800; color: var(--primary); margin-bottom: 4px;">2. Place New Order</div>
+            <code style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary);">action=add&key=YOUR_API_KEY&service=SERVICE_ID&link=LINK&quantity=COUNT</code>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Returns: <code>{"order": 49201}</code></div>
+          </div>
+
+          <!-- Method 3: Status -->
+          <div class="card" style="padding: 12px 14px; font-size: 12.5px; background: var(--bg-surface);">
+            <div style="font-weight: 800; color: var(--primary); margin-bottom: 4px;">3. Order Status</div>
+            <code style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary);">action=status&key=YOUR_API_KEY&order=ORDER_ID</code>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Returns: <code>{"charge": "50.00", "status": "In progress", "remains": "500"}</code></div>
+          </div>
+
+          <!-- Method 4: Balance -->
+          <div class="card" style="padding: 12px 14px; font-size: 12.5px; background: var(--bg-surface);">
+            <div style="font-weight: 800; color: var(--primary); margin-bottom: 4px;">4. Check Balance</div>
+            <code style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary);">action=balance&key=YOUR_API_KEY</code>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Returns: <code>{"balance": "500.00", "currency": "INR"}</code></div>
+          </div>
+
+          <!-- Method 5: Refill -->
+          <div class="card" style="padding: 12px 14px; font-size: 12.5px; background: var(--bg-surface);">
+            <div style="font-weight: 800; color: var(--primary); margin-bottom: 4px;">5. Request Refill</div>
+            <code style="font-family: var(--font-mono); font-size: 11.5px; color: var(--text-secondary);">action=refill&key=YOUR_API_KEY&order=ORDER_ID</code>
+            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Returns: <code>{"refill": 1082}</code></div>
+          </div>
+        </div>
+
       </div>
     `;
 

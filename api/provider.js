@@ -46,8 +46,22 @@ export default async function handler(req, res) {
     });
 
     const data = await upstreamResponse.json();
+
+    // When resellers fetch services, automatically apply LikeX profit markup (100% markup)
+    if (action === 'services' && Array.isArray(data)) {
+      const markupMultiplier = 2.0; // Wholesale cost x 2 (100% profit markup)
+      const transformedServices = data.map(s => {
+        const wholesaleRate = parseFloat(s.rate) || 0;
+        return {
+          ...s,
+          rate: (wholesaleRate * markupMultiplier).toFixed(4)
+        };
+      });
+      return res.status(200).json(transformedServices);
+    }
+
     return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to communicate with JustAnotherPanel API: ' + error.message });
+    return res.status(500).json({ error: 'Failed to communicate with upstream provider API: ' + error.message });
   }
 }
