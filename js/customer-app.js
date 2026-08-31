@@ -1162,10 +1162,10 @@ const CustomerApp = {
 
         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 6px;">
           <button class="btn btn-primary btn-block btn-refraction" onclick="CustomerApp.closeModal(); store.setCustomerTab('orders')">
-            📊 Track in Orders History
+            Track in Orders History
           </button>
           <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal();">
-            ➕ Place Another Order
+            Place Another Order
           </button>
         </div>
       </div>
