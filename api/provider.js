@@ -47,6 +47,7 @@ export default async function handler(req, res) {
     if (customParams.quantity || paramsObj.quantity) formData.append('quantity', String(customParams.quantity || paramsObj.quantity));
     if (customParams.comments || paramsObj.comments) formData.append('comments', String(customParams.comments || paramsObj.comments));
     if (customParams.order || paramsObj.order) formData.append('order', String(customParams.order || paramsObj.order));
+    if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
     const response = await fetch(providerConfig.url, {

@@ -1,0 +1,12 @@
+{
+  "name": "likex",
+  "displayName": "LikeX",
+  "version": "2.0.0",
+  "description": "LikeX - #1 Automated SMM Growth Panel",
+  "scripts": {
+    "start": "python3 -m http.server 8000"
+  },
+  "keywords": ["smm", "likex", "instagram", "youtube", "social-media"],
+  "author": "LikeX Team",
+  "license": "MIT"
+}

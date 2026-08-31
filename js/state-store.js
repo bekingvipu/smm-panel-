@@ -116,6 +116,12 @@ class SmmStateStore {
         }
       }
     } catch (e) {}
+
+    // Auto-reconcile failed orders and sync live status
+    try {
+      this.reconcilePendingOrders();
+      this.syncOrdersStatus(true);
+    } catch (e) {}
   }
 
   subscribe(fn) {
@@ -238,6 +244,9 @@ class SmmStateStore {
       window.history.replaceState(null, '', url);
     } catch (e) {}
     this.notify();
+    if (tab === 'orders') {
+      this.syncOrdersStatus(true);
+    }
   }
 
   setAdminTab(tab) {
@@ -377,13 +386,28 @@ class SmmStateStore {
     if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
       rawServiceId = String(serviceId).replace('wos-', '');
+    } else {
+      // Check if service is listed under worldofsmm
+      const foundSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(serviceId));
+      if (foundSvc && (foundSvc.provider === 'worldofsmm' || String(foundSvc.id).startsWith('wos-'))) {
+        targetProvider = 'worldofsmm';
+        rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '');
+      }
     }
 
     const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM 🇮🇳' : 'JustAnotherPanel';
 
-    // Try sending live order to appropriate upstream provider
+    // Verify JAP balance before attempting order if routed to JAP
+    if (targetProvider === 'jap') {
+      const japProv = this.data.providers.find(p => p.id === 'p1');
+      if (japProv && Number(japProv.balance || 0) <= 0.001) {
+        this.showToast('⚠️ JustAnotherPanel server is currently low on balance. Please select from our Cheapest or Indian Services (WorldOfSMM) which are 100% active and funded! No money was deducted.', 'warning');
+        return { success: false, message: 'Provider balance low' };
+      }
+    }
+
+    // Dispatch live order to upstream provider
     let liveOrderId = null;
-    let isLowBalance = false;
     let upstreamError = null;
 
     try {
@@ -405,16 +429,33 @@ class SmmStateStore {
           liveOrderId = String(liveData.order);
         } else if (liveData.error) {
           upstreamError = liveData.error;
-          const errLower = String(liveData.error).toLowerCase();
-          if (errLower.includes('balance') || errLower.includes('funds') || errLower.includes('not enough')) {
-            isLowBalance = true;
-          }
         }
+      } else {
+        upstreamError = `Server responded with HTTP ${liveRes.status}`;
       }
-    } catch (e) {}
+    } catch (e) {
+      upstreamError = 'Network communication error with provider gateway';
+    }
 
+    // STRICT MONEY PROTECTION: Do NOT deduct money or create fake order if provider rejected it!
+    if (!liveOrderId) {
+      const errLower = String(upstreamError || '').toLowerCase();
+      let friendlyMsg = upstreamError || 'Provider rejected order dispatch';
+      if (errLower.includes('balance') || errLower.includes('funds') || errLower.includes('not enough')) {
+        friendlyMsg = `Provider balance is currently low. Please choose another service or contact support. Your wallet was NOT charged.`;
+      } else if (errLower.includes('incorrect service')) {
+        friendlyMsg = `This service ID is temporarily inactive on provider server. Your wallet was NOT charged.`;
+      } else if (errLower.includes('quantity')) {
+        friendlyMsg = `${upstreamError}. Your wallet was NOT charged.`;
+      }
+
+      this.showToast(`❌ Order Failed: ${friendlyMsg}`, 'error');
+      return { success: false, message: friendlyMsg };
+    }
+
+    // Upstream provider successfully confirmed order! Now deduct user wallet
     this.data.customer.balance -= totalCost;
-    const assignedOrderId = liveOrderId || String(48292 + Math.floor(Math.random() * 900));
+    const assignedOrderId = liveOrderId;
 
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
@@ -426,24 +467,22 @@ class SmmStateStore {
       serviceName: serviceName || `Service #${serviceId}`,
       provider: targetProvider,
       providerName: providerDisplayName,
-      providerOrderId: liveOrderId || (isLowBalance ? 'Pending Balance' : `Dispatched (#${assignedOrderId})`),
-      isLowBalance: isLowBalance,
-      upstreamError: upstreamError,
+      providerOrderId: liveOrderId,
+      isLowBalance: false,
+      upstreamError: null,
       platform: 'smm',
       target: target,
       quantity: Number(quantity),
       amount: totalCost,
       comments: comments || undefined,
-      status: isLowBalance ? 'Pending (Low Provider Balance)' : 'Processing',
+      status: 'Processing',
       createdAt: now,
       date: formattedDate,
       startCount: 0,
       currentCount: 0,
       remains: Number(quantity),
       refillEligible: false,
-      refillReason: isLowBalance 
-        ? `Upstream ${providerDisplayName} balance low. Order queued for topup.` 
-        : `Order is dispatching to ${providerDisplayName} server`
+      refillReason: `Dispatched to ${providerDisplayName} server (ID: ${liveOrderId})`
     };
 
     this.data.orders.unshift(newOrder);
@@ -477,15 +516,132 @@ class SmmStateStore {
     this.data.adminStats.profit += (totalCost * (profitMargin / (1 + profitMargin)));
 
     if (!options.silent) {
-      if (isLowBalance) {
-        this.showToast(`Order #${assignedOrderId} placed! Upstream ${providerDisplayName} balance low. Admin notified.`, 'warning');
-      } else {
-        this.showToast(`Order #${assignedOrderId} placed successfully! Routed via ${providerDisplayName}.`, 'success');
-      }
+      this.showToast(`🎉 Order #${assignedOrderId} placed successfully! Live on ${providerDisplayName}.`, 'success');
       this.setCustomerTab('orders');
     }
     this.notify();
     return { success: true, orderId: assignedOrderId, totalCost };
+  }
+
+  // Live Status Synchronization from Upstream Provider
+  async syncOrdersStatus(silent = false) {
+    if (!this.data.orders || this.data.orders.length === 0) return 0;
+
+    let updatedCount = 0;
+    for (const order of this.data.orders) {
+      if (order.status === 'Completed' || order.status === 'Canceled' || order.status === 'Refunded') {
+        continue;
+      }
+
+      // Check if order has a provider order ID
+      const provOrderId = (order.providerOrderId && /^\d+$/.test(order.providerOrderId))
+        ? order.providerOrderId
+        : (/^\d{6,}$/.test(order.id) ? order.id : null);
+
+      if (provOrderId) {
+        try {
+          const res = await fetch('/api/provider', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              provider: order.provider || 'worldofsmm',
+              action: 'status',
+              order: provOrderId
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.status) {
+              const liveStatus = data.status === 'In progress' ? 'In Progress' : data.status;
+              order.status = liveStatus;
+              if (data.start_count !== undefined && data.start_count !== null) {
+                order.startCount = Number(data.start_count);
+              }
+              if (data.remains !== undefined && data.remains !== null) {
+                order.remains = Number(data.remains);
+              }
+              order.currentCount = (order.startCount || 0) + (order.quantity - (order.remains || 0));
+              updatedCount++;
+            }
+          }
+        } catch (e) {
+          console.warn('Status sync error for order', order.id, e);
+        }
+      }
+    }
+
+    if (updatedCount > 0) {
+      this.saveUserData();
+      this.notify();
+      if (!silent) {
+        this.showToast(`🔄 Synchronized ${updatedCount} orders with live server!`, 'success');
+      }
+    }
+    return updatedCount;
+  }
+
+  // Refund an unfulfilled or canceled order back to user's wallet
+  refundOrder(orderId, reason = 'Provider Service Unavailable') {
+    const order = this.data.orders.find(o => String(o.id) === String(orderId));
+    if (!order || order.status === 'Refunded' || order.status === 'Canceled') return false;
+
+    const refundAmt = Number(order.amount) || 0;
+    this.data.customer.balance += refundAmt;
+    order.status = 'Refunded';
+    order.refillReason = `Refunded: ${reason}`;
+
+    const now = Date.now();
+    const formattedDate = this.formatRealDate(now);
+
+    this.data.transactions.unshift({
+      id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+      type: 'Order Refund',
+      description: `Refund for Order #${orderId} (${reason})`,
+      amount: refundAmt,
+      balanceAfter: this.data.customer.balance,
+      status: 'Success',
+      createdAt: now,
+      date: formattedDate
+    });
+
+    this.saveUserData();
+    this.showToast(`₹${refundAmt.toFixed(4)} refunded to your wallet for Order #${orderId}!`, 'success');
+    this.notify();
+    return true;
+  }
+
+  // Auto-reconcile old failed mock test orders (like #48452, #48609)
+  reconcilePendingOrders() {
+    if (!this.data.orders || this.data.orders.length === 0) return;
+    let refundedCount = 0;
+    for (const order of this.data.orders) {
+      const isUnfulfilledMock = (order.status === 'Pending (Low Provider Balance)') ||
+        (order.isLowBalance && order.status !== 'Refunded') ||
+        (String(order.id).startsWith('48') && !order.providerOrderId && order.status === 'Processing');
+
+      if (isUnfulfilledMock && order.status !== 'Refunded' && order.status !== 'Completed') {
+        const refundAmt = Number(order.amount) || 0;
+        this.data.customer.balance += refundAmt;
+        order.status = 'Refunded';
+        order.refillReason = 'Automated refund: Upstream provider rejected order';
+        this.data.transactions.unshift({
+          id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+          type: 'Order Refund',
+          description: `Auto-Refund for test Order #${order.id}`,
+          amount: refundAmt,
+          balanceAfter: this.data.customer.balance,
+          status: 'Success',
+          createdAt: Date.now(),
+          date: this.formatRealDate(Date.now())
+        });
+        refundedCount++;
+      }
+    }
+    if (refundedCount > 0) {
+      this.saveUserData();
+      this.notify();
+      this.showToast(`✅ Auto-reconciled & refunded ${refundedCount} unfulfilled test orders to your wallet!`, 'success');
+    }
   }
 
   async requestRefill(orderId) {

@@ -11,26 +11,27 @@
 /* Mobile Customer Header (Floating Rounded Island with Frosted Glassmorphism) */
 .customer-header {
   position: sticky;
-  top: 10px;
+  top: max(10px, env(safe-area-inset-top, 10px));
   z-index: 900;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 10px 14px 8px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(108, 92, 231, 0.16);
-  box-shadow: 0 8px 28px -4px rgba(108, 92, 231, 0.12), 0 2px 6px rgba(0, 0, 0, 0.02);
+  margin: 10px 12px 12px;
+  padding: 11px 18px;
+  min-height: 60px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1.5px solid rgba(108, 92, 231, 0.22);
+  box-shadow: 0 10px 32px -4px rgba(108, 92, 231, 0.18), 0 3px 10px rgba(0, 0, 0, 0.04);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme="dark"] .customer-header {
-  background: rgba(14, 16, 27, 0.76);
-  border: 1.5px solid rgba(139, 124, 246, 0.24);
-  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55);
+  background: rgba(18, 20, 32, 0.88);
+  border: 1.5px solid rgba(139, 124, 246, 0.32);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
 }
 
 @media (min-width: 768px) {
@@ -819,22 +820,23 @@
 }
 
 .drawer-hamburger-btn {
-  background: rgba(108, 92, 231, 0.06);
-  border: 1px solid rgba(108, 92, 231, 0.14);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  background: rgba(108, 92, 231, 0.08);
+  border: 1.5px solid rgba(108, 92, 231, 0.2);
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
+  font-size: 19px;
+  font-weight: 700;
   cursor: pointer;
   color: var(--text-main);
   transition: all 0.2s ease;
 }
 
 .drawer-hamburger-btn:hover {
-  background: rgba(108, 92, 231, 0.12);
+  background: rgba(108, 92, 231, 0.14);
   transform: scale(1.05);
 }
 
@@ -846,13 +848,13 @@
 .header-balance-pill {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   background: linear-gradient(135deg, #4F46E5, #6366F1);
   color: #ffffff;
-  padding: 6px 12px;
+  padding: 8px 16px;
   border-radius: 9999px;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+  box-shadow: 0 3px 12px rgba(79, 70, 229, 0.35);
   transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
@@ -861,7 +863,7 @@
 }
 
 .header-balance-val {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -869,13 +871,13 @@
 .add-plus-badge {
   background: #ffffff;
   color: #4F46E5;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 900;
   line-height: 1;
 }

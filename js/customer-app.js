@@ -1487,11 +1487,17 @@ const CustomerApp = {
 
     return `
       <div style="display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; width: 100%;">
-        <div class="orders-history-header">
-          <h1 class="orders-history-title">Orders History</h1>
-          <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px; border-radius: 9999px;">
-            ${allOrders.length} Total Orders
-          </span>
+        <div class="orders-history-header" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+          <div>
+            <h1 class="orders-history-title">Orders History</h1>
+            <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px; border-radius: 9999px;">
+              ${allOrders.length} Total Orders
+            </span>
+          </div>
+          <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700; padding: 7px 14px; border-color: var(--primary); color: var(--primary);" onclick="store.syncOrdersStatus()">
+            <span>🔄</span>
+            <span>Live Status Sync</span>
+          </button>
         </div>
 
         <div class="orders-search-bar">
@@ -1545,12 +1551,22 @@ const CustomerApp = {
     } else if (order.status === 'Processing') {
       badgeBg = '#D1FAE5';
       badgeColor = '#047857';
+    } else if (order.status === 'In Progress') {
+      badgeBg = '#FEF3C7';
+      badgeColor = '#B45309';
+    } else if (order.status === 'Refunded') {
+      badgeBg = '#F3E8FF';
+      badgeColor = '#7E22CE';
+    } else if (order.status.includes('Low Provider Balance') || order.status === 'Canceled') {
+      badgeBg = '#FEE2E2';
+      badgeColor = '#B91C1C';
     }
 
     const startCount = Number(order.startCount || 0).toLocaleString();
     const currentCount = Number(order.currentCount || 0).toLocaleString();
     const remains = Number(order.remains || 0).toLocaleString();
     const canRefill = order.status === 'Completed';
+    const isFailedOrLow = (order.isLowBalance || order.status.includes('Low Provider Balance') || (order.status === 'Processing' && String(order.id).startsWith('48') && !order.providerOrderId)) && order.status !== 'Refunded';
 
     return `
       <div class="order-history-card">
@@ -1593,6 +1609,14 @@ const CustomerApp = {
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
             </svg>
             <span>Request Refill</span>
+          </button>
+        ` : order.status === 'Refunded' ? `
+          <div style="text-align: center; padding: 6px 0; font-size: 12.5px; color: #7E22CE; font-weight: 700;">
+            ✓ ${store.formatMoney(order.amount)} refunded to your wallet
+          </div>
+        ` : isFailedOrLow ? `
+          <button class="btn btn-sm btn-block" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 700; margin-top: 6px; padding: 8px; border-radius: 8px;" onclick="store.refundOrder('${order.id}', 'Provider Service Unavailable')">
+            💸 Cancel & Refund ${store.formatMoney(order.amount)} to Wallet
           </button>
         ` : `
           <div style="text-align: center; padding: 6px 0; font-size: 12.5px; color: var(--text-secondary);">
