@@ -318,11 +318,16 @@ const AdminApp = {
   },
 
   renderDashboard(store) {
-    const stats = store.data.adminStats;
+    const stats = store.recalculateAdminStats ? store.recalculateAdminStats() : store.data.adminStats;
+    if (store.syncSupabaseDataForAdmin) {
+      store.syncSupabaseDataForAdmin();
+    }
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
+    const recentOrders = allOrders.slice(0, 5);
 
     return `
       <div class="kpi-grid">
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="store.setAdminTab('orders')" style="cursor: pointer;" title="View Customers & Orders">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">👥</div>
             <span class="badge badge-success">Active</span>
@@ -331,7 +336,7 @@ const AdminApp = {
           <div class="kpi-value">${stats.totalCustomers.toLocaleString()}</div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="store.setAdminTab('orders')" style="cursor: pointer;" title="View All Orders">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">🛍️</div>
             <span class="badge badge-primary">Live</span>
@@ -340,16 +345,16 @@ const AdminApp = {
           <div class="kpi-value">${stats.totalOrders.toLocaleString()}</div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="store.setAdminTab('orders')" style="cursor: pointer;" title="Total Panel Revenue">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--success-light); color: var(--success);">$</div>
             <span class="badge badge-success">Real-Time</span>
           </div>
           <div class="kpi-label">Revenue</div>
-          <div class="kpi-value">${store.formatMoney(stats.revenue, 0)}</div>
+          <div class="kpi-value">${store.formatMoney(stats.revenue, 2)}</div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="store.setAdminTab('services')" style="cursor: pointer;" title="Adjust Markup %">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--primary-light); color: var(--primary);">📈</div>
             <span class="badge badge-success">Active</span>
@@ -358,14 +363,69 @@ const AdminApp = {
           <div class="kpi-value">+${stats.globalMarkupPercent}%</div>
         </div>
 
-        <div class="kpi-card">
+        <div class="kpi-card" onclick="store.setAdminTab('providers')" style="cursor: pointer;" title="Provider Balance">
           <div class="kpi-card-top">
             <div class="kpi-icon-box" style="background: var(--warning-light); color: var(--warning);">🏛️</div>
             <span class="badge badge-success">${stats.providerBalanceStatus}</span>
           </div>
           <div class="kpi-label">JAP Wholesale Balance</div>
-          <div class="kpi-value">$${stats.providerBalance.toFixed(2)} USD</div>
+          <div class="kpi-value">$${(Number(stats.providerBalance) || 0).toFixed(2)} USD</div>
         </div>
+      </div>
+
+      <!-- LIVE RECENT ORDERS OVERVIEW ON DASHBOARD -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 1px solid var(--border-color); background: var(--bg-surface); border-radius: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>🛒</span> <span>LIVE TRANSACTION STREAM</span>
+            </div>
+            <h3 style="font-size: 19px; font-weight: 800; color: var(--text-main); margin-top: 2px;">
+              Recent Orders Overview (${allOrders.length} Total Placed)
+            </h3>
+          </div>
+          <button class="btn btn-sm btn-primary" onclick="store.setAdminTab('orders')" style="font-weight: 700; border-radius: 999px; padding: 6px 16px;">
+            Open All Orders Master Table ➔
+          </button>
+        </div>
+
+        ${recentOrders.length === 0 ? `
+          <div style="text-align: center; padding: 32px; color: var(--text-muted);">
+            <div style="font-size: 32px; margin-bottom: 6px;">📦</div>
+            <strong>No orders placed yet</strong>
+            <p style="font-size: 12.5px; margin-top: 4px;">Orders placed on storefront will appear here instantly with full live status.</p>
+          </div>
+        ` : `
+          <div style="overflow-x: auto;">
+            <table class="sync-data-table" style="font-size: 13px;">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Service ID</th>
+                  <th>Customer Service</th>
+                  <th>Charge</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${recentOrders.map(ro => {
+                  const sId = this.getOrderServiceId(ro);
+                  return `
+                    <tr>
+                      <td style="font-family: var(--font-mono); font-weight: 800;">#${ro.id}</td>
+                      <td>
+                        <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4F46E5; font-weight: 800; font-family: var(--font-mono); padding: 2px 7px; border-radius: 6px;">#${sId}</span>
+                      </td>
+                      <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><strong>${ro.serviceName}</strong></td>
+                      <td><strong style="color: var(--primary);">${store.formatMoney(ro.amount)}</strong></td>
+                      <td><span class="badge badge-primary">${ro.status || 'Processing'}</span></td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
       </div>
 
       <!-- LIVE ANNOUNCEMENT TICKER MANAGER -->
@@ -1077,7 +1137,8 @@ const AdminApp = {
   },
 
   getFilteredOrders(store) {
-    const allOrders = (store || window.store)?.data?.orders || [];
+    const s = store || window.store;
+    const allOrders = (s && s.getAllAdminOrders ? s.getAllAdminOrders() : s?.data?.orders) || [];
     const query = (this.adminOrdersSearch || '').trim().toLowerCase();
     const cleanQuery = query.replace(/^#/, '');
     const filter = this.adminOrdersFilter || 'all';
@@ -1236,7 +1297,7 @@ const AdminApp = {
       return;
     }
 
-    const allOrders = store.data.orders || [];
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const filtered = this.getFilteredOrders(store);
 
     tbody.innerHTML = this.renderAdminOrderRows(filtered, store);
@@ -1265,7 +1326,7 @@ const AdminApp = {
   },
 
   renderAdminOrders(store) {
-    const allOrders = store.data.orders || [];
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const filtered = this.getFilteredOrders(store);
     const filter = this.adminOrdersFilter || 'all';
 
