@@ -1043,67 +1043,298 @@ const AdminApp = {
     `;
   },
 
+  adminOrdersSearch: '',
+  adminOrdersFilter: 'all',
+
+  getOrderServiceId(order) {
+    if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId).trim() !== '') {
+      return String(order.rawServiceId);
+    }
+    // Check in customerServices catalog
+    const custSvc = (window.mockData?.customerServices || []).find(s => String(s.id) === String(order.serviceId));
+    if (custSvc && custSvc.japId) {
+      return String(custSvc.japId);
+    }
+    // Check in window.JAP_SERVICES
+    const japSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId));
+    if (japSvc) {
+      return String(japSvc.rawId || japSvc.id);
+    }
+    if (order.serviceId) {
+      return String(order.serviceId).replace(/^wos-/, '');
+    }
+    return 'N/A';
+  },
+
+  handleAdminOrdersSearch(val) {
+    this.adminOrdersSearch = val;
+    this.updateAdminOrdersTableView();
+  },
+
+  setAdminOrdersFilter(filter) {
+    this.adminOrdersFilter = filter;
+    this.updateAdminOrdersTableView();
+  },
+
+  getFilteredOrders(store) {
+    const allOrders = (store || window.store)?.data?.orders || [];
+    const query = (this.adminOrdersSearch || '').trim().toLowerCase();
+    const cleanQuery = query.replace(/^#/, '');
+    const filter = this.adminOrdersFilter || 'all';
+
+    let filtered = allOrders;
+    if (filter !== 'all') {
+      filtered = filtered.filter(o => (o.status || '').toLowerCase().replace(/\s+/g, '_') === filter.toLowerCase());
+    }
+
+    if (query) {
+      filtered = filtered.filter(o => {
+        const idStr = String(o.id || '').toLowerCase();
+        const svcId = this.getOrderServiceId(o).toLowerCase();
+        const rawIdStr = String(o.serviceId || '').toLowerCase();
+        const provIdStr = String(o.providerOrderId || '').toLowerCase();
+        const nameStr = String(o.serviceName || '').toLowerCase();
+        const targetStr = String(o.target || '').toLowerCase();
+        const statusStr = String(o.status || '').toLowerCase();
+        const provStr = String(o.provider || '').toLowerCase();
+
+        return idStr.includes(query) ||
+               idStr.includes(cleanQuery) ||
+               svcId.includes(query) ||
+               svcId.includes(cleanQuery) ||
+               rawIdStr.includes(query) ||
+               rawIdStr.includes(cleanQuery) ||
+               provIdStr.includes(query) ||
+               provIdStr.includes(cleanQuery) ||
+               nameStr.includes(query) ||
+               targetStr.includes(query) ||
+               statusStr.includes(query) ||
+               provStr.includes(query);
+      });
+    }
+
+    return filtered;
+  },
+
+  renderAdminOrderRows(filteredOrders, store) {
+    if (!filteredOrders || filteredOrders.length === 0) {
+      const q = (this.adminOrdersSearch || '').trim();
+      const f = this.adminOrdersFilter || 'all';
+      return `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
+            <div style="font-size: 38px; margin-bottom: 10px;">🔍</div>
+            <strong style="font-size: 15px; color: var(--text-main);">No orders found matching "${q || f}"</strong>
+            <p style="font-size: 13px; margin-top: 6px; color: var(--text-secondary);">Directly search by Order ID (#42078) or Service ID (#10131), or reset search filters.</p>
+            ${(q || f !== 'all') ? `
+              <button type="button" class="btn btn-sm btn-secondary" onclick="AdminApp.handleAdminOrdersSearch(''); AdminApp.setAdminOrdersFilter('all');" style="margin-top: 14px; border-radius: 999px; font-weight: 700; padding: 6px 16px;">
+                Reset Search Filters
+              </button>
+            ` : ''}
+          </td>
+        </tr>
+      `;
+    }
+
+    return filteredOrders.map(o => {
+      const svcId = this.getOrderServiceId(o);
+      const isWos = o.provider === 'worldofsmm' || (o.serviceId && String(o.serviceId).startsWith('wos-'));
+      const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
+
+      return `
+        <tr>
+          <!-- ORDER ID -->
+          <td>
+            <div style="display: inline-flex; align-items: center; gap: 6px;">
+              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: var(--text-main); cursor: pointer;" title="Click to copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');">
+                #${o.id}
+              </span>
+              <button type="button" class="btn-copy-id" title="Copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 12px;">📋</button>
+            </div>
+          </td>
+
+          <!-- SERVICE ID -->
+          <td>
+            <div style="display: inline-flex; align-items: center; gap: 6px;">
+              <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4338CA; font-weight: 800; font-family: var(--font-mono); font-size: 12.5px; padding: 4px 9px; border-radius: 7px; border: 1px solid rgba(99, 102, 241, 0.28); letter-spacing: 0.3px; cursor: pointer;" title="Click to copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');">
+                #${svcId}
+              </span>
+              ${svcId !== 'N/A' ? `
+                <button type="button" class="btn-copy-id" title="Copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px;">📋</button>
+              ` : ''}
+            </div>
+          </td>
+
+          <!-- CUSTOMER SERVICE -->
+          <td>
+            <div style="font-weight: 700; color: var(--text-main); font-size: 13.5px; line-height: 1.4;">
+              ${o.serviceName}
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 11px; color: var(--text-muted);">
+              <span style="font-family: var(--font-mono); font-weight: 600; color: #4F46E5;">SVC #${svcId}</span>
+              ${o.comments ? `<span style="color: var(--primary); font-weight: 600;">💬 Custom Comments Included</span>` : ''}
+            </div>
+          </td>
+
+          <!-- PROVIDER ORIGIN -->
+          <td>
+            ${isWos ? `
+              <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+                🇮🇳 WorldOfSMM
+              </span>
+            ` : `
+              <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #1D4ED8; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+                🌐 JAP
+              </span>
+            `}
+            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px;">
+              <span>${o.providerOrderId || 'Prov Order #'+o.id}</span>
+              ${o.providerOrderId ? `
+                <button type="button" title="Copy Provider Order ID" onclick="navigator.clipboard.writeText('${o.providerOrderId}'); window.store.showToast('Provider Order ID copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 10px; opacity: 0.6;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">📋</button>
+              ` : ''}
+            </div>
+          </td>
+
+          <!-- TARGET URL -->
+          <td style="font-family: var(--font-mono); font-size: 12px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <a href="${o.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 500;" title="${o.target}">
+              ${o.target}
+            </a>
+          </td>
+
+          <!-- QUANTITY -->
+          <td style="font-weight: 700; font-size: 13px;">${Number(o.quantity).toLocaleString()}</td>
+
+          <!-- CHARGE -->
+          <td><strong style="color: var(--primary); font-size: 13.5px;">${store.formatMoney(o.amount)}</strong></td>
+
+          <!-- STATUS -->
+          <td>
+            ${isLow ? `
+              <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
+                ⚠️ Low Balance (Needs Fund)
+              </span>
+            ` : `
+              <span class="badge badge-primary">${o.status}</span>
+            `}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  },
+
+  updateAdminOrdersTableView() {
+    const store = window.store;
+    const tbody = document.getElementById('admin-orders-table-body');
+    const countEl = document.getElementById('admin-orders-count-label');
+    const clearBtn = document.getElementById('admin-orders-clear-btn');
+    const searchInput = document.getElementById('admin-orders-search-input');
+
+    if (!tbody) {
+      const screenContainer = document.getElementById('screen-container');
+      this.render(screenContainer);
+      return;
+    }
+
+    const allOrders = store.data.orders || [];
+    const filtered = this.getFilteredOrders(store);
+
+    tbody.innerHTML = this.renderAdminOrderRows(filtered, store);
+
+    if (countEl) {
+      countEl.innerText = `Showing ${filtered.length} of ${allOrders.length} Orders`;
+    }
+
+    if (clearBtn) {
+      clearBtn.style.display = (this.adminOrdersSearch && this.adminOrdersSearch.trim()) ? 'block' : 'none';
+    }
+
+    if (searchInput && searchInput.value !== (this.adminOrdersSearch || '')) {
+      searchInput.value = this.adminOrdersSearch || '';
+    }
+
+    // Update filter pills active state
+    document.querySelectorAll('.orders-filter-pill').forEach(btn => {
+      const filterAttr = btn.getAttribute('data-filter');
+      if (filterAttr === this.adminOrdersFilter) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  },
+
   renderAdminOrders(store) {
-    const orders = store.data.orders;
+    const allOrders = store.data.orders || [];
+    const filtered = this.getFilteredOrders(store);
+    const filter = this.adminOrdersFilter || 'all';
 
     return `
-      <div class="sync-table-container">
-        <table class="sync-data-table">
-          <thead>
-            <tr>
-              <th>Order ID</th>
-              <th>Customer Service</th>
-              <th>Provider Origin</th>
-              <th>Target URL</th>
-              <th>Quantity</th>
-              <th>Charge</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${orders.map(o => {
-              const isWos = o.provider === 'worldofsmm' || (o.serviceId && String(o.serviceId).startsWith('wos-'));
-              const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Top Toolbar with Direct Live Search and Status Filter Chips -->
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
+          <div style="position: relative; flex: 1; min-width: 280px; max-width: 520px;">
+            <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: 0.6; pointer-events: none;">🔍</span>
+            <input 
+              id="admin-orders-search-input"
+              type="text" 
+              class="form-control" 
+              placeholder="Search directly by Order ID (#42078), Service ID (#10131), Link, or Status..." 
+              value="${this.adminOrdersSearch || ''}" 
+              oninput="AdminApp.handleAdminOrdersSearch(this.value)"
+              style="padding-left: 42px; padding-right: 36px; border-radius: 999px; height: 42px; font-size: 13.5px; width: 100%; border: 1.5px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);"
+            />
+            <button 
+              id="admin-orders-clear-btn"
+              type="button"
+              onclick="AdminApp.handleAdminOrdersSearch(''); const inp = document.getElementById('admin-orders-search-input'); if(inp){ inp.value=''; inp.focus(); }" 
+              style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 18px; line-height: 1; cursor: pointer; color: var(--text-muted); display: ${this.adminOrdersSearch ? 'block' : 'none'};"
+              title="Clear Search"
+            >&times;</button>
+          </div>
 
-              return `
-              <tr>
-                <td style="font-family: var(--font-mono); font-weight: 700;">#${o.id}</td>
-                <td>
-                  <strong>${o.serviceName}</strong>
-                  ${o.comments ? `<div style="font-size: 11px; color: var(--primary); font-weight: 600;">💬 Custom Comments Included</div>` : ''}
-                </td>
-                <td>
-                  ${isWos ? `
-                    <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px;">
-                      🇮🇳 WorldOfSMM
-                    </span>
-                  ` : `
-                    <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #1D4ED8; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px;">
-                      🌐 JAP
-                    </span>
-                  `}
-                  <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 3px;">
-                    ${o.providerOrderId || 'Prov Order #'+o.id}
-                  </div>
-                </td>
-                <td style="font-family: var(--font-mono); font-size: 11.5px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                  ${o.target}
-                </td>
-                <td>${Number(o.quantity).toLocaleString()}</td>
-                <td><strong style="color: var(--primary);">${store.formatMoney(o.amount)}</strong></td>
-                <td>
-                  ${isLow ? `
-                    <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
-                      ⚠️ Low Balance (Needs Fund)
-                    </span>
-                  ` : `
-                    <span class="badge badge-primary">${o.status}</span>
-                  `}
-                </td>
-              </tr>
-            `}).join('')}
-          </tbody>
-        </table>
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <span id="admin-orders-count-label" style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">
+              Showing ${filtered.length} of ${allOrders.length} Orders
+            </span>
+            <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700;" onclick="store.syncOrdersStatus()">
+              <span>🔄</span>
+              <span>Sync Live Status</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Chips -->
+        <div class="orders-filter-chips">
+          <button class="orders-filter-pill ${filter === 'all' ? 'active' : ''}" data-filter="all" onclick="AdminApp.setAdminOrdersFilter('all')">All (${allOrders.length})</button>
+          <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" onclick="AdminApp.setAdminOrdersFilter('in_progress')">In Progress</button>
+          <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" data-filter="processing" onclick="AdminApp.setAdminOrdersFilter('processing')">Processing</button>
+          <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" data-filter="completed" onclick="AdminApp.setAdminOrdersFilter('completed')">Completed</button>
+          <button class="orders-filter-pill ${filter === 'refunded' ? 'active' : ''}" data-filter="refunded" onclick="AdminApp.setAdminOrdersFilter('refunded')">Refunded / Canceled</button>
+        </div>
+
+        <!-- Table Container -->
+        <div class="sync-table-container">
+          <div style="overflow-x: auto;">
+            <table class="sync-data-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 120px;">ORDER ID</th>
+                  <th style="min-width: 120px;">SERVICE ID</th>
+                  <th style="min-width: 250px;">CUSTOMER SERVICE</th>
+                  <th style="min-width: 150px;">PROVIDER ORIGIN</th>
+                  <th style="min-width: 180px;">TARGET URL</th>
+                  <th style="min-width: 90px;">QUANTITY</th>
+                  <th style="min-width: 100px;">CHARGE</th>
+                  <th style="min-width: 130px;">STATUS</th>
+                </tr>
+              </thead>
+              <tbody id="admin-orders-table-body">
+                ${this.renderAdminOrderRows(filtered, store)}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     `;
   },
