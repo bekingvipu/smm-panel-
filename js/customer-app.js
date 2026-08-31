@@ -93,6 +93,9 @@ const CustomerApp = {
         </div>
       </header>
 
+      <!-- Running Animated Announcement Ticker Bar -->
+      ${this.renderAnnouncementBar(store)}
+
       <!-- Content Container -->
       <div class="customer-desktop-container">
         ${contentHtml}
@@ -180,6 +183,10 @@ const CustomerApp = {
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('new_order');">
                 <div class="drawer-item-left"><span class="drawer-item-icon">🛒</span> <span>Services & New Order</span></div>
               </li>
+              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('home');">
+                <div class="drawer-item-left"><span class="drawer-item-icon">⭐</span> <span>About LikeX & Reviews</span></div>
+                <span class="badge badge-success" style="font-size: 10px;">10+ Yrs</span>
+              </li>
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('orders');">
                 <div class="drawer-item-left"><span class="drawer-item-icon">⏱️</span> <span>Orders History</span></div>
               </li>
@@ -227,13 +234,10 @@ const CustomerApp = {
         <div class="bottom-nav-item ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
           <div class="nav-icon">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
             </svg>
           </div>
-          <span>Dashboard</span>
+          <span>About LikeX</span>
         </div>
 
         <div class="bottom-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
@@ -746,75 +750,127 @@ const CustomerApp = {
             ${this.searchQuery ? `
               <button type="button" onclick="CustomerApp.clearSearch()" style="position: absolute; right: 12px; top: 12px; border: none; background: var(--bg-hover); color: var(--text-secondary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 800;">✕</button>
             ` : ''}
+              ⚡ <span>Lowest Wholesale Rates Guaranteed</span>
+            </span>
+            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" style="font-size: 11.5px; padding: 4px 10px; border-radius: 999px;">
+              ${activeService.refill ? '🛡️ Refill Protected' : 'Wholesale Direct'}
+            </span>
           </div>
+
+          <h2 class="order-hero-title">
+            Supercharge Your Social Media Growth 🚀
+          </h2>
+          <p class="order-hero-sub">
+            Pick from 5,800+ live verified services powered by automated high-speed servers.
+          </p>
         </div>
 
-        <!-- Platform Filter Tabs with Branded SVGs -->
-        <div class="form-group" style="margin-bottom: 4px;">
-          <label class="form-label" style="font-weight: 800; font-size: 12.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary);">
-            Select Platform
-          </label>
-          <div class="platform-chips-scroll-pro" id="new-order-platform-chips">
-            ${platforms.map(p => `
-              <button class="platform-chip-pro ${plat === p.id ? 'active' : ''}" onclick="CustomerApp.selectPlatform('${p.id}')">
-                <span class="chip-icon-svg" style="display: flex; align-items: center;">${p.icon}</span>
-                <span>${p.label}</span>
-              </button>
-            `).join('')}
-          </div>
+        <!-- Clean Unified Search Bar -->
+        <div class="order-search-box-wrap">
+          <div class="order-search-icon">🔍</div>
+          <input 
+            type="text" 
+            class="order-search-input-field" 
+            id="order-search-input" 
+            placeholder="Search e.g. Followers, Views, Likes, 1407..." 
+            value="${this.searchQuery || ''}" 
+            oninput="CustomerApp.handleSearchInput(this.value)" 
+          />
+          ${this.searchQuery ? `
+            <button class="order-search-clear-btn" onclick="CustomerApp.clearSearch()" title="Clear Search">
+              ✕
+            </button>
+          ` : ''}
         </div>
 
-        <!-- 1st Box: Category Dropdown -->
+        <!-- Branded Platform Chips with Dynamic Counter -->
+        ${!query ? `
+          <div class="order-platforms-container">
+            <div class="platform-chips-scroll">
+              ${[
+                { id: 'instagram', label: 'Instagram' },
+                { id: 'youtube', label: 'YouTube' },
+                { id: 'facebook', label: 'Facebook' },
+                { id: 'telegram', label: 'Telegram' },
+                { id: 'tiktok', label: 'TikTok' },
+                { id: 'twitter', label: 'Twitter (X)' },
+                { id: 'spotify', label: 'Spotify' },
+                { id: 'other', label: 'Other Platforms' }
+              ].map(p => {
+                const count = rawServices.filter(s => (s.platform || 'other') === p.id && !isExcluded(s)).length;
+                const isActive = (this.currentPlatform || 'instagram') === p.id;
+                return `
+                  <button 
+                    type="button" 
+                    class="platform-chip ${isActive ? 'active' : ''}" 
+                    data-platform="${p.id}"
+                    onclick="CustomerApp.selectPlatform('${p.id}')"
+                  >
+                    <span class="platform-chip-icon">${this.getPlatformIconSvg(p.id)}</span>
+                    <span class="platform-chip-label">${p.label}</span>
+                    <span class="platform-chip-count">${count}</span>
+                  </button>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        ` : ''}
+
+        <!-- Cascading Dropdown 1: Category Selection -->
         <div class="form-group">
           <label class="form-label">
             <span style="font-weight: 800;">1. Select Category</span>
-            <span class="form-label-hint" style="background: rgba(108, 92, 231, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 999px; font-weight: 700;">${categories.length} Categories</span>
+            <span class="form-label-hint">${categories.length} Categories Available</span>
           </label>
-          <select class="form-select" id="new-order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)" style="min-height: 48px; border-radius: 12px; font-weight: 600;">
-            ${categories.map(c => `
-              <option value="${c}" ${c === this.currentCategory ? 'selected' : ''}>
-                ${c}
-              </option>
-            `).join('')}
-          </select>
+          <div class="select-wrapper">
+            <select class="form-input custom-select" id="order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)">
+              ${categories.map(c => {
+                const count = filteredServices.filter(s => s.category === c).length;
+                return `<option value="${c.replace(/"/g, '&quot;')}" ${c === this.selectedCategory ? 'selected' : ''}>📂 ${c} (${count})</option>`;
+              }).join('')}
+            </select>
+          </div>
         </div>
 
-        <!-- 2nd Box: Service Package & Rates Dropdown -->
+        <!-- Cascading Dropdown 2: Specific Service Package -->
         <div class="form-group">
           <label class="form-label">
-            <span style="font-weight: 800;">2. Select Service Package (with Selling Rates)</span>
-            <span class="form-label-hint" style="background: rgba(108, 92, 231, 0.1); color: var(--primary); padding: 2px 8px; border-radius: 999px; font-weight: 700;">${activePackages.length} Packages</span>
+            <span style="font-weight: 800;">2. Select Service Package</span>
+            <span class="form-label-hint">${categoryServices.length} Options in this Category</span>
           </label>
-          <select class="form-select" id="new-order-service-select" style="min-height: 48px; border-radius: 12px; font-weight: 600;">
-            ${activePackages.map(s => {
-              const sp = store.getSellingPrice(s.cost);
-              return `
-                <option value="${s.id}" data-cost="${s.cost}" data-min="${s.min}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}">
-                  #${s.id} - ${s.name} — ${store.formatMoney(sp)}/1K
-                </option>
-              `;
-            }).join('')}
-          </select>
+          <div class="select-wrapper">
+            <select class="form-input custom-select" id="order-service-select" onchange="CustomerApp.handleServiceChange(this.value)">
+              ${categoryServices.map(s => {
+                const p = store.getSellingPrice(s.cost || 0.1);
+                return `
+                  <option value="${s.id}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
+                    #${s.id} - ${s.name} (${store.formatMoney(p)}/1K)
+                  </option>
+                `;
+              }).join('')}
+            </select>
+          </div>
         </div>
 
-        <!-- High-Tech VIP Service Details Terminal -->
+        <!-- High-Tech VIP Service Details Terminal (2x2 Compact Specs Grid) -->
         <div class="vip-spec-card" id="service-details-box">
           <div class="vip-spec-header">
             <div class="vip-spec-title">
               <span>⚡</span>
               <span>Service Guarantee & Live Specs</span>
             </div>
-            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge" style="font-size: 12px; padding: 5px 12px; border-radius: 999px;">
-              ${activeService.refill ? '🛡️ Refill Guarantee Active (365D)' : 'No Refill Warranty'}
-            </span>
           </div>
-          <div id="service-detail-name" style="font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.4;">
+          <div id="service-detail-name" style="font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.4; margin-bottom: 12px;">
             ${activeService.name || ''}
           </div>
           <div class="vip-spec-grid">
             <div class="spec-tile">
               <span class="spec-tile-label">Wholesale Rate</span>
-              <span class="spec-tile-val" id="service-detail-rate" style="color: var(--primary); font-size: 16px;">${store.formatMoney(sellingPrice)}/1K</span>
+              <span class="spec-tile-val" id="service-detail-rate" style="color: var(--primary); font-size: 15px;">${store.formatMoney(sellingPrice)}/1K</span>
+            </div>
+            <div class="spec-tile">
+              <span class="spec-tile-label">Service ID</span>
+              <span class="spec-tile-val" id="service-detail-id">#${activeService.id || '—'}</span>
             </div>
             <div class="spec-tile">
               <span class="spec-tile-label">Min Limit</span>
@@ -823,10 +879,6 @@ const CustomerApp = {
             <div class="spec-tile">
               <span class="spec-tile-label">Max Limit</span>
               <span class="spec-tile-val" id="service-detail-max">${(activeService.max || 100000).toLocaleString()}</span>
-            </div>
-            <div class="spec-tile">
-              <span class="spec-tile-label">Service ID</span>
-              <span class="spec-tile-val" id="service-detail-id">#${activeService.id || '—'}</span>
             </div>
           </div>
           <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); border-top: 1px dashed rgba(108, 92, 231, 0.2); padding-top: 10px;">
@@ -1362,92 +1414,341 @@ const CustomerApp = {
     window.store.setCustomerTab('wallet');
   },
 
-  // 1. DASHBOARD WITH CRISP ICONS
+  // 1. ABOUT LIKEX & REVIEWS SHOWCASE (WORLD'S #1 MOST FAMOUS SMM PLATFORM)
+  currentReviewIndex: 0,
+  reviewTimer: null,
+
+  initReviewsCarousel() {
+    if (this.reviewTimer) clearInterval(this.reviewTimer);
+    this.reviewTimer = setInterval(() => {
+      this.nextReview();
+    }, 4000);
+  },
+
+  nextReview() {
+    this.currentReviewIndex = (this.currentReviewIndex + 1) % 12;
+    this.updateReviewDisplay();
+  },
+
+  prevReview() {
+    this.currentReviewIndex = (this.currentReviewIndex - 1 + 12) % 12;
+    this.updateReviewDisplay();
+  },
+
+  goToReview(idx) {
+    this.currentReviewIndex = idx;
+    this.updateReviewDisplay();
+    this.initReviewsCarousel();
+  },
+
+  updateReviewDisplay() {
+    const cards = document.querySelectorAll('.review-slide-card');
+    const dots = document.querySelectorAll('.carousel-dot');
+    cards.forEach((card, i) => {
+      if (i === this.currentReviewIndex) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+    dots.forEach((dot, i) => {
+      if (i === this.currentReviewIndex) {
+        dot.classList.add('active');
+      } else {
+        dot.classList.remove('active');
+      }
+    });
+  },
+
   renderHomeTab(store) {
-    const recentOrders = store.data.orders.slice(0, 4);
+    setTimeout(() => this.initReviewsCarousel(), 50);
+
+    const reviews = [
+      {
+        name: "Aryan Sharma",
+        role: "Digital Creator",
+        city: "Mumbai",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=AryanSharma",
+        rating: 5,
+        badge: "Verified Buyer ✅",
+        time: "Yesterday",
+        service: "10K Instagram Followers [Refill 30D]",
+        text: "LikeX is literally the GOAT of SMM panels! 10k Instagram followers start within 60 seconds and zero drop. Best wholesale price in India hands down."
+      },
+      {
+        name: "Priya Patel",
+        role: "Digital Agency Owner",
+        city: "New Delhi",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=PriyaPatel",
+        rating: 5,
+        badge: "VIP Agency Partner 👑",
+        time: "2 days ago",
+        service: "100K Agency Growth Bundle",
+        text: "Hum 6 saal se clients ke accounts handle kar rahe hain. LikeX ka 365-day refill aur lowest price guarantee unmatched hai. Saved over ₹2 Lakhs this year alone."
+      },
+      {
+        name: "Rahul Verma",
+        role: "SMM Reseller Panel Owner",
+        city: "Jaipur",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=RahulVerma",
+        rating: 5,
+        badge: "API Reseller ✅",
+        time: "3 days ago",
+        service: "API Auto-Fulfill 25,000+ Orders",
+        text: "Connected their V2 API to my child panel. Processed 25,000+ orders without a single glitch. Fast speed, reliable status sync, and 100% money safety!"
+      },
+      {
+        name: "Sneha Joshi",
+        role: "Fashion Influencer",
+        city: "Pune",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=SnehaJoshi",
+        rating: 5,
+        badge: "Verified Creator ✅",
+        time: "4 days ago",
+        service: "Indian Active Likes & Comments",
+        text: "Genuine Indian active likes and followers! Mera engagement rate 3x ho gaya. World's most famous and reliable panel for real creators."
+      },
+      {
+        name: "Vikram Singh",
+        role: "Performance Marketing Lead",
+        city: "Bangalore",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=VikramSingh",
+        rating: 5,
+        badge: "Corporate Client ✅",
+        time: "5 days ago",
+        service: "Brand Campaign Boost",
+        text: "WhatsApp VIP support replies within 2 minutes. Even late night refill queries solve ho jati hain. LikeX customer service is on a different level."
+      },
+      {
+        name: "Ananya Das",
+        role: "Content Creator",
+        city: "Kolkata",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=AnanyaDas",
+        rating: 5,
+        badge: "Verified Buyer ✅",
+        time: "6 days ago",
+        service: "Instagram Reels Viral Views",
+        text: "Reels viral views package actually works! 1 Lakh views delivered in just 20 mins. Highly recommended to all YouTubers and Reelers."
+      },
+      {
+        name: "Kabir Mehta",
+        role: "Growth Hacker",
+        city: "Ahmedabad",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=KabirMehta",
+        rating: 5,
+        badge: "Power User ✅",
+        time: "1 week ago",
+        service: "WorldOfSMM Indian Followers",
+        text: "World's lowest rate guaranteed isn't a marketing gimmick — inke Indian followers WorldOfSMM se bhi perfectly synced hain. Instant UPI top-up is a blessing."
+      },
+      {
+        name: "Neha Gupta",
+        role: "Lifestyle Creator",
+        city: "Chandigarh",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=NehaGupta",
+        rating: 5,
+        badge: "Verified Buyer ✅",
+        time: "1 week ago",
+        service: "High-Retention Followers",
+        text: "Order place karte hi instant start. 30 days baad bhi zero drop. Thank you LikeX team for 10+ years of honest services!"
+      },
+      {
+        name: "Rohan Malhotra",
+        role: "YouTuber & Streamer",
+        city: "Lucknow",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=RohanMalhotra",
+        rating: 5,
+        badge: "Verified YouTuber ✅",
+        time: "2 weeks ago",
+        service: "YouTube Watchtime & Subscribers",
+        text: "Monetization watchtime aur YouTube subscribers pure complete ho gaye. Channel successfully monetized! Best investment ever."
+      },
+      {
+        name: "Kunal Rajput",
+        role: "Brand Strategist",
+        city: "Hyderabad",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=KunalRajput",
+        rating: 5,
+        badge: "Verified Buyer ✅",
+        time: "2 weeks ago",
+        service: "Telegram & Twitter Growth",
+        text: "10 years of reputation shows. Zero scams, fail-safe wallet money protection, and genuine transparency. No other panel comes close."
+      },
+      {
+        name: "Simran Kaur",
+        role: "Beauty & Makeup Artist",
+        city: "Amritsar",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=SimranKaur",
+        rating: 5,
+        badge: "Verified Creator ✅",
+        time: "3 weeks ago",
+        service: "Instagram Followers & Story Views",
+        text: "Followers increase hone ke baad brands ke collaboration offers aana start ho gaye. LikeX made my creator journey so easy and fast!"
+      },
+      {
+        name: "Aditya Rao",
+        role: "Digital Media Director",
+        city: "Chennai",
+        avatar: "https://api.dicebear.com/7.x/bottts/svg?seed=AdityaRao",
+        rating: 5,
+        badge: "VIP Agency Partner 👑",
+        time: "1 month ago",
+        service: "Multi-Platform Bulk Orders",
+        text: "We fulfill 500+ client orders every day through LikeX API. Wholesale prices are unbeatable and delivery quality is top-notch."
+      }
+    ];
 
     return `
-      <div class="balance-hero-card">
-        <div class="balance-hero-header">
-          <div>
-            <div class="balance-label">CURRENT WALLET BALANCE</div>
-            <div class="balance-amount" style="font-size: 36px; font-weight: 800; letter-spacing: -0.02em;">
-              ${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : '₹0'}
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- 1. World's #1 Famous Hero Trust Card -->
+        <div class="about-hero-card">
+          <div class="about-hero-badge">
+            <span>👑</span>
+            <span>WORLD'S #1 MOST FAMOUS SMM PLATFORM</span>
+          </div>
+
+          <h2 class="about-hero-title">
+            LikeX — India's Most Loved SMM Panel Since 10+ Years
+          </h2>
+
+          <p class="about-hero-sub">
+            The undisputed global destination for viral social media growth. Trusted by over <strong>45,000+ top creators, agencies, and celebrity brands</strong> worldwide with guaranteed lowest wholesale prices.
+          </p>
+
+          <!-- 4 Core Pillars -->
+          <div class="about-pillars-grid">
+            <div class="about-pillar-item">
+              <span class="pillar-icon">💰</span>
+              <div>
+                <strong>Lowest Wholesale Price</strong>
+                <p>Guaranteed cheaper than any market rate</p>
+              </div>
+            </div>
+            <div class="about-pillar-item">
+              <span class="pillar-icon">🛡️</span>
+              <div>
+                <strong>365-Day Refill Guarantee</strong>
+                <p>Zero-drop automated protection</p>
+              </div>
+            </div>
+            <div class="about-pillar-item">
+              <span class="pillar-icon">⚡</span>
+              <div>
+                <strong>0-Min Instant Start</strong>
+                <p>Automated cloud server dispatch</p>
+              </div>
+            </div>
+            <div class="about-pillar-item">
+              <span class="pillar-icon">💬</span>
+              <div>
+                <strong>24/7 WhatsApp VIP Support</strong>
+                <p>Direct instant human assistance</p>
+              </div>
             </div>
           </div>
-          <div style="background: rgba(99, 102, 241, 0.12); width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2">
-              <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-              <line x1="2" y1="10" x2="22" y2="10"></line>
-            </svg>
-          </div>
-        </div>
-        ${store.data.isLoggedIn ? `
-          <button class="btn btn-primary btn-block btn-lg" onclick="store.setCustomerTab('wallet')">
-            <span>+ Add Funds</span>
-          </button>
-        ` : `
-          <button class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.openAuthModal('login')">
-            <span>🔑 Sign In / Register Account</span>
-          </button>
-        `}
-      </div>
-
-      <div class="quick-actions-grid" style="margin-top: 18px;">
-        <div class="quick-action-card" onclick="store.setCustomerTab('new_order')">
-          <div class="action-icon-circle" style="background: #5B48EE; box-shadow: 0 4px 12px rgba(91, 72, 238, 0.35);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="9" cy="21" r="1"></circle>
-              <circle cx="20" cy="21" r="1"></circle>
-              <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-            </svg>
-          </div>
-          <div class="action-card-title" style="font-weight: 700;">New Order</div>
         </div>
 
-        <div class="quick-action-card" onclick="store.setCustomerTab('orders')">
-          <div class="action-icon-circle" style="background: #3B82F6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-            </svg>
+        <!-- 2. 10+ Years Trust Metrics Counter Grid -->
+        <div class="trust-metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon">🏆</div>
+            <div class="metric-val">10+ Years</div>
+            <div class="metric-lbl">Market Trust Legacy</div>
           </div>
-          <div class="action-card-title" style="font-weight: 700;">Refill Request</div>
+          <div class="metric-card">
+            <div class="metric-icon">📦</div>
+            <div class="metric-val">2.85M+</div>
+            <div class="metric-lbl">Orders Delivered</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-val">99.9%</div>
+            <div class="metric-lbl">Automated Success</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-icon">⭐️</div>
+            <div class="metric-val">4.98 / 5</div>
+            <div class="metric-lbl">12,400+ Reviews</div>
+          </div>
         </div>
 
-        <div class="quick-action-card" onclick="store.setCustomerTab('wallet')">
-          <div class="action-icon-circle" style="background: #10B981; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
+        <!-- 3. Auto-Sliding Customer Reviews Carousel Section -->
+        <div class="about-reviews-section">
+          <div class="reviews-header-row">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">
+                <span>🌟</span> <span>WHAT OUR CLIENTS SAY</span>
+              </div>
+              <h3 style="font-size: 22px; font-weight: 900; color: var(--text-main); margin-top: 2px;">
+                Real Customer Reviews & Praise
+              </h3>
+            </div>
+            <div class="carousel-nav-arrows">
+              <button class="carousel-arrow-btn" onclick="CustomerApp.prevReview()" title="Previous Review">←</button>
+              <button class="carousel-arrow-btn" onclick="CustomerApp.nextReview()" title="Next Review">→</button>
+            </div>
           </div>
-          <div class="action-card-title" style="font-weight: 700;">Add Funds</div>
+
+          <!-- Carousel Container -->
+          <div class="reviews-slider-wrap" onmouseenter="clearInterval(CustomerApp.reviewTimer)" onmouseleave="CustomerApp.initReviewsCarousel()">
+            ${reviews.map((r, i) => `
+              <div class="review-slide-card ${i === 0 ? 'active' : ''}" data-index="${i}">
+                <div class="review-top-bar">
+                  <div class="review-user-info">
+                    <img src="${r.avatar}" alt="${r.name}" class="review-user-avatar" />
+                    <div>
+                      <div class="review-user-name">
+                        <span>${r.name}</span>
+                        <span class="review-user-badge">${r.badge}</span>
+                      </div>
+                      <div class="review-user-sub">${r.role} • ${r.city}</div>
+                    </div>
+                  </div>
+                  <div class="review-stars-box">
+                    <span>⭐⭐⭐⭐⭐</span>
+                    <span style="font-size: 11px; color: var(--text-muted);">${r.time}</span>
+                  </div>
+                </div>
+
+                <p class="review-quote-text">
+                  "${r.text}"
+                </p>
+
+                <div class="review-service-tag">
+                  <span>🛒 Verified Order:</span>
+                  <strong>${r.service}</strong>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+
+          <!-- Carousel Dots Indicator (12 Dots) -->
+          <div class="carousel-dots-container">
+            ${reviews.map((_, i) => `
+              <span class="carousel-dot ${i === 0 ? 'active' : ''}" onclick="CustomerApp.goToReview(${i})"></span>
+            `).join('')}
+          </div>
         </div>
 
-        <div class="quick-action-card" onclick="store.setCustomerTab('support')">
-          <div class="action-icon-circle" style="background: #8B5CF6; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.35);">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
+        <!-- 4. High-Converting Bottom Action Banner -->
+        <div class="about-cta-card">
+          <h3 style="font-size: 20px; font-weight: 900; color: #FFFFFF;">
+            Ready to Experience World-Class Growth? 🚀
+          </h3>
+          <p style="font-size: 13px; color: rgba(255,255,255,0.85); margin-top: 4px; max-width: 480px; margin-left: auto; margin-right: auto;">
+            Join over 45,000+ satisfied creators and resellers with India's lowest wholesale prices.
+          </p>
+          <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-top: 14px;">
+            <button class="btn btn-lg" style="background: #FFFFFF; color: var(--primary); font-weight: 800; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);" onclick="store.setCustomerTab('new_order')">
+              🛒 Place Your Order
+            </button>
+            <a href="https://wa.me/919837371137" target="_blank" class="btn btn-secondary btn-lg" style="background: rgba(255,255,255,0.2); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
+              💬 WhatsApp VIP Support
+            </a>
           </div>
-          <div class="action-card-title" style="font-weight: 700;">Support Desk</div>
         </div>
-      </div>
 
-      <div class="section-header-row" style="margin-top: 24px;">
-        <div class="section-title">Recent Orders</div>
-        <a class="section-link" onclick="store.setCustomerTab('orders')">View All Orders</a>
-      </div>
-
-      <div class="mobile-orders-list">
-        ${recentOrders.length > 0 ? recentOrders.map(order => this.renderHistoryCard(order, store)).join('') : `
-          <div class="card" style="text-align: center; padding: 28px 16px; color: var(--text-secondary); border-radius: var(--radius-lg);">
-            <div style="font-size: 32px; margin-bottom: 6px;">📦</div>
-            <div style="font-weight: 700; font-size: 14.5px; color: var(--text-main);">No Recent Orders</div>
-            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Browse our 5,800+ services and place your first order!</div>
-            <button class="btn btn-primary btn-sm" style="margin-top: 12px;" onclick="store.setCustomerTab('new_order')">Browse Services</button>
-          </div>
-        `}
       </div>
     `;
   },

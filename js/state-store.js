@@ -79,7 +79,37 @@ class SmmStateStore {
       this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
     }
 
+    // Initialize Live Announcement Ticker
+    try {
+      const savedAnnounce = localStorage.getItem('likex_announcement_config');
+      if (savedAnnounce) {
+        this.data.announcement = JSON.parse(savedAnnounce);
+      } else {
+        this.data.announcement = {
+          enabled: true,
+          text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+        };
+      }
+    } catch (e) {
+      this.data.announcement = {
+        enabled: true,
+        text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+      };
+    }
+
     this.initServerSync();
+  }
+
+  updateAnnouncement(text, enabled = true) {
+    this.data.announcement = {
+      enabled: Boolean(enabled),
+      text: String(text || '').trim()
+    };
+    try {
+      localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement));
+    } catch (e) {}
+    this.notify();
+    this.showToast('✅ Announcement ticker updated successfully!', 'success');
   }
 
   saveCatalogCustomizations() {

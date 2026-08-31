@@ -367,7 +367,80 @@ const AdminApp = {
           <div class="kpi-value">$${stats.providerBalance.toFixed(2)} USD</div>
         </div>
       </div>
+
+      <!-- LIVE ANNOUNCEMENT TICKER MANAGER -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 1.5px solid var(--primary); background: var(--bg-surface); border-radius: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>📢</span> <span>STOREFRONT ANNOUNCEMENT TICKER</span>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 2px;">
+              Live Announcement Bar Editor
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary);">
+              This text runs continuously in a smooth animated marquee across the top of the customer website.
+            </p>
+          </div>
+
+          <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; font-size: 13.5px;">
+            <input type="checkbox" id="admin-announcement-toggle" ${(store.data.announcement && store.data.announcement.enabled !== false) ? 'checked' : ''} style="width: 18px; height: 18px;" />
+            <span>Enable Running Ticker</span>
+          </label>
+        </div>
+
+        <!-- Live Preview -->
+        <div style="background: rgba(99, 102, 241, 0.08); border: 1px dashed var(--primary); border-radius: 12px; padding: 10px 14px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; overflow: hidden;">
+          <span style="background: var(--primary); color: #fff; font-size: 10px; font-weight: 900; padding: 2px 8px; border-radius: 999px; flex-shrink: 0;">PREVIEW</span>
+          <div style="font-size: 12.5px; font-weight: 600; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="admin-announcement-preview">
+            ${(store.data.announcement && store.data.announcement.text) || ''}
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-weight: 700; font-size: 13px;">Announcement Message Text</label>
+          <textarea 
+            id="admin-announcement-text" 
+            class="form-input" 
+            rows="3" 
+            style="width: 100%; border-radius: 12px; font-size: 13.5px; line-height: 1.5; padding: 12px; resize: vertical;"
+            placeholder="Enter announcement text..."
+            oninput="document.getElementById('admin-announcement-preview').innerText = this.value"
+          >${(store.data.announcement && store.data.announcement.text) || ''}</textarea>
+        </div>
+
+        <!-- Preset Insertion Chips -->
+        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
+          <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); align-self: center;">Quick Add:</span>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 💬 24/7 WhatsApp VIP Support: +91 9837371137')">+ WhatsApp VIP</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 🛡️ 365-Day Refill & Drop Protection Guarantee')">+ 365D Refill</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 💰 Guaranteed Lowest Wholesale Prices in India')">+ Lowest Rates</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 🚀 Instant 0-Min Delivery Active')">+ Instant Delivery</button>
+        </div>
+
+        <button class="btn btn-primary" onclick="AdminApp.saveAnnouncement()" style="font-weight: 800; padding: 10px 24px; border-radius: 12px;">
+          💾 Save Announcement (Live Update)
+        </button>
+      </div>
     `;
+  },
+
+  appendAnnouncementSnippet(snippet) {
+    const textarea = document.getElementById('admin-announcement-text');
+    if (textarea) {
+      textarea.value += snippet;
+      document.getElementById('admin-announcement-preview').innerText = textarea.value;
+    }
+  },
+
+  saveAnnouncement() {
+    const textEl = document.getElementById('admin-announcement-text');
+    const toggleEl = document.getElementById('admin-announcement-toggle');
+    if (!textEl || !toggleEl) return;
+    const text = textEl.value.trim();
+    const enabled = toggleEl.checked;
+    window.store.updateAnnouncement(text, enabled);
   },
 
   // CUSTOMER SERVICES & PROFIT % TOOL
