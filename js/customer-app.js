@@ -745,10 +745,9 @@ const CustomerApp = {
         <div class="order-hero-banner-pro">
           <div class="order-hero-top-row">
             <span class="order-hero-pill-badge">
-              <span class="order-hero-pill-dot"></span>
-              ⚡ <span>Lowest Wholesale Rates Guaranteed</span>
+              <span>Lowest Wholesale Rates Guaranteed</span>
             </span>
-            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" style="font-size: 11.5px; padding: 4px 10px; border-radius: 999px;">
+            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" style="font-size: 11.5px; padding: 5px 12px; border-radius: 999px;">
               ${activeService.refill ? '🛡️ Refill Protected' : 'Wholesale Direct'}
             </span>
           </div>
@@ -763,7 +762,10 @@ const CustomerApp = {
 
         <!-- Clean Unified Search Bar -->
         <div class="order-search-box-wrap">
-          <div class="order-search-icon">🔍</div>
+          <svg class="order-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
           <input 
             type="text" 
             class="order-search-input-field" 
@@ -773,7 +775,7 @@ const CustomerApp = {
             oninput="CustomerApp.handleSearch(this.value)" 
           />
           ${this.searchQuery ? `
-            <button class="order-search-clear-btn" onclick="CustomerApp.clearSearch()" title="Clear Search">
+            <button type="button" class="order-search-clear-btn" onclick="CustomerApp.clearSearch()" title="Clear Search">
               ✕
             </button>
           ` : ''}
@@ -1414,12 +1416,33 @@ const CustomerApp = {
   // 1. ABOUT LIKEX & REVIEWS SHOWCASE (WORLD'S #1 MOST FAMOUS SMM PLATFORM)
   currentReviewIndex: 0,
   reviewTimer: null,
+  touchStartX: 0,
 
   initReviewsCarousel() {
     if (this.reviewTimer) clearInterval(this.reviewTimer);
     this.reviewTimer = setInterval(() => {
       this.nextReview();
-    }, 4000);
+    }, 4500);
+  },
+
+  handleTouchStart(e) {
+    if (this.reviewTimer) clearInterval(this.reviewTimer);
+    if (e.touches && e.touches[0]) {
+      this.touchStartX = e.touches[0].clientX;
+    }
+  },
+
+  handleTouchEnd(e) {
+    if (e.changedTouches && e.changedTouches[0]) {
+      const touchEndX = e.changedTouches[0].clientX;
+      const diffX = this.touchStartX - touchEndX;
+      if (diffX > 40) {
+        this.nextReview();
+      } else if (diffX < -40) {
+        this.prevReview();
+      }
+    }
+    this.initReviewsCarousel();
   },
 
   nextReview() {
@@ -1672,23 +1695,24 @@ const CustomerApp = {
 
         <!-- 3. Auto-Sliding Customer Reviews Carousel Section -->
         <div class="about-reviews-section">
-          <div class="reviews-header-row">
-            <div>
-              <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px;">
-                <span>🌟</span> <span>WHAT OUR CLIENTS SAY</span>
-              </div>
-              <h3 style="font-size: 22px; font-weight: 900; color: var(--text-main); margin-top: 2px;">
-                Real Customer Reviews & Praise
-              </h3>
+          <div class="reviews-header-centered">
+            <div class="reviews-header-tag">
+              <span>WHAT OUR CLIENTS SAY</span>
             </div>
-            <div class="carousel-nav-arrows">
-              <button class="carousel-arrow-btn" onclick="CustomerApp.prevReview()" title="Previous Review">←</button>
-              <button class="carousel-arrow-btn" onclick="CustomerApp.nextReview()" title="Next Review">→</button>
-            </div>
+            <h3 class="reviews-header-title">
+              Real Customer Reviews & Praise
+            </h3>
           </div>
 
-          <!-- Carousel Container -->
-          <div class="reviews-slider-wrap" onmouseenter="clearInterval(CustomerApp.reviewTimer)" onmouseleave="CustomerApp.initReviewsCarousel()">
+          <!-- Carousel Container (Touch-Swipe Enabled) -->
+          <div 
+            class="reviews-slider-wrap" 
+            id="reviews-slider-container"
+            onmouseenter="clearInterval(CustomerApp.reviewTimer)" 
+            onmouseleave="CustomerApp.initReviewsCarousel()"
+            ontouchstart="CustomerApp.handleTouchStart(event)"
+            ontouchend="CustomerApp.handleTouchEnd(event)"
+          >
             ${reviews.map((r, i) => `
               <div class="review-slide-card ${i === 0 ? 'active' : ''}" data-index="${i}">
                 <div class="review-top-bar">
