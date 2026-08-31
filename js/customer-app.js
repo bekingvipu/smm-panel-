@@ -628,7 +628,7 @@ const CustomerApp = {
 
   // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
   renderNewOrderTab(store) {
-    const rawServices = window.JAP_SERVICES || [];
+    const rawServices = store.getActiveServices ? store.getActiveServices() : (window.JAP_SERVICES || []);
     const plat = this.currentPlatform || 'instagram';
     const query = (this.searchQuery || '').trim().toLowerCase();
 

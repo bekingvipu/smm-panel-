@@ -80,6 +80,11 @@ export default async function handler(req, res) {
 
     const data = await callProvider(providerConfig);
 
+    // If upstream returns an array (e.g. action: 'services'), return array directly
+    if (Array.isArray(data)) {
+      return res.status(200).json(data);
+    }
+
     // Attach provider key to response for clear origin tracking
     return res.status(200).json({
       ...data,

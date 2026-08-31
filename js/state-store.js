@@ -63,7 +63,149 @@ class SmmStateStore {
       this.data.transactions = [];
     }
 
+    // Initialize dynamic catalog customization (Admin Add/Remove services)
+    try {
+      const savedCustom = localStorage.getItem('likex_catalog_customizations');
+      if (savedCustom) {
+        const parsed = JSON.parse(savedCustom);
+        this.catalogCustomizations = {
+          addedServices: parsed.addedServices || [],
+          disabledServiceIds: new Set(parsed.disabledServiceIds || [])
+        };
+      } else {
+        this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
+      }
+    } catch (e) {
+      this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
+    }
+
     this.initServerSync();
+  }
+
+  saveCatalogCustomizations() {
+    try {
+      const payload = {
+        addedServices: this.catalogCustomizations.addedServices,
+        disabledServiceIds: Array.from(this.catalogCustomizations.disabledServiceIds)
+      };
+      localStorage.setItem('likex_catalog_customizations', JSON.stringify(payload));
+    } catch (e) {}
+    this.notify();
+  }
+
+  _detectPlatform(name = '', category = '') {
+    const combined = `${name} ${category}`.toLowerCase();
+    if (combined.includes('instagram') || combined.includes('ig ') || combined.includes('threads')) return 'instagram';
+    if (combined.includes('youtube') || combined.includes('yt ')) return 'youtube';
+    if (combined.includes('facebook') || combined.includes('fb ')) return 'facebook';
+    if (combined.includes('telegram') || combined.includes('tg ')) return 'telegram';
+    if (combined.includes('tiktok')) return 'tiktok';
+    if (combined.includes('twitter') || combined.includes(' x ')) return 'twitter';
+    if (combined.includes('spotify')) return 'spotify';
+    return 'other';
+  }
+
+  getActiveServices() {
+    const base = window.JAP_SERVICES || [];
+    const disabled = this.catalogCustomizations.disabledServiceIds;
+    const added = this.catalogCustomizations.addedServices;
+
+    const activeMap = new Map();
+    // 1. Base services not disabled
+    for (const s of base) {
+      const sId = String(s.id);
+      const rId = String(s.rawId || '');
+      if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
+        activeMap.set(sId, s);
+      }
+    }
+    // 2. Added/imported custom services take priority
+    for (const s of added) {
+      const sId = String(s.id);
+      const rId = String(s.rawId || '');
+      if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
+        activeMap.set(sId, s);
+      }
+    }
+
+    return Array.from(activeMap.values());
+  }
+
+  isServiceActiveInCatalog(serviceId, rawId = null) {
+    const idStr = String(serviceId);
+    const rawStr = rawId ? String(rawId) : '';
+    const disabled = this.catalogCustomizations.disabledServiceIds;
+
+    if (disabled.has(idStr) || (rawStr && disabled.has(rawStr))) {
+      return false;
+    }
+
+    if (this.catalogCustomizations.addedServices.some(s => String(s.id) === idStr || (rawStr && String(s.rawId) === rawStr))) {
+      return true;
+    }
+
+    return (window.JAP_SERVICES || []).some(s => String(s.id) === idStr || (rawStr && String(s.rawId) === rawStr));
+  }
+
+  addServicesToCatalog(servicesList) {
+    if (!Array.isArray(servicesList) || servicesList.length === 0) return 0;
+    let count = 0;
+    servicesList.forEach(rawSvc => {
+      const prov = rawSvc.provider || 'worldofsmm';
+      const sId = String(rawSvc.id || (prov === 'worldofsmm' ? `wos-${rawSvc.service || rawSvc.rawId}` : rawSvc.service));
+      const rId = String(rawSvc.rawId || rawSvc.service || sId.replace('wos-', ''));
+
+      this.catalogCustomizations.disabledServiceIds.delete(sId);
+      this.catalogCustomizations.disabledServiceIds.delete(rId);
+
+      const formattedSvc = {
+        id: sId,
+        rawId: rId,
+        name: rawSvc.name,
+        category: rawSvc.category || 'General Services',
+        platform: rawSvc.platform || this._detectPlatform(rawSvc.name, rawSvc.category),
+        cost: parseFloat(rawSvc.rate || rawSvc.cost || 0.1),
+        min: parseInt(rawSvc.min || 10, 10),
+        max: parseInt(rawSvc.max || 1000000, 10),
+        refill: !!rawSvc.refill,
+        cancel: !!rawSvc.cancel,
+        provider: prov
+      };
+
+      const existingIdx = this.catalogCustomizations.addedServices.findIndex(s => String(s.id) === sId);
+      if (existingIdx >= 0) {
+        this.catalogCustomizations.addedServices[existingIdx] = formattedSvc;
+      } else {
+        this.catalogCustomizations.addedServices.unshift(formattedSvc);
+      }
+      count++;
+    });
+
+    this.saveCatalogCustomizations();
+    this.showToast(`✅ Successfully added ${count} service(s) to Customer Catalog!`, 'success');
+    return count;
+  }
+
+  removeServicesFromCatalog(serviceIdsList) {
+    if (!Array.isArray(serviceIdsList) || serviceIdsList.length === 0) return 0;
+    let count = 0;
+    serviceIdsList.forEach(sId => {
+      const strId = String(sId);
+      this.catalogCustomizations.disabledServiceIds.add(strId);
+      if (strId.startsWith('wos-')) {
+        this.catalogCustomizations.disabledServiceIds.add(strId.replace('wos-', ''));
+      } else {
+        this.catalogCustomizations.disabledServiceIds.add(`wos-${strId}`);
+      }
+      this.catalogCustomizations.addedServices = this.catalogCustomizations.addedServices.filter(
+        s => String(s.id) !== strId && String(s.rawId) !== strId
+      );
+      count++;
+    });
+
+    this.saveCatalogCustomizations();
+    this.showToast(`🗑️ Removed ${count} service(s) from Customer Catalog!`, 'info');
+    return count;
   }
 
   setCustomerAvatar(avatarUrl) {

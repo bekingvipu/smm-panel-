@@ -209,6 +209,7 @@ const AdminApp = {
     let contentHtml = '';
     if (tab === 'dashboard') contentHtml = this.renderDashboard(store);
     else if (tab === 'providers') contentHtml = this.renderProviders(store);
+    else if (tab === 'provider_services') contentHtml = this.renderProviderServicesManager(store);
     else if (tab === 'sync_services') contentHtml = this.renderSyncServices(store);
     else if (tab === 'services') contentHtml = this.renderCustomerServices(store);
     else if (tab === 'refills') contentHtml = this.renderRefillsQueue(store);
@@ -235,6 +236,10 @@ const AdminApp = {
             <li class="admin-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setAdminTab('orders')">
               <span class="nav-icon">🛒</span>
               <span>Orders</span>
+            </li>
+            <li class="admin-nav-item ${tab === 'provider_services' ? 'active' : ''}" onclick="store.setAdminTab('provider_services')">
+              <span class="nav-icon">⚡</span>
+              <span>Provider Services</span>
             </li>
             <li class="admin-nav-item ${tab === 'services' ? 'active' : ''}" onclick="store.setAdminTab('services')">
               <span class="nav-icon">📑</span>
@@ -304,6 +309,7 @@ const AdminApp = {
   getTabTitle(tab) {
     if (tab === 'dashboard') return 'Dashboard';
     if (tab === 'providers') return 'Provider Management';
+    if (tab === 'provider_services') return 'Provider Services & Live Catalog Importer';
     if (tab === 'services') return 'Customer Services & Profit Markup';
     if (tab === 'refills') return 'Refill Requests Management';
     if (tab === 'orders') return 'All Orders Master Table';
@@ -461,6 +467,394 @@ const AdminApp = {
       return;
     }
     window.store.applyGlobalMarkup(val);
+  },
+
+  // --- PROVIDER SERVICES MANAGER & BATCH ACTIONS ---
+  selectedProvider: 'worldofsmm',
+  selectedCategory: 'all',
+  serviceSearchQuery: '',
+  statusFilter: 'all',
+  selectedServiceIds: new Set(),
+  providerServicesCache: {},
+  isLoadingProviderServices: false,
+  _currentRenderedServices: [],
+
+  async fetchProviderServices(provider = 'worldofsmm', force = false) {
+    if (!force && this.providerServicesCache[provider] && this.providerServicesCache[provider].length > 0) {
+      return this.providerServicesCache[provider];
+    }
+    this.isLoadingProviderServices = true;
+    const container = document.getElementById('screen-container');
+    if (container && window.store.adminTab === 'provider_services') {
+      this.render(container);
+    }
+    try {
+      const res = await fetch(`/api/provider?action=services&provider=${provider}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          this.providerServicesCache[provider] = data;
+          window.store.showToast(`Fetched ${data.length} live services from ${provider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel'}!`, 'success');
+        }
+      }
+    } catch (e) {
+      window.store.showToast('Could not reach provider API. Showing local catalog services.', 'warning');
+    } finally {
+      this.isLoadingProviderServices = false;
+      if (container && window.store.adminTab === 'provider_services') {
+        this.render(container);
+      }
+    }
+  },
+
+  handleSelectProvider(prov) {
+    this.selectedProvider = prov;
+    this.selectedCategory = 'all';
+    this.selectedServiceIds.clear();
+    if (!this.providerServicesCache[prov]) {
+      this.fetchProviderServices(prov);
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleCategoryFilter(cat) {
+    this.selectedCategory = cat;
+    this.selectedServiceIds.clear();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleServiceSearch(query) {
+    this.serviceSearchQuery = query;
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleStatusFilter(status) {
+    this.statusFilter = status;
+    this.selectedServiceIds.clear();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleToggleServiceSelect(serviceId) {
+    const sId = String(serviceId);
+    if (this.selectedServiceIds.has(sId)) {
+      this.selectedServiceIds.delete(sId);
+    } else {
+      this.selectedServiceIds.add(sId);
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleSelectAllVisible(isChecked) {
+    if (isChecked) {
+      (this._currentRenderedServices || []).forEach(s => {
+        this.selectedServiceIds.add(String(s.rawId || s.id));
+      });
+    } else {
+      this.selectedServiceIds.clear();
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleAddSelectedToCatalog() {
+    if (this.selectedServiceIds.size === 0) return;
+    const toAdd = (this._currentRenderedServices || []).filter(s => {
+      const id = String(s.id);
+      const rawId = String(s.rawId || '');
+      return this.selectedServiceIds.has(id) || (rawId && this.selectedServiceIds.has(rawId));
+    });
+    if (toAdd.length === 0) return;
+    window.store.addServicesToCatalog(toAdd);
+    this.selectedServiceIds.clear();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleRemoveSelectedFromCatalog() {
+    if (this.selectedServiceIds.size === 0) return;
+    window.store.removeServicesFromCatalog(Array.from(this.selectedServiceIds));
+    this.selectedServiceIds.clear();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleToggleSingleServiceById(serviceId) {
+    const sId = String(serviceId);
+    const serviceObj = (this._currentRenderedServices || []).find(s => String(s.rawId || s.id) === sId);
+    if (!serviceObj) return;
+
+    const isActive = window.store.isServiceActiveInCatalog(serviceObj.id, serviceObj.rawId);
+    if (isActive) {
+      window.store.removeServicesFromCatalog([serviceObj.id, serviceObj.rawId]);
+    } else {
+      window.store.addServicesToCatalog([serviceObj]);
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  renderProviderServicesManager(store) {
+    const prov = this.selectedProvider || 'worldofsmm';
+    const isWos = prov === 'worldofsmm';
+
+    if (!this.providerServicesCache[prov] && !this.isLoadingProviderServices) {
+      setTimeout(() => this.fetchProviderServices(prov), 10);
+    }
+
+    let allServices = this.providerServicesCache[prov] || [];
+    if (allServices.length === 0) {
+      const catalog = window.JAP_SERVICES || [];
+      if (isWos) {
+        allServices = catalog.filter(s => s.provider === 'worldofsmm' || String(s.id).startsWith('wos-'));
+      } else {
+        allServices = catalog.filter(s => s.provider !== 'worldofsmm' && !String(s.id).startsWith('wos-'));
+      }
+    }
+
+    const normalized = allServices.map(s => {
+      const sId = String(s.service || s.id);
+      const rawId = String(s.rawId || s.service || sId.replace('wos-', ''));
+      const costUsd = parseFloat(s.rate || s.cost || 0.1);
+      return {
+        ...s,
+        id: sId,
+        rawId: rawId,
+        provider: prov,
+        cost: costUsd,
+        rate: costUsd,
+        name: s.name || '',
+        category: s.category || 'General Services',
+        min: s.min || 10,
+        max: s.max || 1000000
+      };
+    });
+
+    const rawCategories = [...new Set(normalized.map(s => s.category).filter(Boolean))].sort();
+    const selectedCat = this.selectedCategory || 'all';
+    const query = (this.serviceSearchQuery || '').trim().toLowerCase();
+    const statusF = this.statusFilter || 'all';
+
+    let filtered = normalized;
+    if (selectedCat !== 'all') {
+      filtered = filtered.filter(s => s.category === selectedCat);
+    }
+    if (query) {
+      filtered = filtered.filter(s => 
+        s.id.toLowerCase().includes(query) || 
+        s.rawId.toLowerCase().includes(query) || 
+        s.name.toLowerCase().includes(query)
+      );
+    }
+    if (statusF === 'active') {
+      filtered = filtered.filter(s => store.isServiceActiveInCatalog(s.id, s.rawId));
+    } else if (statusF === 'inactive') {
+      filtered = filtered.filter(s => !store.isServiceActiveInCatalog(s.id, s.rawId));
+    }
+
+    this._currentRenderedServices = filtered;
+
+    const visibleIds = filtered.map(s => String(s.rawId || s.id));
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => this.selectedServiceIds.has(id));
+    const selectedCount = this.selectedServiceIds.size;
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 16px;">
+        <!-- Top Info Header -->
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
+          <div>
+            <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main);">⚡ Provider Service Importer & Manager</h2>
+            <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 2px;">
+              Browse all raw provider services, filter by category, and add or remove services to LikeX Customer Catalog in bulk.
+            </p>
+          </div>
+          <button class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;" onclick="AdminApp.fetchProviderServices('${prov}', true)">
+            <span>${this.isLoadingProviderServices ? '⏳ Fetching...' : '🔄 Refresh Live API'}</span>
+          </button>
+        </div>
+
+        <!-- Provider Switcher Tabs -->
+        <div class="provider-selector-tabs">
+          <button class="provider-tab-btn ${isWos ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('worldofsmm')">
+            <span>🇮🇳 WorldOfSMM (Funded $0.10)</span>
+            <span class="badge ${isWos ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">1,685 Live Services</span>
+          </button>
+          <button class="provider-tab-btn ${!isWos ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('jap')">
+            <span>❖ JustAnotherPanel (JAP)</span>
+            <span class="badge ${!isWos ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">5,803 Services</span>
+          </button>
+        </div>
+
+        <!-- Filter and Search Bar -->
+        <div class="service-filter-card">
+          <div class="service-filter-row">
+            <div style="flex: 1; min-width: 240px;">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+                Filter by Category (${rawCategories.length} Categories)
+              </label>
+              <select class="form-input" style="height: 40px; font-size: 13px;" onchange="AdminApp.handleCategoryFilter(this.value)">
+                <option value="all" ${selectedCat === 'all' ? 'selected' : ''}>📂 All Categories (${normalized.length} total)</option>
+                ${rawCategories.map(cat => {
+                  const count = normalized.filter(s => s.category === cat).length;
+                  return `<option value="${cat.replace(/"/g, '&quot;')}" ${selectedCat === cat ? 'selected' : ''}>${cat} (${count})</option>`;
+                }).join('')}
+              </select>
+            </div>
+
+            <div style="flex: 1; min-width: 220px;">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+                Search by Service Name or ID
+              </label>
+              <input 
+                type="text" 
+                class="form-input" 
+                style="height: 40px; font-size: 13px;" 
+                placeholder="Search e.g. Followers, Views, Likes, 1407..." 
+                value="${this.serviceSearchQuery || ''}"
+                oninput="AdminApp.handleServiceSearch(this.value)" 
+              />
+            </div>
+
+            <div style="width: 180px;">
+              <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block;">
+                Catalog Status
+              </label>
+              <select class="form-input" style="height: 40px; font-size: 13px;" onchange="AdminApp.handleStatusFilter(this.value)">
+                <option value="all" ${statusF === 'all' ? 'selected' : ''}>All Services</option>
+                <option value="active" ${statusF === 'active' ? 'selected' : ''}>🟢 Active in LikeX</option>
+                <option value="inactive" ${statusF === 'inactive' ? 'selected' : ''}>⚪ Not in Catalog</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--text-secondary); padding-top: 4px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
+            <span>Showing <strong>${filtered.length}</strong> of ${normalized.length} services</span>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700;">
+                <input type="checkbox" ${allVisibleSelected ? 'checked' : ''} onchange="AdminApp.handleSelectAllVisible(this.checked)" />
+                <span>Select All Visible (${filtered.length})</span>
+              </label>
+              ${selectedCount > 0 ? `<button class="btn btn-sm btn-secondary" onclick="AdminApp.selectedServiceIds.clear(); AdminApp.render(document.getElementById('screen-container'))">Clear Selection (${selectedCount})</button>` : ''}
+            </div>
+          </div>
+        </div>
+
+        <!-- Services Table -->
+        <div class="sync-table-container">
+          <table class="sync-data-table">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">
+                  <input type="checkbox" ${allVisibleSelected ? 'checked' : ''} onchange="AdminApp.handleSelectAllVisible(this.checked)" title="Select All Visible" />
+                </th>
+                <th style="width: 90px;">Service ID</th>
+                <th>Package Name & Category</th>
+                <th>Wholesale Cost</th>
+                <th>Selling Price (+${store.data.adminStats.globalMarkupPercent}%)</th>
+                <th>Min / Max</th>
+                <th>Status in LikeX</th>
+                <th style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filtered.length === 0 ? `
+                <tr>
+                  <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                    No services match the selected category or search query.
+                  </td>
+                </tr>
+              ` : filtered.slice(0, 100).map(s => {
+                const sKey = String(s.rawId || s.id);
+                const isSelected = this.selectedServiceIds.has(sKey);
+                const isActive = store.isServiceActiveInCatalog(s.id, s.rawId);
+                const wholesaleInr = store.formatMoney(s.cost);
+                const sellingPriceUsd = store.getSellingPrice(s.cost);
+                const sellingPriceInr = store.formatMoney(sellingPriceUsd);
+
+                return `
+                  <tr style="${isSelected ? 'background: rgba(99, 102, 241, 0.08);' : ''}">
+                    <td style="text-align: center;">
+                      <input 
+                        type="checkbox" 
+                        ${isSelected ? 'checked' : ''} 
+                        onchange="AdminApp.handleToggleServiceSelect('${sKey}')" 
+                      />
+                    </td>
+                    <td>
+                      <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 700;">
+                        #${sKey}
+                      </span>
+                      <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${isWos ? 'WorldOfSMM' : 'JAP'}</div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); line-height: 1.3;">
+                        ${s.name}
+                      </div>
+                      <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 3px;">
+                        📂 <em>${s.category}</em>
+                      </div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 700; font-size: 13px; color: var(--text-muted);">$${s.cost.toFixed(4)}</div>
+                      <div style="font-size: 11px; color: var(--text-secondary);">${wholesaleInr} / 1K</div>
+                    </td>
+                    <td>
+                      <div style="font-weight: 800; font-size: 14px; color: var(--primary);">${sellingPriceInr} / 1K</div>
+                      <div style="font-size: 11px; color: #10B981; font-weight: 600;">+$${(sellingPriceUsd - s.cost).toFixed(4)} profit</div>
+                    </td>
+                    <td>
+                      <div style="font-size: 12px; font-weight: 600;">${Number(s.min).toLocaleString()} - ${Number(s.max).toLocaleString()}</div>
+                      <div style="font-size: 11px; color: var(--text-muted);">${s.refill ? '🛡️ Refill' : 'No Refill'}</div>
+                    </td>
+                    <td>
+                      ${isActive ? `
+                        <span class="badge-active-likex">
+                          <span>●</span> Active in LikeX
+                        </span>
+                      ` : `
+                        <span class="badge-inactive-likex">
+                          <span>○</span> Not in Catalog
+                        </span>
+                      `}
+                    </td>
+                    <td style="text-align: right;">
+                      <button 
+                        class="btn btn-sm ${isActive ? 'btn-outline' : 'btn-primary'}" 
+                        style="${isActive ? 'color: #EF4444; border-color: #EF4444; font-size: 12px; padding: 5px 12px;' : 'font-size: 12px; padding: 5px 12px;'}"
+                        onclick="AdminApp.handleToggleSingleServiceById('${sKey}')"
+                      >
+                        ${isActive ? '🗑️ Remove' : '➕ Add to LikeX'}
+                      </button>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          ${filtered.length > 100 ? `
+            <div style="text-align: center; padding: 14px; background: var(--bg-subtle); font-size: 12.5px; color: var(--text-secondary);">
+              Showing first 100 of ${filtered.length} services. Use category or search to narrow down.
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- Sticky Floating Multi-Select Batch Action Bar -->
+        ${selectedCount > 0 ? `
+          <div class="floating-batch-bar">
+            <div class="batch-info">
+              <span style="font-size: 20px;">📌</span>
+              <span><strong>${selectedCount}</strong> services selected from ${isWos ? 'WorldOfSMM' : 'JAP'}</span>
+            </div>
+            <div class="batch-actions">
+              <button class="btn btn-success btn-md" style="background: #10B981; border: none; font-weight: 700; color: #FFFFFF;" onclick="AdminApp.handleAddSelectedToCatalog()">
+                ➕ Add Selected (${selectedCount}) to Customer Catalog
+              </button>
+              <button class="btn btn-sm" style="background: #EF4444; border: none; font-weight: 700; color: #FFFFFF;" onclick="AdminApp.handleRemoveSelectedFromCatalog()">
+                🗑️ Remove Selected (${selectedCount})
+              </button>
+              <button class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.15); color: #FFFFFF; border: none;" onclick="AdminApp.selectedServiceIds.clear(); AdminApp.render(document.getElementById('screen-container'))">
+                ✕ Cancel
+              </button>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
   },
 
   renderProviders(store) {
