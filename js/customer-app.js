@@ -5,6 +5,29 @@ const CustomerApp = {
   ordersFilter: 'all',
   ordersSearch: '',
 
+  renderAnnouncementBar(store) {
+    const announce = (store && store.data && store.data.announcement) || {
+      enabled: true,
+      text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+    };
+
+    if (!announce.enabled || !announce.text) return '';
+
+    return `
+      <div class="announcement-ticker-wrap">
+        <div class="announcement-badge">
+          <span class="announcement-pulse-dot"></span>
+          <span>UPDATES</span>
+        </div>
+        <div class="announcement-marquee-track">
+          <div class="announcement-marquee-content">
+            ${announce.text}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
   render(container) {
     const store = window.store;
     const tab = store.customerTab;
@@ -650,15 +673,15 @@ const CustomerApp = {
     if (query) {
       filteredServices = filteredServices.filter(s => 
         String(s.id).includes(query) || 
-        s.name.toLowerCase().includes(query) ||
-        s.category.toLowerCase().includes(query)
+        (s.name || '').toLowerCase().includes(query) ||
+        (s.category || '').toLowerCase().includes(query)
       );
     } else if (plat !== 'all') {
-      filteredServices = filteredServices.filter(s => s.platform === plat);
+      filteredServices = filteredServices.filter(s => (s.platform || 'other') === plat);
     }
 
     // Get unique categories and smartly prioritize Followers, Likes, Views
-    const rawCategories = [...new Set(filteredServices.map(s => s.category))];
+    const rawCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
     const categories = rawCategories.sort((a, b) => {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
@@ -705,7 +728,7 @@ const CustomerApp = {
     const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
 
     const platforms = [
-      { id: 'all', label: 'All (5,803)', icon: '⚡' },
+      { id: 'all', label: 'All', icon: '⚡' },
       { id: 'instagram', label: 'Instagram', icon: this.getPlatformIconSvg('instagram') },
       { id: 'tiktok', label: 'TikTok', icon: this.getPlatformIconSvg('tiktok') },
       { id: 'youtube', label: 'YouTube', icon: this.getPlatformIconSvg('youtube') },
@@ -718,38 +741,11 @@ const CustomerApp = {
 
     return `
       <div class="order-premium-card" style="max-width: 840px; margin: 0 auto; width: 100%;">
-        <!-- Header Banner Matching Image 3 -->
+        <!-- Hero Title Banner with Live Stats -->
         <div class="order-hero-banner-pro">
-          <h1 class="order-hero-title">Place New Order</h1>
-          <div class="order-hero-accent-line">
-            <span class="order-hero-accent-bar"></span>
-            <span class="order-hero-accent-dot"></span>
-          </div>
-          <p class="order-hero-sub">Instant automated delivery across wholesale global servers.</p>
-          <div>
-            <div class="order-hero-pill-badge">
+          <div class="order-hero-top-row">
+            <span class="order-hero-pill-badge">
               <span class="order-hero-pill-dot"></span>
-              <span><strong>5,803</strong> Services Active</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Frosted Instant Search Box with Clear Button -->
-        <div class="form-group" style="margin-bottom: 0;">
-          <div style="position: relative;">
-            <input 
-              type="text" 
-              class="form-input" 
-              id="service-search-input" 
-              placeholder="Search service name, ID (e.g. 10349), or keyword..." 
-              value="${this.searchQuery}" 
-              style="padding-left: 42px; padding-right: 36px; min-height: 48px; font-size: 14.5px; border-radius: 14px;" 
-              oninput="CustomerApp.handleSearch(this.value)" 
-            />
-            <span style="position: absolute; left: 14px; top: 14px; font-size: 16px; color: var(--text-muted); pointer-events: none;">🔍</span>
-            ${this.searchQuery ? `
-              <button type="button" onclick="CustomerApp.clearSearch()" style="position: absolute; right: 12px; top: 12px; border: none; background: var(--bg-hover); color: var(--text-secondary); width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 13px; font-weight: 800;">✕</button>
-            ` : ''}
               ⚡ <span>Lowest Wholesale Rates Guaranteed</span>
             </span>
             <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" style="font-size: 11.5px; padding: 4px 10px; border-radius: 999px;">
@@ -758,10 +754,10 @@ const CustomerApp = {
           </div>
 
           <h2 class="order-hero-title">
-            Supercharge Your Social Media Growth 🚀
+            Place New Order
           </h2>
           <p class="order-hero-sub">
-            Pick from 5,800+ live verified services powered by automated high-speed servers.
+            Instant automated delivery across wholesale global servers.
           </p>
         </div>
 
@@ -771,10 +767,10 @@ const CustomerApp = {
           <input 
             type="text" 
             class="order-search-input-field" 
-            id="order-search-input" 
-            placeholder="Search e.g. Followers, Views, Likes, 1407..." 
+            id="service-search-input" 
+            placeholder="Search service name, ID (e.g. 10349), or keyword..." 
             value="${this.searchQuery || ''}" 
-            oninput="CustomerApp.handleSearchInput(this.value)" 
+            oninput="CustomerApp.handleSearch(this.value)" 
           />
           ${this.searchQuery ? `
             <button class="order-search-clear-btn" onclick="CustomerApp.clearSearch()" title="Clear Search">
@@ -787,16 +783,7 @@ const CustomerApp = {
         ${!query ? `
           <div class="order-platforms-container">
             <div class="platform-chips-scroll">
-              ${[
-                { id: 'instagram', label: 'Instagram' },
-                { id: 'youtube', label: 'YouTube' },
-                { id: 'facebook', label: 'Facebook' },
-                { id: 'telegram', label: 'Telegram' },
-                { id: 'tiktok', label: 'TikTok' },
-                { id: 'twitter', label: 'Twitter (X)' },
-                { id: 'spotify', label: 'Spotify' },
-                { id: 'other', label: 'Other Platforms' }
-              ].map(p => {
+              ${platforms.map(p => {
                 const count = rawServices.filter(s => (s.platform || 'other') === p.id && !isExcluded(s)).length;
                 const isActive = (this.currentPlatform || 'instagram') === p.id;
                 return `
@@ -806,9 +793,9 @@ const CustomerApp = {
                     data-platform="${p.id}"
                     onclick="CustomerApp.selectPlatform('${p.id}')"
                   >
-                    <span class="platform-chip-icon">${this.getPlatformIconSvg(p.id)}</span>
+                    <span class="platform-chip-icon">${p.icon}</span>
                     <span class="platform-chip-label">${p.label}</span>
-                    <span class="platform-chip-count">${count}</span>
+                    ${p.id !== 'all' ? `<span class="platform-chip-count">${count}</span>` : ''}
                   </button>
                 `;
               }).join('')}
@@ -823,10 +810,10 @@ const CustomerApp = {
             <span class="form-label-hint">${categories.length} Categories Available</span>
           </label>
           <div class="select-wrapper">
-            <select class="form-input custom-select" id="order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)">
+            <select class="form-input custom-select" id="new-order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)">
               ${categories.map(c => {
                 const count = filteredServices.filter(s => s.category === c).length;
-                return `<option value="${c.replace(/"/g, '&quot;')}" ${c === this.selectedCategory ? 'selected' : ''}>📂 ${c} (${count})</option>`;
+                return `<option value="${c.replace(/"/g, '&quot;')}" ${c === this.currentCategory ? 'selected' : ''}>📂 ${c} (${count})</option>`;
               }).join('')}
             </select>
           </div>
@@ -836,14 +823,14 @@ const CustomerApp = {
         <div class="form-group">
           <label class="form-label">
             <span style="font-weight: 800;">2. Select Service Package</span>
-            <span class="form-label-hint">${categoryServices.length} Options in this Category</span>
+            <span class="form-label-hint">${activePackages.length} Options in this Category</span>
           </label>
           <div class="select-wrapper">
-            <select class="form-input custom-select" id="order-service-select" onchange="CustomerApp.handleServiceChange(this.value)">
-              ${categoryServices.map(s => {
+            <select class="form-input custom-select" id="new-order-service-select" onchange="CustomerApp.handleServiceChange(this.value)">
+              ${activePackages.map(s => {
                 const p = store.getSellingPrice(s.cost || 0.1);
                 return `
-                  <option value="${s.id}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
+                  <option value="${s.id}" data-cost="${s.cost}" data-min="${s.min}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
                     #${s.id} - ${s.name} (${store.formatMoney(p)}/1K)
                   </option>
                 `;
@@ -859,6 +846,9 @@ const CustomerApp = {
               <span>⚡</span>
               <span>Service Guarantee & Live Specs</span>
             </div>
+            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge" style="font-size: 12px; padding: 5px 12px; border-radius: 999px;">
+              ${activeService.refill ? '🛡️ Refill Guarantee Active (365D)' : 'No Refill Warranty'}
+            </span>
           </div>
           <div id="service-detail-name" style="font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.4; margin-bottom: 12px;">
             ${activeService.name || ''}
@@ -1008,7 +998,7 @@ const CustomerApp = {
     const steppersBar = document.getElementById('qty-steppers-bar');
     const commentsCountHint = document.getElementById('comments-count-hint');
 
-    if (serviceSelect && qtyInput) {
+    if (serviceSelect && serviceSelect.addEventListener && qtyInput) {
       const updateCalc = () => {
         const store = window.store;
         if (!serviceSelect.options || serviceSelect.selectedIndex < 0) return;
@@ -1053,11 +1043,16 @@ const CustomerApp = {
 
         const sellingPrice = store.getSellingPrice(cost);
 
-        document.getElementById('service-detail-name').textContent = name;
-        document.getElementById('service-detail-min').textContent = min.toLocaleString();
-        document.getElementById('service-detail-max').textContent = max.toLocaleString();
-        document.getElementById('service-detail-rate').textContent = store.formatMoney(sellingPrice);
-        document.getElementById('service-detail-id').textContent = '#' + id;
+        const nameEl = document.getElementById('service-detail-name');
+        if (nameEl) nameEl.textContent = name;
+        const minEl = document.getElementById('service-detail-min');
+        if (minEl) minEl.textContent = min.toLocaleString();
+        const maxEl = document.getElementById('service-detail-max');
+        if (maxEl) maxEl.textContent = max.toLocaleString();
+        const rateEl = document.getElementById('service-detail-rate');
+        if (rateEl) rateEl.textContent = store.formatMoney(sellingPrice);
+        const idEl = document.getElementById('service-detail-id');
+        if (idEl) idEl.textContent = '#' + id;
 
         const badge = document.getElementById('service-detail-refill-badge');
         if (badge) {
@@ -1065,14 +1060,16 @@ const CustomerApp = {
           badge.textContent = refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty';
         }
 
-        document.getElementById('calc-rate-label').textContent = store.formatMoney(sellingPrice);
+        const calcRateEl = document.getElementById('calc-rate-label');
+        if (calcRateEl) calcRateEl.textContent = store.formatMoney(sellingPrice);
 
         const qty = Number(qtyInput.value) || 0;
         const total = (sellingPrice / 1000) * qty;
-        document.getElementById('calc-total-label').textContent = store.formatMoney(total);
+        const calcTotalEl = document.getElementById('calc-total-label');
+        if (calcTotalEl) calcTotalEl.textContent = store.formatMoney(total);
 
         const statusBox = document.getElementById('balance-check-status');
-        if (store.data.isLoggedIn) {
+        if (statusBox && store.data.isLoggedIn) {
           if (store.data.customer.balance >= total) {
             statusBox.innerHTML = '<span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>';
           } else {
@@ -1082,9 +1079,9 @@ const CustomerApp = {
       };
 
       serviceSelect.addEventListener('change', updateCalc);
-      qtyInput.addEventListener('input', updateCalc);
+      if (qtyInput.addEventListener) qtyInput.addEventListener('input', updateCalc);
 
-      if (commentsBox) {
+      if (commentsBox && commentsBox.addEventListener) {
         commentsBox.addEventListener('input', () => {
           const lines = commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean);
           const count = lines.length;
