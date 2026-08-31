@@ -245,15 +245,63 @@ class SmmStateStore {
     this.showToast('Profile avatar updated successfully! 🌟', 'success');
   }
 
-  // Dynamic profit calculation (never hardcoded)
+  // Dynamic profit calculation (never sells at a loss; minimum 25% margin safeguard)
   getSellingPrice(wholesaleCostUsd) {
-    const markup = Number(this.data.adminStats.globalMarkupPercent) || 100;
-    return wholesaleCostUsd * (1 + markup / 100);
+    const markup = Math.max(25, Number(this.data.adminStats.globalMarkupPercent) || 50);
+    return (Number(wholesaleCostUsd) || 0.10) * (1 + markup / 100);
+  }
+
+  // Generate unique 5-digit Order ID for LikeX (e.g. 58392)
+  generateLikeXOrderId() {
+    const existing = new Set((this.data.orders || []).map(o => String(o.id)));
+    for (let attempts = 0; attempts < 1000; attempts++) {
+      const candidate = String(Math.floor(10000 + Math.random() * 90000));
+      if (!existing.has(candidate)) {
+        return candidate;
+      }
+    }
+    return String(Math.floor(10000 + Math.random() * 90000));
+  }
+
+  // Clean and sanitize target URL (strips ?igsi=..., ?utm_source=..., handles @username)
+  cleanTargetUrl(rawUrl) {
+    if (!rawUrl || typeof rawUrl !== 'string') return '';
+    let url = rawUrl.trim();
+
+    // If customer entered @username
+    if (url.startsWith('@')) {
+      const handle = url.slice(1).replace(/[^a-zA-Z0-9._]/g, '');
+      return `https://www.instagram.com/${handle}/`;
+    }
+
+    // Clean tracking parameters from Instagram & social URLs
+    if (url.includes('instagram.com/')) {
+      try {
+        const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+        let path = u.pathname.replace(/\/+/g, '/');
+        if (!path.endsWith('/')) path += '/';
+        return `https://www.instagram.com${path}`;
+      } catch (e) {
+        return url.split('?')[0].split('#')[0];
+      }
+    }
+
+    if (url.includes('?')) {
+      try {
+        const u = new URL(url.startsWith('http') ? url : `https://${url}`);
+        ['igsi', 'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'fbclid', 'ref'].forEach(p => u.searchParams.delete(p));
+        return u.toString();
+      } catch (e) {
+        return url.split('?')[0];
+      }
+    }
+
+    return url;
   }
 
   // Admin dynamic markup setter
   applyGlobalMarkup(percent) {
-    percent = Number(percent) || 100;
+    percent = Math.max(25, Number(percent) || 50);
     this.data.adminStats.globalMarkupPercent = percent;
     localStorage.setItem('smm_global_markup', percent);
 
@@ -323,7 +371,19 @@ class SmmStateStore {
     this.data.customer.balance = savedBal !== null ? parseFloat(savedBal) : 0.00;
 
     const savedOrders = localStorage.getItem(ordersKey);
-    this.data.orders = savedOrders ? JSON.parse(savedOrders) : [];
+    const parsedOrders = savedOrders ? JSON.parse(savedOrders) : [];
+    this.data.orders = parsedOrders.map(o => {
+      // Ensure clean 5-digit LikeX Order ID
+      if (String(o.id).length > 5) {
+        if (!o.providerOrderId) o.providerOrderId = String(o.id);
+        o.id = String(o.id).slice(-5);
+      }
+      // White-label provider display name for customer privacy
+      if (o.providerName && (o.providerName.includes('JustAnotherPanel') || o.providerName.includes('WorldOfSMM') || o.providerName.includes('JAP'))) {
+        o.providerName = 'LikeX Automated Server';
+      }
+      return o;
+    });
 
     const savedTxns = localStorage.getItem(txnsKey);
     this.data.transactions = savedTxns ? JSON.parse(savedTxns) : [];
@@ -578,6 +638,9 @@ class SmmStateStore {
       }
     }
 
+    // Sanitize target URL to prevent bot issues (strips ?igsi=..., handles @handle)
+    const cleanedTarget = this.cleanTargetUrl(target);
+
     // Dispatch live order to upstream provider
     let liveOrderId = null;
     let upstreamError = null;
@@ -590,7 +653,7 @@ class SmmStateStore {
           provider: targetProvider,
           action: 'add',
           service: String(rawServiceId),
-          link: target,
+          link: cleanedTarget,
           quantity: quantity,
           comments: comments || undefined
         })
@@ -627,7 +690,9 @@ class SmmStateStore {
 
     // Upstream provider successfully confirmed order! Now deduct user wallet
     this.data.customer.balance -= totalCost;
-    const assignedOrderId = liveOrderId;
+
+    // Generate unique 5-Digit LikeX Order ID (e.g. #58392)
+    const assignedOrderId = this.generateLikeXOrderId();
 
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
@@ -638,12 +703,12 @@ class SmmStateStore {
       rawServiceId: rawServiceId,
       serviceName: serviceName || `Service #${serviceId}`,
       provider: targetProvider,
-      providerName: providerDisplayName,
-      providerOrderId: liveOrderId,
+      providerName: 'LikeX Cloud Engine',
+      providerOrderId: liveOrderId, // Stored internally for admin & refill tracking
       isLowBalance: false,
       upstreamError: null,
       platform: 'smm',
-      target: target,
+      target: cleanedTarget,
       quantity: Number(quantity),
       amount: totalCost,
       comments: comments || undefined,
@@ -654,7 +719,7 @@ class SmmStateStore {
       currentCount: 0,
       remains: Number(quantity),
       refillEligible: false,
-      refillReason: `Dispatched to ${providerDisplayName} server (ID: ${liveOrderId})`
+      refillReason: `Dispatched to LikeX cloud server`
     };
 
     this.data.orders.unshift(newOrder);
@@ -662,7 +727,7 @@ class SmmStateStore {
     this.data.transactions.unshift({
       id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
       type: 'Order Deduction',
-      description: `Payment for Order #${assignedOrderId} (${providerDisplayName})`,
+      description: `Payment for Order #${assignedOrderId}`,
       amount: -totalCost,
       balanceAfter: this.data.customer.balance,
       status: 'Success',
@@ -676,7 +741,7 @@ class SmmStateStore {
       id: `act-${now}`,
       type: 'order',
       title: `New Order #${assignedOrderId}`,
-      sub: `${serviceName} - ${providerDisplayName}`,
+      sub: `${serviceName} • LikeX Express Server`,
       amount: this.formatMoney(totalCost),
       time: formattedDate,
       icon: '🛒'
@@ -688,7 +753,7 @@ class SmmStateStore {
     this.data.adminStats.profit += (totalCost * (profitMargin / (1 + profitMargin)));
 
     if (!options.silent) {
-      this.showToast(`🎉 Order #${assignedOrderId} placed successfully! Live on ${providerDisplayName}.`, 'success');
+      this.showToast(`🎉 Order #${assignedOrderId} placed successfully! Queued on high-speed server.`, 'success');
       this.setCustomerTab('orders');
     }
     this.notify();

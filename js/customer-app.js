@@ -1559,8 +1559,8 @@ const CustomerApp = {
         rating: 5,
         badge: "Power User ✅",
         time: "1 week ago",
-        service: "WorldOfSMM Indian Followers",
-        text: "World's lowest rate guaranteed isn't a marketing gimmick — inke Indian followers WorldOfSMM se bhi perfectly synced hain. Instant UPI top-up is a blessing."
+        service: "LikeX Indian Active Followers",
+        text: "World's lowest rate guaranteed isn't a marketing gimmick — inke Indian followers high-speed automated cloud network se instant deliver hote hain. Instant UPI top-up is a blessing."
       },
       {
         name: "Neha Gupta",

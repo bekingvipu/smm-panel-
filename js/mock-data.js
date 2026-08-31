@@ -101,8 +101,8 @@ window.SMM_MOCK = {
       id: 'ig-fol-1',
       platform: 'instagram',
       subcategory: 'Instagram Followers [Guaranteed / Refill 30D - 365D]',
-      customerName: 'Instagram Followers [Refill: 30D] - Basic Fast (₹25 me 1000)',
-      pricePer1k: 0.30, // ₹25.00
+      customerName: 'Instagram Followers [Refill: 30D] - Basic Fast (₹79 me 1000)',
+      pricePer1k: 0.83, // ₹79.16
       min: 50,
       max: 200000,
       deliverySpeed: '10K - 20K / Day',
@@ -111,8 +111,8 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'Budget real followers with 30-Day auto-refill guarantee. Safe delivery for personal and business pages.',
       japId: '10131',
-      wholesaleCost: 0.12, // ₹10.00 wholesale
-      markupPercent: 150
+      wholesaleCost: 0.585, // ₹55.80 wholesale
+      markupPercent: 42
     },
     {
       id: 'ig-fol-2',
