@@ -21,7 +21,8 @@ const CustomerApp = {
         </div>
         <div class="announcement-marquee-track">
           <div class="announcement-marquee-content">
-            ${announce.text}
+            <span class="ticker-text-item">${announce.text}</span>
+            <span class="ticker-text-item">${announce.text}</span>
           </div>
         </div>
       </div>
