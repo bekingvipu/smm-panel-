@@ -55,84 +55,45 @@
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.55);
 }
 
-.desktop-nav-brand,
-.brand-logo-wrap {
-  display: inline-flex;
+.desktop-nav-brand {
+  display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 10px;
   text-decoration: none;
   cursor: pointer;
-  user-select: none;
-  background: transparent !important;
+}
+
+.desktop-brand-logo-img {
+  height: 42px;
+  width: auto;
+  object-fit: contain;
+  display: block;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.desktop-nav-brand:hover,
-.brand-logo-wrap:hover {
-  transform: translateY(-1px);
+.desktop-brand-logo-img:hover {
+  transform: scale(1.04);
 }
 
-.desktop-nav-brand:active,
-.brand-logo-wrap:active {
-  transform: scale(0.97);
-}
-
-/* Original LikeX Logo Image (100% Transparent, No White Box) */
-.desktop-brand-logo-img {
-  height: 38px;
-  width: auto;
-  object-fit: contain;
-  display: block;
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
+[data-theme="dark"] .desktop-brand-logo-img {
+  background: #FFFFFF;
+  padding: 4px 12px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .mobile-brand-logo-img {
-  height: 29px;
+  height: 32px;
   width: auto;
   object-fit: contain;
   display: block;
-  background: transparent !important;
-  box-shadow: none !important;
-  border: none !important;
-  padding: 0 !important;
-  margin: 0 !important;
 }
 
-/* Dark mode: crisp visibility for black "Like" text without any background box */
-[data-theme="dark"] .desktop-brand-logo-img,
 [data-theme="dark"] .mobile-brand-logo-img {
-  background: transparent !important;
-  box-shadow: none !important;
-  filter: drop-shadow(0 0 1.2px rgba(255, 255, 255, 0.85));
-}
-
-/* .in Domain Suffix (Black in Light Theme, White in Dark Theme) */
-.brand-dot-in {
-  font-size: 20px;
-  font-weight: 900;
-  color: #000000;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
-  letter-spacing: -0.5px;
-  line-height: 1;
-  display: inline-block;
-  vertical-align: middle;
-  transition: color 0.2s ease;
-}
-
-[data-theme="dark"] .brand-dot-in {
-  color: #FFFFFF;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.4);
-}
-
-@media (max-width: 767px) {
-  .brand-dot-in {
-    font-size: 16px;
-    letter-spacing: -0.3px;
-  }
+  background: #FFFFFF;
+  padding: 3px 8px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .desktop-nav-links {

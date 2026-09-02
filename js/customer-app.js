@@ -45,9 +45,8 @@ const CustomerApp = {
     container.innerHTML = `
       <!-- Desktop Header (Screens >= 768px) -->
       <nav class="desktop-navbar">
-        <div class="desktop-nav-brand brand-logo-wrap" onclick="store.setCustomerTab('new_order')" title="LikeX.in — Home">
+        <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')" title="LikeX Home">
           <img src="assets/likex-logo-tight.png" alt="LikeX" class="desktop-brand-logo-img" />
-          <span class="brand-dot-in">.in</span>
         </div>
 
         <div class="desktop-nav-links">
@@ -99,9 +98,8 @@ const CustomerApp = {
           <button class="drawer-hamburger-btn" onclick="CustomerApp.openSideDrawer()" title="Menu">
             ☰
           </button>
-          <div class="customer-brand-name brand-logo-wrap" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; cursor: pointer;" title="LikeX.in — Home">
+          <div class="customer-brand-name" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; cursor: pointer;" title="LikeX Home">
             <img src="assets/likex-logo-tight.png" alt="LikeX" class="mobile-brand-logo-img" />
-            <span class="brand-dot-in">.in</span>
           </div>
         </div>
 
