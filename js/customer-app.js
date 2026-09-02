@@ -45,8 +45,14 @@ const CustomerApp = {
     container.innerHTML = `
       <!-- Desktop Header (Screens >= 768px) -->
       <nav class="desktop-navbar">
-        <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')" title="LikeX Home">
-          <img src="assets/likex-logo-tight.png" alt="LikeX" class="desktop-brand-logo-img" />
+        <div class="desktop-nav-brand brand-logo-link" onclick="store.setCustomerTab('new_order')" title="LikeX.in — Home">
+          <div class="brand-badge-icon">
+            <img src="assets/likex-glyph-white.png" alt="LikeX" class="brand-badge-glyph" />
+          </div>
+          <div class="brand-text-group">
+            <span class="brand-text-name">Like<span class="brand-text-x">X</span></span>
+            <span class="brand-text-tld">.in</span>
+          </div>
         </div>
 
         <div class="desktop-nav-links">
@@ -98,8 +104,14 @@ const CustomerApp = {
           <button class="drawer-hamburger-btn" onclick="CustomerApp.openSideDrawer()" title="Menu">
             ☰
           </button>
-          <div class="customer-brand-name" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; cursor: pointer;" title="LikeX Home">
-            <img src="assets/likex-logo-tight.png" alt="LikeX" class="mobile-brand-logo-img" />
+          <div class="customer-brand-name brand-logo-link" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; cursor: pointer;" title="LikeX.in — Home">
+            <div class="brand-badge-icon mobile-badge">
+              <img src="assets/likex-glyph-white.png" alt="LikeX" class="brand-badge-glyph" />
+            </div>
+            <div class="brand-text-group">
+              <span class="brand-text-name">Like<span class="brand-text-x">X</span></span>
+              <span class="brand-text-tld">.in</span>
+            </div>
           </div>
         </div>
 

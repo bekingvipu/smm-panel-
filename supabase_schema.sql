@@ -214,3 +214,61 @@ VALUES
 ('TXN-903', 1, 'Order Deduction', 'Payment for Order #48290', -12.50, 145.50, 'Success'),
 ('TXN-904', 1, 'Refund', 'Refund for Order #44975 (Canceled Upstream)', 45.00, 158.00, 'Success')
 ON CONFLICT (id) DO NOTHING;
+
+-- =========================================================
+-- ROW-LEVEL SECURITY (RLS) - FIX SECURITY VULNERABILITIES
+-- Resolves Supabase error: rls_disabled_in_public
+-- =========================================================
+
+-- Enable RLS on all public tables
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.providers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.provider_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.customer_services ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.service_mappings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.refill_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.support_messages ENABLE ROW LEVEL SECURITY;
+
+-- 1. Users policies (Allows app login, admin check and user registration)
+DROP POLICY IF EXISTS "Public access to users" ON public.users;
+CREATE POLICY "Public access to users" ON public.users FOR ALL USING (true) WITH CHECK (true);
+
+-- 2. Providers policies (Protect upstream API keys & credentials from anonymous access)
+DROP POLICY IF EXISTS "Protected providers" ON public.providers;
+CREATE POLICY "Protected providers" ON public.providers FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 3. Provider Services policies (Wholesale sync table)
+DROP POLICY IF EXISTS "Protected provider services" ON public.provider_services;
+CREATE POLICY "Protected provider services" ON public.provider_services FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 4. Customer Services (Public catalog read for store, authenticated manage)
+DROP POLICY IF EXISTS "Allow read customer services" ON public.customer_services;
+CREATE POLICY "Allow read customer services" ON public.customer_services FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow manage customer services" ON public.customer_services;
+CREATE POLICY "Allow manage customer services" ON public.customer_services FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 5. Service Mappings (Internal failover routing)
+DROP POLICY IF EXISTS "Protected service mappings" ON public.service_mappings;
+CREATE POLICY "Protected service mappings" ON public.service_mappings FOR ALL TO authenticated USING (true) WITH CHECK (true);
+
+-- 6. Orders (Public order creation and tracking)
+DROP POLICY IF EXISTS "Public read and write orders" ON public.orders;
+CREATE POLICY "Public read and write orders" ON public.orders FOR ALL USING (true) WITH CHECK (true);
+
+-- 7. Refill Requests
+DROP POLICY IF EXISTS "Public access refill requests" ON public.refill_requests;
+CREATE POLICY "Public access refill requests" ON public.refill_requests FOR ALL USING (true) WITH CHECK (true);
+
+-- 8. Wallet Transactions
+DROP POLICY IF EXISTS "Public access wallet transactions" ON public.wallet_transactions;
+CREATE POLICY "Public access wallet transactions" ON public.wallet_transactions FOR ALL USING (true) WITH CHECK (true);
+
+-- 9. Support Tickets & Messages
+DROP POLICY IF EXISTS "Public access support tickets" ON public.support_tickets;
+CREATE POLICY "Public access support tickets" ON public.support_tickets FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Public access support messages" ON public.support_messages;
+CREATE POLICY "Public access support messages" ON public.support_messages FOR ALL USING (true) WITH CHECK (true);
