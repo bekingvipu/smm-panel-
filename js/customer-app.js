@@ -665,26 +665,26 @@ const CustomerApp = {
     // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
     const JAP_AVERAGE_TIMES = {
       '10147': '⏱️ 22h 52m',
-      '10349': '⏱️ 7h 40m',
-      '1810': '⏱️ 1 - 4 Hours',
-      '10129': '⏱️ 1 - 3 Hours',
+      '10349': '⏱️ 8 - 20 Hours',
+      '1810': '⏱️ 8 - 20 Hours',
+      '10129': '⏱️ 8 - 20 Hours',
       '1910': '⚡ 0 - 15 Mins',
       '10130': '⚡ 0 - 15 Mins',
       '9131': '⚡ 0 - 15 Mins',
-      '9132': '⏱️ 1 - 4 Hours',
-      '9316': '⏱️ 3 - 8 Hours',
-      '7791': '⏱️ 3 - 8 Hours',
+      '9132': '⏱️ 8 - 20 Hours',
+      '9316': '⏱️ 8 - 20 Hours',
+      '7791': '⏱️ 8 - 20 Hours',
       '9317': '⚡ 0 - 15 Mins',
       '5950': '⚡ 0 - 15 Mins',
-      '5952': '⏱️ 3 - 8 Hours',
-      '7444': '⏱️ 1 - 4 Hours',
-      '7445': '⏱️ 1 - 3 Hours',
-      '7446': '⏱️ 2 - 6 Hours',
-      '6328': '⏱️ 6 - 18 Hours',
-      '5951': '⏱️ 6 - 18 Hours',
-      '6074': '⏱️ 2 - 8 Hours',
-      '6382': '⏱️ 2 - 8 Hours',
-      '6381': '⏱️ 2 - 8 Hours',
+      '5952': '⏱️ 8 - 20 Hours',
+      '7444': '⏱️ 8 - 20 Hours',
+      '7445': '⏱️ 8 - 20 Hours',
+      '7446': '⏱️ 8 - 20 Hours',
+      '6328': '⏱️ 8 - 20 Hours',
+      '5951': '⏱️ 8 - 20 Hours',
+      '6074': '⏱️ 8 - 20 Hours',
+      '6382': '⏱️ 8 - 20 Hours',
+      '6381': '⏱️ 8 - 20 Hours',
       '4163': '⏱️ 24 - 48 Hours',
       '4232': '⚡ 0 - 15 Mins',
       '4238': '⚡ 15 - 45 Mins',
@@ -708,15 +708,15 @@ const CustomerApp = {
       return '⚡ 5 - 15 Mins';
     }
     if (name.includes('0-1 hour') || name.includes('0 - 1 hr') || name.includes('0-1 hrs') || name.includes('0-1hr') || name.includes('0-1hrs') || name.includes('0-1 hours')) {
-      if (name.includes('follower') || cat.includes('follower')) return '⏱️ 1 - 3 Hours';
-      if (name.includes('subscriber') || cat.includes('subscriber')) return '⏱️ 1 - 4 Hours';
+      if (name.includes('follower') || cat.includes('follower')) return '⏱️ 8 - 20 Hours';
+      if (name.includes('subscriber') || cat.includes('subscriber')) return '⏱️ 8 - 20 Hours';
       return '⚡ 15 - 45 Mins';
     }
     if (name.includes('0-2 hrs') || name.includes('0 - 2 hrs') || name.includes('0-2 hours') || name.includes('0-3 hours') || name.includes('0-4 hours')) {
-      return '⏱️ 2 - 6 Hours';
+      return '⏱️ 8 - 20 Hours';
     }
     if (name.includes('0-8 hrs') || name.includes('0-8 hours') || name.includes('0-9 hours')) {
-      return '⏱️ 4 - 8 Hours';
+      return '⏱️ 8 - 20 Hours';
     }
     if (name.includes('24hr start') || name.includes('24 hours') || name.includes('0 - 24 hrs') || name.includes('0 - 24 hours') || name.includes('48 hours')) {
       return '⏱️ 12 - 24 Hours';
@@ -733,10 +733,10 @@ const CustomerApp = {
       return '⏱️ ~12 - 24 Hours';
     }
     if (name.includes('indian') && name.includes('follower')) {
-      return '⏱️ ~4 - 12 Hours';
+      return '⏱️ ~8 - 20 Hours';
     }
     if (name.includes('follower') || cat.includes('follower')) {
-      return '⏱️ ~3 - 8 Hours';
+      return '⏱️ ~8 - 20 Hours';
     }
     if (name.includes('member') || name.includes('channel') || name.includes('telegram')) {
       return '⚡ 10 - 30 Mins';
