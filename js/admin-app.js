@@ -422,9 +422,9 @@ const AdminApp = {
               <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
                 📧 Gmail Notification Email:
               </label>
-              <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'viplavkumar50@gmail.com'}" placeholder="e.g. viplavkumar50@gmail.com" style="font-weight: 700; font-size: 14px;" />
+              <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'supporthubindia@gmail.com'}" placeholder="e.g. supporthubindia@gmail.com" style="font-weight: 700; font-size: 14px;" />
               <p style="font-size: 12px; color: #10B981; margin-top: 4px; font-weight: 700;">
-                ✓ Active & Verified (viplavkumar50@gmail.com)
+                ✓ Active & Verified (supporthubindia@gmail.com)
               </p>
             </div>
 
@@ -786,9 +786,9 @@ const AdminApp = {
             <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
               📱 WhatsApp Alert Number:
             </label>
-            <input type="text" id="admin-alert-whatsapp" class="form-input" value="${alertConfig.whatsappNumber || '7055515757'}" placeholder="e.g. 7055515757" style="font-weight: 700;" />
+            <input type="text" id="admin-alert-whatsapp" class="form-input" value="${alertConfig.whatsappNumber || '9837371137'}" placeholder="e.g. 9837371137" style="font-weight: 700;" />
             <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
-              Alerts delivered directly to your personal phone number.
+              Alerts delivered directly to your personal phone number (+91 9837371137).
             </div>
           </div>
 
@@ -796,7 +796,7 @@ const AdminApp = {
             <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
               📧 Gmail Notification Address:
             </label>
-            <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'viplavkumar50@gmail.com'}" placeholder="e.g. viplavkumar50@gmail.com" style="font-weight: 700;" />
+            <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'supporthubindia@gmail.com'}" placeholder="e.g. supporthubindia@gmail.com" style="font-weight: 700;" />
             <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
               Instant push email delivered whenever top-up is needed.
             </div>
@@ -848,7 +848,7 @@ const AdminApp = {
     const config = {
       telegramBotToken: tgTokenEl ? tgTokenEl.value.trim() : '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
       telegramChatId: tgChatIdEl ? tgChatIdEl.value.trim() : '2057136429',
-      adminEmail: emailEl ? emailEl.value.trim() : 'viplavkumar50@gmail.com',
+      adminEmail: emailEl ? emailEl.value.trim() : 'supporthubindia@gmail.com',
       threshold: threshEl ? Number(threshEl.value) || 100 : 100
     };
 

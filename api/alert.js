@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     quantity = '',
     customerPaid = '',
     customerEmail = '',
-    adminEmail = 'viplavkumar50@gmail.com',
+    adminEmail = 'supporthubindia@gmail.com',
     telegramBotToken = '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
     telegramChatId = '2057136429'
   } = body;
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
 
   // 2. Dispatch Real Email Notification (FormSubmit Gateway)
   try {
-    const emailRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail || 'viplavkumar50@gmail.com')}`, {
+    const emailRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail || 'supporthubindia@gmail.com')}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

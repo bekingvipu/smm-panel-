@@ -1250,7 +1250,7 @@ class SmmStateStore {
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return {
-      adminEmail: 'viplavkumar50@gmail.com',
+      adminEmail: 'supporthubindia@gmail.com',
       telegramBotToken: '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
       telegramChatId: '2057136429',
       threshold: 100.00
@@ -1288,7 +1288,7 @@ class SmmStateStore {
 
   async sendTestAlert() {
     const config = this.getAlertConfig();
-    this.showToast('📡 Sending live test alert to Telegram Bot and Gmail (viplavkumar50@gmail.com)...', 'info');
+    this.showToast(`📡 Sending live test alert to Telegram Bot and Gmail (${config.adminEmail})...`, 'info');
 
     try {
       const res = await fetch('/api/alert', {
