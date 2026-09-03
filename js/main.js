@@ -52,40 +52,47 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.location.pathname !== route) {
       window.history.pushState(null, '', route);
     }
-    syncRoute();
-    renderApp();
+    renderApp(true);
     window.scrollTo(0, 0);
   };
 
-  // Main Render Loop
-  const renderApp = () => {
-    // 1. Sync Route
-    syncRoute();
+  // Main Render Loop with Frame-Batching
+  let _renderRaf = null;
+  const renderApp = (immediate = false) => {
+    const doRender = () => {
+      _renderRaf = null;
+      syncRoute();
+      if (store.persona === 'admin') {
+        document.title = 'Admin Console — LikeX System Management';
+        AdminApp.render(screenContainer);
+      } else {
+        document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
+        CustomerApp.render(screenContainer);
+      }
+    };
 
-    // 2. Set Page Title dynamically
-    if (store.persona === 'admin') {
-      document.title = 'Admin Console — LikeX System Management';
-      AdminApp.render(screenContainer);
-    } else {
-      document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
-      CustomerApp.render(screenContainer);
+    if (immediate) {
+      if (_renderRaf) cancelAnimationFrame(_renderRaf);
+      doRender();
+      return;
     }
+
+    if (_renderRaf) return;
+    _renderRaf = requestAnimationFrame(doRender);
   };
 
   // Listen to popstate (browser back/forward) & legacy hashchange
   window.addEventListener('popstate', () => {
-    syncRoute();
-    renderApp();
+    renderApp(true);
     window.scrollTo(0, 0);
   });
   window.addEventListener('hashchange', () => {
-    syncRoute();
-    renderApp();
+    renderApp(true);
     window.scrollTo(0, 0);
   });
 
-  // Subscribe to state updates
-  store.subscribe(renderApp);
+  // Subscribe to state updates (batched)
+  store.subscribe(() => renderApp(false));
 
   // Close generic modal on backdrop click
   const modalBackdrop = document.getElementById('generic-modal-backdrop');
@@ -97,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Initial render
-  syncRoute();
-  renderApp();
+  // Single Clean Initial Render
+  renderApp(true);
 });

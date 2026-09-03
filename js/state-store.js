@@ -332,7 +332,9 @@ class SmmStateStore {
               wosProv.lastSync = 'Live Sync (WorldOfSMM API)';
             }
           }
-          this.notify();
+          if (this.persona === 'admin') {
+            this.notify();
+          }
         }
       }
     } catch (e) {}
@@ -529,8 +531,20 @@ class SmmStateStore {
     };
   }
 
-  notify() {
-    this.subscribers.forEach(fn => fn(this));
+  notify(immediate = false) {
+    if (immediate) {
+      if (this._notifyRaf) {
+        cancelAnimationFrame(this._notifyRaf);
+        this._notifyRaf = null;
+      }
+      this.subscribers.forEach(fn => fn(this));
+      return;
+    }
+    if (this._notifyRaf) return;
+    this._notifyRaf = requestAnimationFrame(() => {
+      this._notifyRaf = null;
+      this.subscribers.forEach(fn => fn(this));
+    });
   }
 
   _getUserStorageKey(email, key) {

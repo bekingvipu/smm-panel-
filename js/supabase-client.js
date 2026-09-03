@@ -122,20 +122,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       const u = session.user;
       const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
       const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
-      if (!window.store.data.isLoggedIn || window.store.data.customer.email !== u.email) {
+      if (!window.store.data.isLoggedIn || (window.store.data.customer.email && window.store.data.customer.email.toLowerCase() !== u.email.toLowerCase())) {
         window.store.login(name, u.email, avatar, false); // silent login without duplicate toast
       }
     }
 
     // Subscribe to auth state updates
     window.supabaseClient.auth.onAuthStateChange((event, session) => {
-      console.log('[LikeX Auth] Auth state event:', event);
       if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session && session.user && window.store) {
         const u = session.user;
         const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
         const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
-        if (!window.store.data.isLoggedIn || window.store.data.customer.email !== u.email) {
-          window.store.login(name, u.email, avatar, true);
+        if (!window.store.data.isLoggedIn || (window.store.data.customer.email && window.store.data.customer.email.toLowerCase() !== u.email.toLowerCase())) {
+          window.store.login(name, u.email, avatar, event === 'SIGNED_IN');
         }
       } else if (event === 'SIGNED_OUT' && window.store) {
         if (window.store.data.isLoggedIn) {
