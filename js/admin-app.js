@@ -324,8 +324,78 @@ const AdminApp = {
     }
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const recentOrders = allOrders.slice(0, 5);
+    const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
+    const alertConfig = store.getAlertConfig();
 
     return `
+      ${queuedOrders.length > 0 ? `
+        <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
+        <div class="card" style="margin-bottom: 24px; padding: 22px; border: 2px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 18px; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 26px;">🚨</span>
+              <div>
+                <h3 style="font-size: 19px; font-weight: 800; color: #DC2626; margin: 0;">
+                  ${queuedOrders.length} Order(s) Queued — Waiting for Provider Top-Up
+                </h3>
+                <p style="font-size: 13px; color: #B45309; margin: 4px 0 0;">
+                  Customer has paid on LikeX. Recharge the target provider server and click "1-Click Dispatch" to execute!
+                </p>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 8px 18px;" onclick="AdminApp.dispatchAllQueuedOrders()">
+                ⚡ 1-Click Dispatch All Queued (${queuedOrders.length})
+              </button>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="sync-data-table" style="font-size: 13px; background: white; border-radius: 12px; overflow: hidden;">
+              <thead>
+                <tr style="background: #FEF2F2;">
+                  <th>Order ID</th>
+                  <th>Target Provider</th>
+                  <th>Service Details</th>
+                  <th>Target Link</th>
+                  <th>Quantity</th>
+                  <th>Customer Paid</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${queuedOrders.map(qo => {
+                  const provName = qo.providerDisplayName || (qo.provider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)');
+                  return `
+                    <tr>
+                      <td style="font-family: var(--font-mono); font-weight: 800; color: #6C5CE7;">#${qo.id}</td>
+                      <td>
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.14); color: #DC2626; font-weight: 800; padding: 4px 10px; border-radius: 8px;">
+                          ${provName}
+                        </span>
+                      </td>
+                      <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <strong>${qo.serviceName}</strong>
+                      </td>
+                      <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <a href="${qo.target}" target="_blank" style="color: #0284c7; text-decoration: underline;">${qo.target}</a>
+                      </td>
+                      <td><strong>${Number(qo.quantity).toLocaleString()}</strong></td>
+                      <td><strong style="color: #10B981; font-size: 14px;">${store.formatMoney(qo.amount)}</strong></td>
+                      <td>
+                        <button class="btn btn-sm btn-primary" style="font-size: 12px; padding: 6px 14px; font-weight: 800; border-radius: 8px;" onclick="store.dispatchQueuedOrder('${qo.id}')">
+                          ⚡ 1-Click Dispatch
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ` : ''}
+
       <div class="kpi-grid">
         <div class="kpi-card" onclick="store.setAdminTab('orders')" style="cursor: pointer;" title="View Customers & Orders">
           <div class="kpi-card-top">
@@ -483,6 +553,65 @@ const AdminApp = {
           💾 Save Announcement (Live Update)
         </button>
       </div>
+
+      <!-- MULTI-CHANNEL ALERT GATEWAY (WHATSAPP & GMAIL) -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 1.5px solid #10B981; background: var(--bg-surface); border-radius: 18px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #10B981; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>📲</span> <span>AUTOMATED ALERT NOTIFICATIONS</span>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 2px;">
+              WhatsApp & Gmail Low Balance / Queued Order Alerts
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary);">
+              Receive instant alerts on WhatsApp & Gmail when provider balance drops or any customer order is queued.
+            </p>
+          </div>
+
+          <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; padding: 8px 18px; border-radius: 999px;" onclick="store.sendTestAlert()">
+            🧪 Send Test Alert (WhatsApp & Gmail)
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; margin-top: 16px;">
+          <div style="background: var(--bg-subtle); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color);">
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+              📱 WhatsApp Alert Number:
+            </label>
+            <input type="text" id="admin-alert-whatsapp" class="form-input" value="${alertConfig.whatsappNumber || '7055515757'}" placeholder="e.g. 7055515757" style="font-weight: 700;" />
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+              Alerts delivered directly to your personal phone number.
+            </div>
+          </div>
+
+          <div style="background: var(--bg-subtle); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color);">
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+              📧 Gmail Notification Address:
+            </label>
+            <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'viplavkumar50@gmail.com'}" placeholder="e.g. viplavkumar50@gmail.com" style="font-weight: 700;" />
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+              Instant push email delivered whenever top-up is needed.
+            </div>
+          </div>
+
+          <div style="background: var(--bg-subtle); padding: 16px; border-radius: 14px; border: 1px solid var(--border-color);">
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+              📉 Warning Threshold (INR ₹):
+            </label>
+            <input type="number" id="admin-alert-threshold" class="form-input" value="${alertConfig.threshold || 100}" placeholder="100" style="font-weight: 700;" />
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+              Alerts trigger when balance falls below this amount.
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top: 18px; display: flex; justify-content: flex-end;">
+          <button class="btn btn-primary" onclick="AdminApp.saveAlertSettings()" style="font-weight: 800; padding: 10px 24px; border-radius: 12px;">
+            💾 Save Alert Configuration
+          </button>
+        </div>
+      </div>
     `;
   },
 
@@ -501,6 +630,41 @@ const AdminApp = {
     const text = textEl.value.trim();
     const enabled = toggleEl.checked;
     window.store.updateAnnouncement(text, enabled);
+  },
+
+  saveAlertSettings() {
+    const waEl = document.getElementById('admin-alert-whatsapp');
+    const emailEl = document.getElementById('admin-alert-email');
+    const threshEl = document.getElementById('admin-alert-threshold');
+
+    const config = {
+      whatsappNumber: waEl ? waEl.value.trim() : '7055515757',
+      adminEmail: emailEl ? emailEl.value.trim() : 'viplavkumar50@gmail.com',
+      threshold: threshEl ? Number(threshEl.value) || 100 : 100,
+      callmebotApiKey: ''
+    };
+
+    window.store.saveAlertConfig(config);
+  },
+
+  async dispatchAllQueuedOrders() {
+    const allOrders = window.store.getAllAdminOrders ? window.store.getAllAdminOrders() : window.store.data.orders;
+    const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
+    if (queuedOrders.length === 0) {
+      window.store.showToast('No queued orders waiting for dispatch.', 'info');
+      return;
+    }
+
+    window.store.showToast(`⚡ Dispatching ${queuedOrders.length} queued orders to providers...`, 'info');
+    let successCount = 0;
+    for (const qo of queuedOrders) {
+      const res = await window.store.dispatchQueuedOrder(qo.id);
+      if (res && res.success) {
+        successCount++;
+      }
+    }
+
+    window.store.showToast(`🏁 Finished dispatching: ${successCount}/${queuedOrders.length} orders successfully sent to live servers!`, 'success');
   },
 
   // CUSTOMER SERVICES & PROFIT % TOOL

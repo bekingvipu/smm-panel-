@@ -335,6 +335,35 @@ class SmmStateStore {
           if (this.persona === 'admin') {
             this.notify();
           }
+
+          // Low Balance Threshold Alert Monitoring (WhatsApp & Gmail)
+          const alertCfg = this.getAlertConfig();
+          const thresholdINR = Number(alertCfg.threshold || 100);
+          const thresholdUSD = thresholdINR / 85;
+
+          const now = Date.now();
+          const lastAlertTime = Number(localStorage.getItem('likex_last_low_bal_alert') || 0);
+          if (now - lastAlertTime > 3 * 60 * 60 * 1000) { // 3-hour anti-spam cooldown
+            if (balData.jap && balData.jap.balance !== undefined && parseFloat(balData.jap.balance) < thresholdUSD) {
+              localStorage.setItem('likex_last_low_bal_alert', String(now));
+              this.triggerAlert({
+                type: 'low_balance',
+                providerName: 'JustAnotherPanel (JAP)',
+                providerKey: 'jap',
+                balance: (parseFloat(balData.jap.balance) * 85).toFixed(2),
+                threshold: thresholdINR.toFixed(2)
+              });
+            } else if (balData.worldofsmm && balData.worldofsmm.balance !== undefined && parseFloat(balData.worldofsmm.balance) < thresholdINR) {
+              localStorage.setItem('likex_last_low_bal_alert', String(now));
+              this.triggerAlert({
+                type: 'low_balance',
+                providerName: 'WorldOfSMM',
+                providerKey: 'worldofsmm',
+                balance: parseFloat(balData.worldofsmm.balance).toFixed(2),
+                threshold: thresholdINR.toFixed(2)
+              });
+            }
+          }
         }
       }
     } catch (e) {}
@@ -833,16 +862,7 @@ class SmmStateStore {
       }
     }
 
-    const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM 🇮🇳' : 'JustAnotherPanel';
-
-    // Verify JAP balance before attempting order if routed to JAP
-    if (targetProvider === 'jap') {
-      const japProv = this.data.providers.find(p => p.id === 'p1');
-      if (japProv && Number(japProv.balance || 0) <= 0.001) {
-        this.showToast('⚠️ JustAnotherPanel server is currently low on balance. Please select from our Cheapest or Indian Services (WorldOfSMM) which are 100% active and funded! No money was deducted.', 'warning');
-        return { success: false, message: 'Provider balance low' };
-      }
-    }
+    const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)';
 
     // Sanitize target URL to prevent bot issues (strips ?igsi=..., handles @handle)
     const cleanedTarget = this.cleanTargetUrl(target);
@@ -850,6 +870,7 @@ class SmmStateStore {
     // Dispatch live order to upstream provider
     let liveOrderId = null;
     let upstreamError = null;
+    let isQueued = false;
 
     try {
       const liveRes = await fetch('/api/provider', {
@@ -878,23 +899,13 @@ class SmmStateStore {
       upstreamError = 'Network communication error with provider gateway';
     }
 
-    // STRICT MONEY PROTECTION: Do NOT deduct money or create fake order if provider rejected it!
+    // SMART QUEUE LOGIC: If provider rejected due to low funds, server timeout or inactive state,
+    // we safely queue the order on LikeX and alert the admin via WhatsApp & Email!
     if (!liveOrderId) {
-      const errLower = String(upstreamError || '').toLowerCase();
-      let friendlyMsg = upstreamError || 'Provider rejected order dispatch';
-      if (errLower.includes('balance') || errLower.includes('funds') || errLower.includes('not enough')) {
-        friendlyMsg = `Provider balance is currently low. Please choose another service or contact support. Your wallet was NOT charged.`;
-      } else if (errLower.includes('incorrect service')) {
-        friendlyMsg = `This service ID is temporarily inactive on provider server. Your wallet was NOT charged.`;
-      } else if (errLower.includes('quantity')) {
-        friendlyMsg = `${upstreamError}. Your wallet was NOT charged.`;
-      }
-
-      this.showToast(`❌ Order Failed: ${friendlyMsg}`, 'error');
-      return { success: false, message: friendlyMsg };
+      isQueued = true;
     }
 
-    // Upstream provider successfully confirmed order! Now deduct user wallet
+    // Deduct user wallet (profit locked in LikeX!)
     this.data.customer.balance -= totalCost;
 
     // Generate unique 5-Digit LikeX Order ID (e.g. #58392)
@@ -910,25 +921,43 @@ class SmmStateStore {
       serviceName: serviceName || `Service #${serviceId}`,
       provider: targetProvider,
       providerName: 'LikeX Cloud Engine',
-      providerOrderId: liveOrderId, // Stored internally for admin & refill tracking
-      isLowBalance: false,
-      upstreamError: null,
+      providerDisplayName: providerDisplayName,
+      providerOrderId: liveOrderId || null,
+      isQueued: isQueued,
+      needsTopup: isQueued,
+      upstreamError: upstreamError || null,
       platform: 'smm',
       target: cleanedTarget,
       quantity: Number(quantity),
       amount: totalCost,
       comments: comments || undefined,
       status: 'Processing',
+      displayStatus: isQueued ? 'Processing (Queued for Dispatch)' : 'Processing',
       createdAt: now,
       date: formattedDate,
       startCount: 0,
       currentCount: 0,
       remains: Number(quantity),
       refillEligible: false,
-      refillReason: `Dispatched to LikeX cloud server`,
+      refillReason: isQueued ? `Queued on LikeX cloud server (Waiting ${providerDisplayName} top-up)` : `Dispatched to LikeX cloud server`,
       userEmail: this.data.customer?.email || '',
       customerName: this.data.customer?.name || 'Customer'
     };
+
+    // If order is queued due to low provider funds, trigger instant WhatsApp + Gmail Alert to Admin!
+    if (isQueued) {
+      this.triggerAlert({
+        type: 'queued_order',
+        orderId: assignedOrderId,
+        providerName: providerDisplayName,
+        providerKey: targetProvider,
+        serviceName: serviceName || `Service #${serviceId}`,
+        target: cleanedTarget,
+        quantity: quantity,
+        customerPaid: totalCost.toFixed(2),
+        customerEmail: this.data.customer?.email || ''
+      });
+    }
 
     this.data.orders.unshift(newOrder);
 
@@ -1212,6 +1241,170 @@ class SmmStateStore {
     setTimeout(() => {
       this.showToast(`Connection to ${provider.displayName} verified! Ping 84ms, Balance $${provider.balance.toFixed(2)}`, 'success');
     }, 800);
+  }
+
+  // Multi-Channel Alert Gateway (Email & WhatsApp)
+  getAlertConfig() {
+    try {
+      const saved = localStorage.getItem('likex_alert_config');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return {
+      adminEmail: 'viplavkumar50@gmail.com',
+      whatsappNumber: '7055515757',
+      threshold: 100.00,
+      callmebotApiKey: ''
+    };
+  }
+
+  saveAlertConfig(config) {
+    try {
+      localStorage.setItem('likex_alert_config', JSON.stringify(config));
+    } catch (e) {}
+    this.showToast('✅ Alert settings updated successfully!', 'success');
+    this.notify();
+  }
+
+  async triggerAlert(alertData) {
+    try {
+      const config = this.getAlertConfig();
+      const payload = {
+        ...alertData,
+        adminEmail: config.adminEmail,
+        whatsappNumber: config.whatsappNumber,
+        threshold: config.threshold,
+        callmebotApiKey: config.callmebotApiKey
+      };
+
+      await fetch('/api/alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      console.warn('[LikeX Alert] Alert trigger notice:', e);
+    }
+  }
+
+  async sendTestAlert() {
+    const config = this.getAlertConfig();
+    this.showToast('📡 Sending test alert to WhatsApp (7055515757) and Gmail (viplavkumar50@gmail.com)...', 'info');
+
+    try {
+      const res = await fetch('/api/alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'test',
+          providerName: 'JustAnotherPanel (JAP)',
+          providerKey: 'jap',
+          balance: '45.00',
+          threshold: String(config.threshold || 100),
+          adminEmail: config.adminEmail,
+          whatsappNumber: config.whatsappNumber,
+          callmebotApiKey: config.callmebotApiKey
+        })
+      });
+      if (res.ok) {
+        this.showToast(`✅ Test alert successfully dispatched to ${config.whatsappNumber} & ${config.adminEmail}!`, 'success');
+      } else {
+        this.showToast('⚠️ Alert gateway responded with status ' + res.status, 'warning');
+      }
+    } catch (e) {
+      this.showToast('❌ Failed to connect to alert gateway: ' + e.message, 'error');
+    }
+  }
+
+  // 1-Click Dispatch Queued Orders once Provider Balance is Refilled
+  async dispatchQueuedOrder(orderId) {
+    const allOrders = this.getAllAdminOrders();
+    const order = allOrders.find(o => String(o.id) === String(orderId));
+    if (!order) {
+      this.showToast(`Order #${orderId} not found in system.`, 'error');
+      return { success: false };
+    }
+
+    const prov = order.provider || (String(order.serviceId).startsWith('wos-') ? 'worldofsmm' : 'jap');
+    const rawId = order.rawServiceId || String(order.serviceId).replace('wos-', '');
+    const provName = prov === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)';
+
+    this.showToast(`⚡ Dispatching Order #${orderId} to ${provName}...`, 'info');
+
+    try {
+      const liveRes = await fetch('/api/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: prov,
+          action: 'add',
+          service: String(rawId),
+          link: order.target,
+          quantity: order.quantity,
+          comments: order.comments || undefined
+        })
+      });
+
+      if (liveRes.ok) {
+        const liveData = await liveRes.json();
+        if (liveData.order) {
+          order.providerOrderId = String(liveData.order);
+          order.isQueued = false;
+          order.needsTopup = false;
+          order.upstreamError = null;
+          order.status = 'In Progress';
+          order.displayStatus = 'In Progress';
+          order.refillReason = `Dispatched to ${provName} (Provider Order #${liveData.order})`;
+
+          this.updateOrderInAllStorages(order);
+          this.showToast(`🎉 Order #${orderId} successfully dispatched to ${provName}! Upstream Order ID: #${liveData.order}`, 'success');
+          this.notify();
+          return { success: true, providerOrderId: liveData.order };
+        } else {
+          this.showToast(`⚠️ ${provName} returned: ${liveData.error || 'Insufficient balance'}. Please refill provider account first.`, 'error');
+          return { success: false, error: liveData.error };
+        }
+      } else {
+        this.showToast(`❌ Gateway responded with HTTP ${liveRes.status}`, 'error');
+        return { success: false };
+      }
+    } catch (e) {
+      this.showToast(`❌ Network error while dispatching order #${orderId}`, 'error');
+      return { success: false, error: e.message };
+    }
+  }
+
+  updateOrderInAllStorages(updatedOrder) {
+    // 1. Update in local store data
+    const idx = (this.data.orders || []).findIndex(o => String(o.id) === String(updatedOrder.id));
+    if (idx >= 0) {
+      this.data.orders[idx] = { ...this.data.orders[idx], ...updatedOrder };
+    }
+    this.saveUserData();
+
+    // 2. Update in master global orders
+    try {
+      const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
+      const mIdx = master.findIndex(o => String(o.id) === String(updatedOrder.id));
+      if (mIdx >= 0) {
+        master[mIdx] = { ...master[mIdx], ...updatedOrder };
+      } else {
+        master.unshift(updatedOrder);
+      }
+      localStorage.setItem('likex_master_orders', JSON.stringify(master));
+    } catch (e) {}
+
+    // 3. Update in user storage
+    if (updatedOrder.userEmail) {
+      try {
+        const key = this._getUserStorageKey(updatedOrder.userEmail, 'orders');
+        const uOrders = JSON.parse(localStorage.getItem(key) || '[]');
+        const uIdx = uOrders.findIndex(o => String(o.id) === String(updatedOrder.id));
+        if (uIdx >= 0) {
+          uOrders[uIdx] = { ...uOrders[uIdx], ...updatedOrder };
+          localStorage.setItem(key, JSON.stringify(uOrders));
+        }
+      } catch (e) {}
+    }
   }
 }
 
