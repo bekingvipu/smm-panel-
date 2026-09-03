@@ -1243,7 +1243,7 @@ class SmmStateStore {
     }, 800);
   }
 
-  // Multi-Channel Alert Gateway (Email & WhatsApp)
+  // Multi-Channel Alert Gateway (Telegram Bot & Gmail)
   getAlertConfig() {
     try {
       const saved = localStorage.getItem('likex_alert_config');
@@ -1251,9 +1251,9 @@ class SmmStateStore {
     } catch (e) {}
     return {
       adminEmail: 'viplavkumar50@gmail.com',
-      whatsappNumber: '7055515757',
-      threshold: 100.00,
-      callmebotApiKey: ''
+      telegramBotToken: '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
+      telegramChatId: '2057136429',
+      threshold: 100.00
     };
   }
 
@@ -1271,9 +1271,9 @@ class SmmStateStore {
       const payload = {
         ...alertData,
         adminEmail: config.adminEmail,
-        whatsappNumber: config.whatsappNumber,
-        threshold: config.threshold,
-        callmebotApiKey: config.callmebotApiKey
+        telegramBotToken: config.telegramBotToken,
+        telegramChatId: config.telegramChatId,
+        threshold: config.threshold
       };
 
       await fetch('/api/alert', {
@@ -1288,7 +1288,7 @@ class SmmStateStore {
 
   async sendTestAlert() {
     const config = this.getAlertConfig();
-    this.showToast('📡 Sending test alert to WhatsApp (7055515757) and Gmail (viplavkumar50@gmail.com)...', 'info');
+    this.showToast('📡 Sending live test alert to Telegram Bot and Gmail (viplavkumar50@gmail.com)...', 'info');
 
     try {
       const res = await fetch('/api/alert', {
@@ -1301,12 +1301,12 @@ class SmmStateStore {
           balance: '45.00',
           threshold: String(config.threshold || 100),
           adminEmail: config.adminEmail,
-          whatsappNumber: config.whatsappNumber,
-          callmebotApiKey: config.callmebotApiKey
+          telegramBotToken: config.telegramBotToken,
+          telegramChatId: config.telegramChatId
         })
       });
       if (res.ok) {
-        this.showToast(`✅ Test alert successfully dispatched to ${config.whatsappNumber} & ${config.adminEmail}!`, 'success');
+        this.showToast(`✅ Test alert successfully sent to Telegram Bot & ${config.adminEmail}!`, 'success');
       } else {
         this.showToast('⚠️ Alert gateway responded with status ' + res.status, 'warning');
       }

@@ -400,21 +400,31 @@ const AdminApp = {
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
             <div>
               <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-                📱 WhatsApp Alert Phone Number:
+                🤖 Telegram Bot Token:
               </label>
-              <input type="text" id="admin-alert-whatsapp" class="form-input" value="${alertConfig.whatsappNumber || '7055515757'}" placeholder="e.g. 7055515757" style="font-weight: 700; font-size: 15px;" />
+              <input type="text" id="admin-alert-tg-token" class="form-input" value="${alertConfig.telegramBotToken || '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik'}" placeholder="e.g. 8874080054:AAFazn2iknl..." style="font-weight: 700; font-size: 13px; font-family: monospace;" />
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                Direct alerts for <strong>7055515757</strong>.
+                Your LikeX Alert Telegram Bot token.
               </p>
             </div>
 
             <div>
               <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-                📧 Gmail Alert Email:
+                💬 Telegram Chat ID:
               </label>
-              <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'viplavkumar50@gmail.com'}" placeholder="e.g. viplavkumar50@gmail.com" style="font-weight: 700; font-size: 15px;" />
+              <input type="text" id="admin-alert-tg-chatid" class="form-input" value="${alertConfig.telegramChatId || '2057136429'}" placeholder="e.g. 2057136429" style="font-weight: 700; font-size: 14px; font-family: monospace;" />
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                Instant push email delivered to <strong>viplavkumar50@gmail.com</strong>.
+                Your personal Telegram Chat ID.
+              </p>
+            </div>
+
+            <div>
+              <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                📧 Gmail Notification Email:
+              </label>
+              <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'viplavkumar50@gmail.com'}" placeholder="e.g. viplavkumar50@gmail.com" style="font-weight: 700; font-size: 14px;" />
+              <p style="font-size: 12px; color: #10B981; margin-top: 4px; font-weight: 700;">
+                ✓ Active & Verified (viplavkumar50@gmail.com)
               </p>
             </div>
 
@@ -422,20 +432,10 @@ const AdminApp = {
               <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
                 📉 Warning Threshold Amount (₹ INR):
               </label>
-              <input type="number" id="admin-alert-threshold" class="form-input" value="${alertConfig.threshold || 100}" placeholder="100" style="font-weight: 700; font-size: 15px;" />
+              <input type="number" id="admin-alert-threshold" class="form-input" value="${alertConfig.threshold || 100}" placeholder="100" style="font-weight: 700; font-size: 14px;" />
               <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
                 Triggers when provider balance drops below this amount.
               </p>
-            </div>
-
-            <div>
-              <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
-                🔑 WhatsApp Gateway API Key:
-              </label>
-              <input type="text" id="admin-alert-apikey" class="form-input" value="${alertConfig.callmebotApiKey || ''}" placeholder="e.g. 123456" style="font-weight: 700; font-size: 15px;" />
-              <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 5px; line-height: 1.4;">
-                👉 <a href="https://wa.me/34941860826?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" style="color: #10B981; font-weight: 800; text-decoration: underline;">Click here to get Free WhatsApp Key in 5 secs</a> (Send <em>"I allow callmebot to send me messages"</em> to bot & paste key).
-              </div>
             </div>
           </div>
 
@@ -840,16 +840,16 @@ const AdminApp = {
   },
 
   saveAlertSettings() {
-    const waEl = document.getElementById('admin-alert-whatsapp');
+    const tgTokenEl = document.getElementById('admin-alert-tg-token');
+    const tgChatIdEl = document.getElementById('admin-alert-tg-chatid');
     const emailEl = document.getElementById('admin-alert-email');
     const threshEl = document.getElementById('admin-alert-threshold');
-    const keyEl = document.getElementById('admin-alert-apikey');
 
     const config = {
-      whatsappNumber: waEl ? waEl.value.trim() : '7055515757',
+      telegramBotToken: tgTokenEl ? tgTokenEl.value.trim() : '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
+      telegramChatId: tgChatIdEl ? tgChatIdEl.value.trim() : '2057136429',
       adminEmail: emailEl ? emailEl.value.trim() : 'viplavkumar50@gmail.com',
-      threshold: threshEl ? Number(threshEl.value) || 100 : 100,
-      callmebotApiKey: keyEl ? keyEl.value.trim() : ''
+      threshold: threshEl ? Number(threshEl.value) || 100 : 100
     };
 
     window.store.saveAlertConfig(config);
