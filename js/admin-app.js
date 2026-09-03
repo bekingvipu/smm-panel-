@@ -427,6 +427,16 @@ const AdminApp = {
                 Triggers when provider balance drops below this amount.
               </p>
             </div>
+
+            <div>
+              <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                🔑 WhatsApp Gateway API Key:
+              </label>
+              <input type="text" id="admin-alert-apikey" class="form-input" value="${alertConfig.callmebotApiKey || ''}" placeholder="e.g. 123456" style="font-weight: 700; font-size: 15px;" />
+              <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 5px; line-height: 1.4;">
+                👉 <a href="https://wa.me/34941860826?text=I%20allow%20callmebot%20to%20send%20me%20messages" target="_blank" style="color: #10B981; font-weight: 800; text-decoration: underline;">Click here to get Free WhatsApp Key in 5 secs</a> (Send <em>"I allow callmebot to send me messages"</em> to bot & paste key).
+              </div>
+            </div>
           </div>
 
           <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
@@ -833,12 +843,13 @@ const AdminApp = {
     const waEl = document.getElementById('admin-alert-whatsapp');
     const emailEl = document.getElementById('admin-alert-email');
     const threshEl = document.getElementById('admin-alert-threshold');
+    const keyEl = document.getElementById('admin-alert-apikey');
 
     const config = {
       whatsappNumber: waEl ? waEl.value.trim() : '7055515757',
       adminEmail: emailEl ? emailEl.value.trim() : 'viplavkumar50@gmail.com',
       threshold: threshEl ? Number(threshEl.value) || 100 : 100,
-      callmebotApiKey: ''
+      callmebotApiKey: keyEl ? keyEl.value.trim() : ''
     };
 
     window.store.saveAlertConfig(config);

@@ -132,7 +132,7 @@ export default async function handler(req, res) {
     `;
   }
 
-  // 1. Dispatch WhatsApp Notification (CallMeBot Gateway or Direct webhook)
+  // 1. Dispatch WhatsApp Notification (CallMeBot Gateway)
   try {
     const cleanPhone = String(whatsappNumber).replace(/[^0-9]/g, '');
     const phoneToUse = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
@@ -140,45 +140,44 @@ export default async function handler(req, res) {
     if (callmebotApiKey) {
       const waUrl = `https://api.callmebot.com/whatsapp.php?phone=${phoneToUse}&text=${encodeURIComponent(messageText)}&apikey=${callmebotApiKey}`;
       const waRes = await fetch(waUrl, { method: 'GET' });
-      results.whatsapp = { sent: waRes.ok, status: waRes.status };
+      const waText = await waRes.text();
+      results.whatsapp = { sent: waRes.ok, status: waRes.status, response: waText };
     } else {
-      // Direct Webhook delivery / Fallback link
       results.whatsapp = {
-        sent: true,
-        method: 'ready',
-        targetPhone: phoneToUse,
-        previewText: messageText
+        sent: false,
+        reason: 'CallMeBot API Key is required. Send "I allow callmebot to send me messages" to +34 941 86 08 26 on WhatsApp to get your free key.'
       };
     }
   } catch (err) {
     results.whatsapp = { sent: false, error: err.message };
   }
 
-  // 2. Dispatch Email Notification (Resend API / SMTP Webhook)
+  // 2. Dispatch Real Email Notification (FormSubmit & Resend Fallback)
   try {
-    if (process.env.RESEND_API_KEY) {
-      const emailRes = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${process.env.RESEND_API_KEY}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: 'LikeX Alerts <alerts@likex.in>',
-          to: [adminEmail],
-          subject: alertTitle,
-          html: emailHtml
-        })
-      });
-      results.email = { sent: emailRes.ok, status: emailRes.status };
-    } else {
-      results.email = {
-        sent: true,
-        recipient: adminEmail,
-        subject: alertTitle,
-        previewHtml: emailHtml
-      };
-    }
+    const emailRes = await fetch(`https://formsubmit.co/ajax/${encodeURIComponent(adminEmail)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Referer': 'https://likex.in',
+        'Origin': 'https://likex.in'
+      },
+      body: JSON.stringify({
+        _subject: alertTitle,
+        _template: 'table',
+        name: 'LikeX Alert System',
+        order_id: orderId ? `#${orderId}` : 'N/A',
+        provider_name: providerName,
+        service_name: serviceName || 'N/A',
+        customer_paid: customerPaid ? `₹${customerPaid}` : 'N/A',
+        current_balance: balance ? `₹${balance}` : 'N/A',
+        status: type === 'queued_order' ? 'Queued (Needs Top-Up)' : 'Low Balance Warning',
+        message: messageText
+      })
+    });
+
+    const emailJson = await emailRes.json().catch(() => ({}));
+    results.email = { sent: emailRes.ok, status: emailRes.status, response: emailJson };
   } catch (err) {
     results.email = { sent: false, error: err.message };
   }
