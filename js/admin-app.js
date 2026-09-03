@@ -208,6 +208,7 @@ const AdminApp = {
 
     let contentHtml = '';
     if (tab === 'dashboard') contentHtml = this.renderDashboard(store);
+    else if (tab === 'alerts') contentHtml = this.renderAlertsManager(store);
     else if (tab === 'providers') contentHtml = this.renderProviders(store);
     else if (tab === 'provider_services') contentHtml = this.renderProviderServicesManager(store);
     else if (tab === 'sync_services') contentHtml = this.renderSyncServices(store);
@@ -232,6 +233,10 @@ const AdminApp = {
             <li class="admin-nav-item ${tab === 'dashboard' ? 'active' : ''}" onclick="store.setAdminTab('dashboard')">
               <span class="nav-icon">📊</span>
               <span>Dashboard</span>
+            </li>
+            <li class="admin-nav-item ${tab === 'alerts' ? 'active' : ''}" onclick="store.setAdminTab('alerts')">
+              <span class="nav-icon">🔔</span>
+              <span>Low Balance & Alerts</span>
             </li>
             <li class="admin-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setAdminTab('orders')">
               <span class="nav-icon">🛒</span>
@@ -308,6 +313,7 @@ const AdminApp = {
 
   getTabTitle(tab) {
     if (tab === 'dashboard') return 'Dashboard';
+    if (tab === 'alerts') return 'Low Balance Alerts & Multi-Channel Gateway';
     if (tab === 'providers') return 'Provider Management';
     if (tab === 'provider_services') return 'Provider Services & Live Catalog Importer';
     if (tab === 'services') return 'Customer Services & Profit Markup';
@@ -315,6 +321,188 @@ const AdminApp = {
     if (tab === 'orders') return 'All Orders Master Table';
     if (tab === 'support') return 'Support Ticket Queue';
     return 'Admin Console';
+  },
+
+  // DEDICATED LOW BALANCE & QUEUED ORDER ALERTS MANAGER TAB
+  renderAlertsManager(store) {
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
+    const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
+    const alertConfig = store.getAlertConfig();
+    const japProv = (store.data.providers || []).find(p => p.id === 'p1');
+    const wosProv = (store.data.providers || []).find(p => p.id === 'p2');
+    const japBal = Number(japProv?.balance || 0);
+    const wosBal = Number(wosProv?.balance || 0);
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1000px;">
+        
+        <!-- Live Alert Status Header Card -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(99, 102, 241, 0.08)); border: 2px solid #10B981; padding: 24px; border-radius: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(16, 185, 129, 0.15); color: #047857; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; text-transform: uppercase;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+                <span>Active Notification System</span>
+              </div>
+              <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin-top: 8px; margin-bottom: 4px;">
+                Low Balance & Queued Order Alert Gateway
+              </h2>
+              <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
+                Whenever JAP or WorldOfSMM balance drops below ₹${alertConfig.threshold || 100}, or a customer places an order requiring top-up, you receive instant alerts on WhatsApp & Gmail.
+              </p>
+            </div>
+
+            <button class="btn" style="background: #10B981; color: white; font-weight: 800; font-size: 14px; padding: 12px 24px; border-radius: 999px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);" onclick="store.sendTestAlert()">
+              🧪 Send Live Test Alert Now
+            </button>
+          </div>
+        </div>
+
+        <!-- Live Provider Balances Overview -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+          <div class="card" style="padding: 20px; border: 1.5px solid var(--border-color); border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">🏛️ JustAnotherPanel (JAP)</span>
+              <span class="badge ${japBal > 1.2 ? 'badge-success' : 'badge-danger'}">
+                ${japBal > 1.2 ? '✓ Funded' : '⚠️ Low Balance'}
+              </span>
+            </div>
+            <div style="font-size: 28px; font-weight: 900; color: var(--primary); font-family: monospace;">
+              $${japBal.toFixed(2)} USD
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+              Approx: <strong>₹${(japBal * 85).toFixed(2)} INR</strong> • Threshold: ₹${alertConfig.threshold || 100}
+            </div>
+          </div>
+
+          <div class="card" style="padding: 20px; border: 1.5px solid var(--border-color); border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">🇮🇳 WorldOfSMM (India)</span>
+              <span class="badge ${wosBal > Number(alertConfig.threshold || 100) ? 'badge-success' : 'badge-danger'}">
+                ${wosBal > Number(alertConfig.threshold || 100) ? '✓ Funded' : '⚠️ Low Balance'}
+              </span>
+            </div>
+            <div style="font-size: 28px; font-weight: 900; color: #10B981; font-family: monospace;">
+              ₹${wosBal.toFixed(2)} INR
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+              Direct Indian Gateway • Threshold: ₹${alertConfig.threshold || 100}
+            </div>
+          </div>
+        </div>
+
+        <!-- Alert Notification Settings Form -->
+        <div class="card" style="padding: 24px; border: 1px solid var(--border-color); border-radius: 18px;">
+          <h3 style="font-size: 18px; font-weight: 800; margin-bottom: 16px; color: var(--text-main);">
+            ⚙️ Alert Channels & Threshold Configuration
+          </h3>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 18px;">
+            <div>
+              <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                📱 WhatsApp Alert Phone Number:
+              </label>
+              <input type="text" id="admin-alert-whatsapp" class="form-input" value="${alertConfig.whatsappNumber || '7055515757'}" placeholder="e.g. 7055515757" style="font-weight: 700; font-size: 15px;" />
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                Direct alerts for <strong>7055515757</strong>.
+              </p>
+            </div>
+
+            <div>
+              <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                📧 Gmail Alert Email:
+              </label>
+              <input type="email" id="admin-alert-email" class="form-input" value="${alertConfig.adminEmail || 'viplavkumar50@gmail.com'}" placeholder="e.g. viplavkumar50@gmail.com" style="font-weight: 700; font-size: 15px;" />
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                Instant push email delivered to <strong>viplavkumar50@gmail.com</strong>.
+              </p>
+            </div>
+
+            <div>
+              <label style="font-size: 13px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                📉 Warning Threshold Amount (₹ INR):
+              </label>
+              <input type="number" id="admin-alert-threshold" class="form-input" value="${alertConfig.threshold || 100}" placeholder="100" style="font-weight: 700; font-size: 15px;" />
+              <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                Triggers when provider balance drops below this amount.
+              </p>
+            </div>
+          </div>
+
+          <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+            <button class="btn btn-primary" onclick="AdminApp.saveAlertSettings()" style="font-weight: 800; padding: 10px 26px; border-radius: 12px;">
+              💾 Save Alert Settings
+            </button>
+          </div>
+        </div>
+
+        <!-- Queued Orders Awaiting Top-Up Table -->
+        <div class="card" style="padding: 24px; border: 1px solid var(--border-color); border-radius: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+            <div>
+              <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+                ⏳ Orders Queued for Dispatch (${queuedOrders.length})
+              </h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
+                Customer payment is received in LikeX wallet. Once you top-up provider funds, click "1-Click Dispatch".
+              </p>
+            </div>
+
+            ${queuedOrders.length > 0 ? `
+              <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 8px 18px;" onclick="AdminApp.dispatchAllQueuedOrders()">
+                ⚡ Dispatch All Queued (${queuedOrders.length})
+              </button>
+            ` : ''}
+          </div>
+
+          ${queuedOrders.length === 0 ? `
+            <div style="text-align: center; padding: 36px 20px; color: var(--text-muted);">
+              <div style="font-size: 36px; margin-bottom: 8px;">✨</div>
+              <strong>Zero Queued Orders</strong>
+              <p style="font-size: 13px; margin-top: 4px;">All customer orders have been successfully dispatched to upstream provider servers.</p>
+            </div>
+          ` : `
+            <div style="overflow-x: auto;">
+              <table class="sync-data-table" style="font-size: 13px;">
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Target Provider</th>
+                    <th>Service Name</th>
+                    <th>Target Link</th>
+                    <th>Quantity</th>
+                    <th>Customer Paid</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${queuedOrders.map(qo => `
+                    <tr>
+                      <td style="font-family: var(--font-mono); font-weight: 800; color: #6C5CE7;">#${qo.id}</td>
+                      <td>
+                        <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #DC2626; font-weight: 800; padding: 3px 8px; border-radius: 6px;">
+                          ${qo.providerDisplayName || qo.provider}
+                        </span>
+                      </td>
+                      <td><strong>${qo.serviceName}</strong></td>
+                      <td><a href="${qo.target}" target="_blank" style="color: #0284c7;">${qo.target}</a></td>
+                      <td>${Number(qo.quantity).toLocaleString()}</td>
+                      <td><strong style="color: #10B981;">${store.formatMoney(qo.amount)}</strong></td>
+                      <td>
+                        <button class="btn btn-sm btn-primary" style="font-size: 12px; padding: 5px 12px; font-weight: 800; border-radius: 6px;" onclick="store.dispatchQueuedOrder('${qo.id}')">
+                          ⚡ 1-Click Dispatch
+                        </button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          `}
+        </div>
+
+      </div>
+    `;
   },
 
   renderDashboard(store) {
@@ -440,6 +628,15 @@ const AdminApp = {
           </div>
           <div class="kpi-label">JAP Wholesale Balance</div>
           <div class="kpi-value">$${(Number(stats.providerBalance) || 0).toFixed(2)} USD</div>
+        </div>
+
+        <div class="kpi-card" onclick="store.setAdminTab('alerts')" style="cursor: pointer;" title="Manage WhatsApp & Gmail Low Balance Alerts">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box" style="background: rgba(16, 185, 129, 0.15); color: #10B981;">🔔</div>
+            <span class="badge badge-success">Live Ready</span>
+          </div>
+          <div class="kpi-label">Auto Alerts Gateway</div>
+          <div class="kpi-value" style="font-size: 16.5px; color: #10B981;">WhatsApp & Mail 📲</div>
         </div>
       </div>
 
