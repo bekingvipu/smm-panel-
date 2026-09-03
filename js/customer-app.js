@@ -8,7 +8,7 @@ const CustomerApp = {
   renderAnnouncementBar(store) {
     const announce = (store && store.data && store.data.announcement) || {
       enabled: true,
-      text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+      text: "⚡ Welcome to LikeX! • 👑 India's Direct Wholesale SMM & Creator Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
     };
 
     if (!announce.enabled || !announce.text) return '';
@@ -654,6 +654,97 @@ const CustomerApp = {
     }
   },
 
+  // Dynamic Live Average Time Parser for JAP & WorldOfSMM
+  getServiceAverageTime(service) {
+    if (!service) return '⚡ Instant (0 - 15m)';
+    const idStr = String(service.id || '');
+    const rawId = String(service.rawId || service.service || idStr.replace('wos-', ''));
+    const name = (service.name || '').toLowerCase();
+    const cat = (service.category || '').toLowerCase();
+
+    // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
+    const JAP_AVERAGE_TIMES = {
+      '10147': '⏱️ 22h 52m',
+      '10349': '⏱️ 7h 40m',
+      '1810': '⏱️ 1 - 4 Hours',
+      '10129': '⏱️ 1 - 3 Hours',
+      '1910': '⚡ 0 - 15 Mins',
+      '10130': '⚡ 0 - 15 Mins',
+      '9131': '⚡ 0 - 15 Mins',
+      '9132': '⏱️ 1 - 4 Hours',
+      '9316': '⏱️ 3 - 8 Hours',
+      '7791': '⏱️ 3 - 8 Hours',
+      '9317': '⚡ 0 - 15 Mins',
+      '5950': '⚡ 0 - 15 Mins',
+      '5952': '⏱️ 3 - 8 Hours',
+      '7444': '⏱️ 1 - 4 Hours',
+      '7445': '⏱️ 1 - 3 Hours',
+      '7446': '⏱️ 2 - 6 Hours',
+      '6328': '⏱️ 6 - 18 Hours',
+      '5951': '⏱️ 6 - 18 Hours',
+      '6074': '⏱️ 2 - 8 Hours',
+      '6382': '⏱️ 2 - 8 Hours',
+      '6381': '⏱️ 2 - 8 Hours',
+      '4163': '⏱️ 24 - 48 Hours',
+      '4232': '⚡ 0 - 15 Mins',
+      '4238': '⚡ 15 - 45 Mins',
+      '3588': '⚡ 0 - 15 Mins',
+      '3587': '⚡ 0 - 15 Mins',
+      '5714': '⚡ 0 - 15 Mins',
+      '5877': '⚡ 15 - 45 Mins',
+      '5878': '⚡ 15 - 45 Mins',
+      '5876': '⚡ 15 - 45 Mins'
+    };
+
+    if (JAP_AVERAGE_TIMES[rawId]) {
+      return JAP_AVERAGE_TIMES[rawId];
+    }
+
+    // 2. Extract Duration & Speed Tags from Provider Service Title (WorldOfSMM & JAP)
+    if (name.includes('0-1 min') || name.includes('0 - 1 min') || name.includes('0–1 min') || name.includes('0-1min') || name.includes('0-5 min') || name.includes('instant-start') || name.includes('instant start') || (name.includes('instant') && !name.includes('drop'))) {
+      return '⚡ Instant (0 - 15m)';
+    }
+    if (name.includes('0-10 min') || name.includes('0–10 min')) {
+      return '⚡ 5 - 15 Mins';
+    }
+    if (name.includes('0-1 hour') || name.includes('0 - 1 hr') || name.includes('0-1 hrs') || name.includes('0-1hr') || name.includes('0-1hrs') || name.includes('0-1 hours')) {
+      if (name.includes('follower') || cat.includes('follower')) return '⏱️ 1 - 3 Hours';
+      if (name.includes('subscriber') || cat.includes('subscriber')) return '⏱️ 1 - 4 Hours';
+      return '⚡ 15 - 45 Mins';
+    }
+    if (name.includes('0-2 hrs') || name.includes('0 - 2 hrs') || name.includes('0-2 hours') || name.includes('0-3 hours') || name.includes('0-4 hours')) {
+      return '⏱️ 2 - 6 Hours';
+    }
+    if (name.includes('0-8 hrs') || name.includes('0-8 hours') || name.includes('0-9 hours')) {
+      return '⏱️ 4 - 8 Hours';
+    }
+    if (name.includes('24hr start') || name.includes('24 hours') || name.includes('0 - 24 hrs') || name.includes('0 - 24 hours') || name.includes('48 hours')) {
+      return '⏱️ 12 - 24 Hours';
+    }
+
+    // 3. Category & SMM Service Type Heuristics
+    if (name.includes('like') || cat.includes('likes') || name.includes('view') || cat.includes('views') || name.includes('share') || name.includes('save') || cat.includes('shares')) {
+      return '⚡ Instant (0 - 15m)';
+    }
+    if (name.includes('comment') || cat.includes('comment')) {
+      return '⏱️ 15 - 45 Mins';
+    }
+    if (name.includes('subscriber') || cat.includes('subscriber') || cat.includes('youtube')) {
+      return '⏱️ ~12 - 24 Hours';
+    }
+    if (name.includes('indian') && name.includes('follower')) {
+      return '⏱️ ~4 - 12 Hours';
+    }
+    if (name.includes('follower') || cat.includes('follower')) {
+      return '⏱️ ~3 - 8 Hours';
+    }
+    if (name.includes('member') || name.includes('channel') || name.includes('telegram')) {
+      return '⚡ 10 - 30 Mins';
+    }
+
+    return '⚡ Instant - Fast';
+  },
+
   // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
   renderNewOrderTab(store) {
     const rawServices = store.getActiveServices ? store.getActiveServices() : (window.JAP_SERVICES || []);
@@ -727,6 +818,10 @@ const CustomerApp = {
 
     const activeService = activePackages[0] || {};
     const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
+    const isCommentService = (activeService.name || '').toLowerCase().includes('comment') || (activeService.category || '').toLowerCase().includes('comment');
+    const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom') || (activeService.name || '').toLowerCase().includes('emoji') || (activeService.name || '').toLowerCase().includes('random'));
+    const effectiveMin = isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10);
+    const avgTime = this.getServiceAverageTime(activeService);
 
     const platforms = [
       { id: 'all', label: 'All', icon: '⚡' },
@@ -832,8 +927,10 @@ const CustomerApp = {
             <select class="form-input custom-select" id="new-order-service-select" onchange="CustomerApp.handleServiceChange(this.value)">
               ${activePackages.map(s => {
                 const p = store.getSellingPrice(s.cost || 0.1);
+                const isComm = (s.name || '').toLowerCase().includes('comment') || (s.category || '').toLowerCase().includes('comment');
+                const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
                 return `
-                  <option value="${s.id}" data-cost="${s.cost}" data-min="${s.min}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
+                  <option value="${s.id}" data-cost="${s.cost}" data-min="${sMin}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
                     #${s.id} - ${s.name} (${store.formatMoney(p)}/1K)
                   </option>
                 `;
@@ -842,7 +939,7 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- High-Tech VIP Service Details Terminal (2x2 Compact Specs Grid) -->
+        <!-- High-Tech VIP Service Details Terminal (2x2 Compact Specs Grid with Live Average Time) -->
         <div class="vip-spec-card" id="service-details-box">
           <div class="vip-spec-header">
             <div class="vip-spec-title">
@@ -867,19 +964,19 @@ const CustomerApp = {
             </div>
             <div class="spec-tile">
               <span class="spec-tile-label">Min Limit</span>
-              <span class="spec-tile-val" id="service-detail-min">${(activeService.min || 10).toLocaleString()}</span>
+              <span class="spec-tile-val" id="service-detail-min">${effectiveMin.toLocaleString()}</span>
             </div>
-            <div class="spec-tile">
-              <span class="spec-tile-label">Max Limit</span>
-              <span class="spec-tile-val" id="service-detail-max">${(activeService.max || 100000).toLocaleString()}</span>
+            <div class="spec-tile" style="border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.04);">
+              <span class="spec-tile-label" style="color: #059669;">Average Time</span>
+              <span class="spec-tile-val" id="service-detail-time" style="color: #059669; font-size: 13.5px; font-weight: 800;">${avgTime}</span>
             </div>
           </div>
           <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--text-secondary); border-top: 1px dashed rgba(108, 92, 231, 0.2); padding-top: 10px;">
-            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #059669;">🚀 Speed: ~50,000 - 200,000 / Day</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; color: #059669;">🚀 Live Provider Network</span>
             <span>•</span>
-            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">⚡ Start: Instant (0 - 15 mins)</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">⚡ Algorithmic Safe Pacing</span>
             <span>•</span>
-            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">⭐ High Retention Drop Protection</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 600;">🛡️ High Retention Drop Protection</span>
           </div>
         </div>
 
@@ -901,30 +998,38 @@ const CustomerApp = {
         <div class="form-group" id="order-quantity-group">
           <label class="form-label">
             <span style="font-weight: 800;">Order Quantity</span>
-            <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${(activeService.min || 10).toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
+            <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${effectiveMin.toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="${(activeService.name || '').toLowerCase().includes('custom') && (activeService.name || '').toLowerCase().includes('comment') ? 5 : 1000}" min="${activeService.min || 1}" max="${activeService.max || 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" />
-          <div class="qty-steppers-bar" id="qty-steppers-bar">
-            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(500)">+500</button>
-            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
-            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(2500)">+2,500</button>
-            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(5000)">+5,000</button>
-            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(10000)">+10,000</button>
-            <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(${activeService.max || 100000})" style="color: var(--primary); font-weight: 800;">MAX</button>
+          <input type="number" class="form-input" id="new-order-quantity" value="${isCommentService ? 50 : 1000}" min="${effectiveMin}" max="${activeService.max || 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" />
+          <div class="qty-steppers-bar" id="qty-steppers-bar" style="${isCustomComment ? 'display: none;' : 'display: flex;'}">
+            ${isCommentService ? `
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(50)">50</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(100)">100</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(250)">250</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(500)">500</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(1000)">1,000</button>
+            ` : `
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(500)">+500</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(1000)">+1,000</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(2500)">+2,500</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(5000)">+5,000</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(10000)">+10,000</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(${activeService.max || 100000})" style="color: var(--primary); font-weight: 800;">MAX</button>
+            `}
           </div>
         </div>
 
         <!-- Custom Comments (1 per line) Dynamic Box -->
-        <div class="form-group" id="custom-comments-group" style="display: none;">
+        <div class="form-group" id="custom-comments-group" style="${isCustomComment ? 'display: block;' : 'display: none;'}">
           <label class="form-label">
             <span style="font-weight: 800;">Comments (1 per line)</span>
-            <span class="form-label-hint" id="comments-count-hint" style="font-family: var(--font-mono); font-weight: 700; color: var(--primary);">0 comments</span>
+            <span class="form-label-hint" id="comments-count-hint" style="font-family: var(--font-mono); font-weight: 700; color: #f59e0b;">0/50 comments (Min 50 required)</span>
           </label>
           <textarea 
             class="form-input" 
             id="new-order-comments" 
-            rows="5" 
-            placeholder="Great post!&#10;Awesome reel 🔥&#10;Love your content!&#10;Keep it up!&#10;Best creator ✨" 
+            rows="6" 
+            placeholder="Enter at least 50 custom comments (1 comment per line):&#10;Great post!&#10;Awesome reel 🔥&#10;Love your content!&#10;Keep it up!&#10;Best creator ✨&#10;..." 
             style="border-radius: 12px; font-family: inherit; font-size: 14px; line-height: 1.5; padding: 12px 14px; resize: vertical;"
           ></textarea>
         </div>
@@ -941,7 +1046,7 @@ const CustomerApp = {
           </div>
           <div class="receipt-row total-charge-row">
             <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Total Charge:</span>
-            <span class="receipt-total-amount" id="calc-total-label">${store.formatMoney((sellingPrice / 1000) * 1000)}</span>
+            <span class="receipt-total-amount" id="calc-total-label">${store.formatMoney((sellingPrice / 1000) * (isCommentService ? 50 : 1000))}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 2px;">
             ${store.data.isLoggedIn ? `
@@ -1009,13 +1114,15 @@ const CustomerApp = {
         if (!selectedOpt) return;
 
         const cost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
-        const min = parseInt(selectedOpt.getAttribute('data-min')) || 10;
+        const rawMin = parseInt(selectedOpt.getAttribute('data-min')) || 10;
         const max = parseInt(selectedOpt.getAttribute('data-max')) || 100000;
         const refill = selectedOpt.getAttribute('data-refill') === '1';
         const name = selectedOpt.getAttribute('data-name') || '';
         const id = selectedOpt.value;
 
-        const isCustomComment = name.toLowerCase().includes('custom') && name.toLowerCase().includes('comment');
+        const isComment = name.toLowerCase().includes('comment') || (CustomerApp.currentCategory || '').toLowerCase().includes('comment');
+        const isCustomComment = isComment && (name.toLowerCase().includes('custom') || name.toLowerCase().includes('emoji') || name.toLowerCase().includes('random'));
+        const min = isComment ? Math.max(50, rawMin) : rawMin;
 
         if (commentsGroup) {
           if (isCustomComment) {
@@ -1028,11 +1135,15 @@ const CustomerApp = {
             const lines = commentsBox ? commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean) : [];
             const count = lines.length;
             if (commentsCountHint) {
-              commentsCountHint.textContent = `${count} comment${count === 1 ? '' : 's'}`;
+              if (count < 50) {
+                commentsCountHint.innerHTML = `<span style="color: #ef4444; font-weight: 800;">⚠️ ${count}/50 comments (Min 50 required)</span>`;
+              } else {
+                commentsCountHint.innerHTML = `<span style="color: #10b981; font-weight: 800;">✓ ${count} comments</span>`;
+              }
             }
-            qtyInput.value = count > 0 ? count : 1;
+            qtyInput.value = count > 0 ? count : 50;
             const hint = document.getElementById('qty-limits-hint');
-            if (hint) hint.textContent = '1 comment per line (Auto-counted)';
+            if (hint) hint.textContent = '1 comment per line (Min: 50 comments)';
           } else {
             commentsGroup.style.display = 'none';
             if (steppersBar) steppersBar.style.display = 'flex';
@@ -1041,6 +1152,10 @@ const CustomerApp = {
             qtyInput.style.cursor = '';
             const hint = document.getElementById('qty-limits-hint');
             if (hint) hint.textContent = `Min: ${min.toLocaleString()} | Max: ${max.toLocaleString()}`;
+            qtyInput.min = min;
+            if (isComment && Number(qtyInput.value) < 50) {
+              qtyInput.value = 50;
+            }
           }
         }
 
@@ -1050,8 +1165,8 @@ const CustomerApp = {
         if (nameEl) nameEl.textContent = name;
         const minEl = document.getElementById('service-detail-min');
         if (minEl) minEl.textContent = min.toLocaleString();
-        const maxEl = document.getElementById('service-detail-max');
-        if (maxEl) maxEl.textContent = max.toLocaleString();
+        const timeEl = document.getElementById('service-detail-time');
+        if (timeEl) timeEl.textContent = CustomerApp.getServiceAverageTime({ id, name, category: CustomerApp.currentCategory });
         const rateEl = document.getElementById('service-detail-rate');
         if (rateEl) rateEl.textContent = store.formatMoney(sellingPrice);
         const idEl = document.getElementById('service-detail-id');
@@ -1089,9 +1204,13 @@ const CustomerApp = {
           const lines = commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean);
           const count = lines.length;
           if (commentsCountHint) {
-            commentsCountHint.textContent = `${count} comment${count === 1 ? '' : 's'}`;
+            if (count < 50) {
+              commentsCountHint.innerHTML = `<span style="color: #ef4444; font-weight: 800;">⚠️ ${count}/50 comments (Min 50 required)</span>`;
+            } else {
+              commentsCountHint.innerHTML = `<span style="color: #10b981; font-weight: 800;">✓ ${count} comments</span>`;
+            }
           }
-          qtyInput.value = count > 0 ? count : 1;
+          qtyInput.value = count > 0 ? count : 50;
           updateCalc();
         });
       }
@@ -1114,25 +1233,44 @@ const CustomerApp = {
     const serviceId = serviceSelect.value;
     const serviceName = selectedOpt.getAttribute('data-name') || `Service #${serviceId}`;
     const wholesaleCost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
+    const rawMin = parseInt(selectedOpt.getAttribute('data-min')) || 10;
     const target = document.getElementById('new-order-target').value.trim();
-    const quantity = Number(document.getElementById('new-order-quantity').value);
+    const qtyInput = document.getElementById('new-order-quantity');
+    const quantity = Number(qtyInput.value);
     const commentsBox = document.getElementById('new-order-comments');
-    const isCustomComment = (serviceName || '').toLowerCase().includes('custom') && (serviceName || '').toLowerCase().includes('comment');
+    
+    const isComment = (serviceName || '').toLowerCase().includes('comment') || (CustomerApp.currentCategory || '').toLowerCase().includes('comment');
+    const isCustomComment = isComment && ((serviceName || '').toLowerCase().includes('custom') || (serviceName || '').toLowerCase().includes('emoji') || (serviceName || '').toLowerCase().includes('random'));
+    const min = isComment ? Math.max(50, rawMin) : rawMin;
 
     let comments = '';
     if (isCustomComment) {
       if (!commentsBox || !commentsBox.value.trim()) {
-        store.showToast('Please enter at least 1 custom comment (1 per line)', 'error');
+        store.showToast('⚠️ Please enter custom comments (1 per line). Minimum 50 comments required.', 'error');
         if (commentsBox) commentsBox.focus();
         return;
       }
       const lines = commentsBox.value.split('\n').map(l => l.trim()).filter(Boolean);
       if (lines.length === 0) {
-        store.showToast('Please enter at least 1 custom comment', 'error');
+        store.showToast('⚠️ Please enter custom comments (1 per line). Minimum 50 comments required.', 'error');
+        if (commentsBox) commentsBox.focus();
+        return;
+      }
+      if (lines.length < 50) {
+        store.showToast(`⚠️ Minimum 50 custom comments required! You entered only ${lines.length} comment${lines.length === 1 ? '' : 's'}. Please add at least ${50 - lines.length} more comments.`, 'error');
         if (commentsBox) commentsBox.focus();
         return;
       }
       comments = lines.join('\n');
+    } else if (isComment) {
+      if (!quantity || quantity < 50) {
+        store.showToast('⚠️ Minimum order quantity for comments is 50. Please enter at least 50.', 'error');
+        if (qtyInput) {
+          qtyInput.value = 50;
+          qtyInput.focus();
+        }
+        return;
+      }
     }
 
     if (!target) {
@@ -1144,6 +1282,11 @@ const CustomerApp = {
 
     if (!quantity || quantity <= 0) {
       store.showToast('Please specify a valid quantity', 'error');
+      return;
+    }
+
+    if (quantity < min) {
+      store.showToast(`⚠️ Minimum order quantity for this service is ${min.toLocaleString()}`, 'error');
       return;
     }
 
@@ -1229,6 +1372,16 @@ const CustomerApp = {
   setQty(val) {
     const input = document.getElementById('new-order-quantity');
     if (input) {
+      const serviceSelect = document.getElementById('new-order-service-select');
+      let isComment = false;
+      if (serviceSelect && serviceSelect.selectedIndex >= 0) {
+        const opt = serviceSelect.options[serviceSelect.selectedIndex];
+        const sName = (opt.getAttribute('data-name') || '').toLowerCase();
+        if (sName.includes('comment')) isComment = true;
+      }
+      if (isComment && Number(val) < 50) {
+        val = 50;
+      }
       input.value = val;
       input.dispatchEvent(new Event('input'));
     }

@@ -792,8 +792,11 @@ class SmmStateStore {
       return { success: false, message: 'Authentication required' };
     }
 
-    const unitSellingPrice = this.getSellingPrice(wholesaleCost || 0.20);
-    const totalCost = (unitSellingPrice / 1000) * quantity;
+    const isComment = (serviceName || '').toLowerCase().includes('comment');
+    if (isComment && quantity < 50) {
+      this.showToast('⚠️ Minimum order quantity for comments is 50.', 'error');
+      return { success: false, message: 'Minimum 50 comments required' };
+    }
 
     if (this.data.customer.balance < totalCost) {
       this.showToast('Insufficient wallet balance. Please add funds.', 'error');

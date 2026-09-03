@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.title = 'Admin Console — LikeX System Management';
       AdminApp.render(screenContainer);
     } else {
-      document.title = 'LikeX — #1 Social Media Marketing Growth Panel | likex.in';
+      document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
       CustomerApp.render(screenContainer);
     }
   };
