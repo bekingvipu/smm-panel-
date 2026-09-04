@@ -848,7 +848,7 @@ class SmmStateStore {
     }
 
     // Determine provider & raw service id
-    let targetProvider = 'jap';
+    let targetProvider = 'worldofsmm';
     let rawServiceId = serviceId;
     if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
@@ -856,13 +856,13 @@ class SmmStateStore {
     } else {
       // Check if service is listed under worldofsmm
       const foundSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(serviceId));
-      if (foundSvc && (foundSvc.provider === 'worldofsmm' || String(foundSvc.id).startsWith('wos-'))) {
-        targetProvider = 'worldofsmm';
+      if (foundSvc) {
+        targetProvider = foundSvc.provider || 'worldofsmm';
         rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '');
       }
     }
 
-    const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)';
+    const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Backup Provider';
 
     // Sanitize target URL to prevent bot issues (strips ?igsi=..., handles @handle)
     const cleanedTarget = this.cleanTargetUrl(target);

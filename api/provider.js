@@ -34,7 +34,7 @@ export default async function handler(req, res) {
   }
 
   const action = paramsObj.action || 'balance';
-  const requestedProvider = (paramsObj.provider || 'jap').toLowerCase();
+  const requestedProvider = (paramsObj.provider || 'worldofsmm').toLowerCase();
 
   // Helper to query an upstream provider
   const callProvider = async (providerConfig, customParams = {}) => {
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
       });
     }
 
-    const providerKey = requestedProvider in PROVIDERS ? requestedProvider : 'jap';
+    const providerKey = requestedProvider in PROVIDERS ? requestedProvider : 'worldofsmm';
     const providerConfig = PROVIDERS[providerKey];
 
     const data = await callProvider(providerConfig);

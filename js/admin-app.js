@@ -885,10 +885,10 @@ const AdminApp = {
       <div class="card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08)); border: 2px solid var(--primary); display: flex; flex-direction: column; gap: 14px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div>
-            <h3 style="font-size: 18px; font-weight: 800; color: var(--primary);">⚡ Global Profit Percentage Tool</h3>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--primary);">⚡ Global Profit Percentage & Dynamic No-Loss Tool</h3>
             <p style="font-size: 13px; color: var(--text-secondary); margin-top: 2px;">
-              Automatically calculate customer selling prices from JustAnotherPanel wholesale costs:
-              <strong>Selling Price = Provider Cost + Your Profit %</strong>
+              Automatically calculate customer selling prices from <strong>WorldOfSMM</strong> wholesale costs:
+              <strong>Selling Price = Provider Cost × (1 + Markup %)</strong> (Never Sell at a Loss!)
             </p>
           </div>
           <span class="badge badge-primary" style="font-size: 14px; padding: 6px 14px;">
@@ -919,7 +919,7 @@ const AdminApp = {
             <tr>
               <th>Sub-Category & Package Name</th>
               <th>Platform</th>
-              <th>JAP Wholesale Cost</th>
+              <th>WorldOfSMM Cost</th>
               <th>Customer Selling Price</th>
               <th>Profit Margin</th>
               <th>Refill Guarantee</th>
