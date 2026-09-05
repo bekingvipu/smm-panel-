@@ -2898,11 +2898,14 @@ const CustomerApp = {
   renderEarnTab(store) {
     const earnConfig = (store.data && store.data.earnTutorial) || {
       enabled: true,
-      videoUrl: 'https://www.youtube.com/watch?v=kYV3_47V-wY',
+      videoUrl: 'https://www.youtube.com/watch?v=g5XHXSOmONk',
       title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
       description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
     };
-    const videoUrlToUse = earnConfig.videoUrl || 'https://www.youtube.com/watch?v=kYV3_47V-wY';
+    let videoUrlToUse = earnConfig.videoUrl || 'https://www.youtube.com/watch?v=g5XHXSOmONk';
+    if (videoUrlToUse.includes('kYV3_47V-wY')) {
+      videoUrlToUse = 'https://www.youtube.com/watch?v=g5XHXSOmONk';
+    }
     const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(videoUrlToUse) : '';
 
     return `
