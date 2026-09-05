@@ -124,10 +124,13 @@ class SmmStateStore {
       const savedEarnVideo = localStorage.getItem('likex_earn_tutorial_config');
       if (savedEarnVideo) {
         this.data.earnTutorial = JSON.parse(savedEarnVideo);
+        if (!this.data.earnTutorial.videoUrl) {
+          this.data.earnTutorial.videoUrl = 'https://www.youtube.com/watch?v=kYV3_47V-wY';
+        }
       } else {
         this.data.earnTutorial = {
           enabled: true,
-          videoUrl: '',
+          videoUrl: 'https://www.youtube.com/watch?v=kYV3_47V-wY',
           title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
           description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
         };
@@ -135,7 +138,7 @@ class SmmStateStore {
     } catch (e) {
       this.data.earnTutorial = {
         enabled: true,
-        videoUrl: '',
+        videoUrl: 'https://www.youtube.com/watch?v=kYV3_47V-wY',
         title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
         description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
       };

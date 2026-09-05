@@ -212,6 +212,10 @@ const CustomerApp = {
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('new_order');">
                 <div class="drawer-item-left"><span class="drawer-item-icon">🛒</span> <span>Services & New Order</span></div>
               </li>
+              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('earn');">
+                <div class="drawer-item-left"><span class="drawer-item-icon">💰</span> <span>How to Earn Money</span></div>
+                <span class="badge badge-primary" style="font-size: 10px;">Video Guide</span>
+              </li>
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('home');">
                 <div class="drawer-item-left"><span class="drawer-item-icon">⭐</span> <span>About LikeX & Reviews</span></div>
                 <span class="badge badge-success" style="font-size: 10px;">10+ Yrs</span>
@@ -2894,11 +2898,12 @@ const CustomerApp = {
   renderEarnTab(store) {
     const earnConfig = (store.data && store.data.earnTutorial) || {
       enabled: true,
-      videoUrl: '',
+      videoUrl: 'https://www.youtube.com/watch?v=kYV3_47V-wY',
       title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
       description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
     };
-    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(earnConfig.videoUrl) : '';
+    const videoUrlToUse = earnConfig.videoUrl || 'https://www.youtube.com/watch?v=kYV3_47V-wY';
+    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(videoUrlToUse) : '';
 
     return `
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 920px; margin: 0 auto; width: 100%; padding-bottom: 8px;">
