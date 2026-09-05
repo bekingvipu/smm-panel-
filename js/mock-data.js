@@ -95,13 +95,13 @@ window.SMM_MOCK = {
   // 2-Level Structured Services (Sub-Category -> Packages with tiered rates)
   customerServices: [
     // -------------------------------------------------------------
-    // LIKEX SPECIAL VERY GOOD - INSTAGRAM GUARANTEED FOLLOWERS (JAP 10323)
+    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (JAP 10323 & 1837)
     // -------------------------------------------------------------
     {
       id: 'jap-10323',
       rawId: '10323',
       platform: 'instagram',
-      subcategory: '🌟 LikeX Special Very Good [Guaranteed 30D Refill]',
+      subcategory: '🌟 LikeX Special Very Good [Followers & Likes]',
       customerName: '10323 - LikeX Special Very Good Instagram Followers [Max 50K] [Refill: 30D] [Speed: 6-8 Hours]',
       pricePer1k: 0.705, // ₹67.28
       min: 10,
@@ -113,6 +113,25 @@ window.SMM_MOCK = {
       description: '🌟 LikeX Special Very Good Quality Followers connected directly via JustAnotherPanel (JAP). 30-Day auto-refill guarantee.',
       japId: '10323',
       wholesaleCost: 0.705, // ₹67.28 wholesale
+      markupPercent: 0,
+      provider: 'jap'
+    },
+    {
+      id: 'jap-1837',
+      rawId: '1837',
+      platform: 'instagram',
+      subcategory: '🌟 LikeX Special Very Good [Followers & Likes]',
+      customerName: '1837 - LikeX Special Instagram Likes [Refill: No] [Max: 1M] [Start Time: 0-1 Hr] [Speed: Up to 300K/D]',
+      pricePer1k: 0.0409, // ₹3.90
+      min: 10,
+      max: 1000000,
+      deliverySpeed: '⚡ Instant (0 - 1 Hr)',
+      startTime: '0 - 1 Hour',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: '🌟 LikeX Special Super Fast Instagram Likes connected directly via JustAnotherPanel (JAP). High speed up to 300K/Day.',
+      japId: '1837',
+      wholesaleCost: 0.0409, // ₹3.90 wholesale
       markupPercent: 0,
       provider: 'jap'
     },
