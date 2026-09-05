@@ -669,6 +669,7 @@ const CustomerApp = {
 
     // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
     const JAP_AVERAGE_TIMES = {
+      '6149': '⚡ Instant (0 - 15m)',
       '5994': '⚡ Instant (0 - 15m)',
       '1837': '⚡ Instant (0 - 15m)',
       '10323': '⏱️ 6 - 8 Hours',
@@ -706,6 +707,10 @@ const CustomerApp = {
 
     if (JAP_AVERAGE_TIMES[rawId]) {
       return JAP_AVERAGE_TIMES[rawId];
+    }
+
+    if (rawId === '6149' || idStr.includes('6149')) {
+      return '⚡ Instant (0 - 15m)';
     }
 
     if (rawId === '5994' || idStr.includes('5994')) {
@@ -830,16 +835,32 @@ const CustomerApp = {
       activePackages = filteredServices;
     }
 
-    // Sort Lowest Price First (Low to High: ascending by cost)
-    activePackages.sort((a, b) => {
-      const costA = parseFloat(a.cost) || 0;
-      const costB = parseFloat(b.cost) || 0;
-      return costA - costB;
-    });
+    const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special') || (this.currentCategory || '').toLowerCase().includes('special very good');
+
+    if (isLikeXSpecial) {
+      // User-defined Flagship Order: 1. Followers (10323), 2. Views (5994), 3. Likes (1837), 4. Custom Comments (6149)
+      const getSpecialRank = (s) => {
+        const id = String(s.rawId || s.id || '');
+        const name = (s.name || '').toLowerCase();
+        if (id === '10323' || (name.includes('likex special') && name.includes('follower'))) return 1;
+        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 2;
+        if (id === '1837' || (name.includes('likex special') && name.includes('like'))) return 3;
+        if (id === '6149' || name.includes('comment')) return 4;
+        return 5;
+      };
+      activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
+    } else {
+      // Sort Lowest Price First (Low to High: ascending by cost)
+      activePackages.sort((a, b) => {
+        const costA = parseFloat(a.cost) || 0;
+        const costB = parseFloat(b.cost) || 0;
+        return costA - costB;
+      });
+    }
 
     const activeService = activePackages[0] || {};
     const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
-    const isCommentService = (activeService.name || '').toLowerCase().includes('comment') || (activeService.category || '').toLowerCase().includes('comment');
+    const isCommentService = (activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'));
     const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom') || (activeService.name || '').toLowerCase().includes('emoji') || (activeService.name || '').toLowerCase().includes('random'));
     const effectiveMin = isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10);
     const avgTime = this.getServiceAverageTime(activeService);
@@ -984,7 +1005,7 @@ const CustomerApp = {
           <select id="new-order-service-select" style="display: none;" onchange="CustomerApp.handleServiceChange(this.value)">
             ${activePackages.map(s => {
               const p = store.getSellingPrice(s.cost || 0.1);
-              const isComm = (s.name || '').toLowerCase().includes('comment') || (s.category || '').toLowerCase().includes('comment');
+              const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
               const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
               return `
                 <option value="${s.id}" data-cost="${s.cost}" data-min="${sMin}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
@@ -1341,7 +1362,8 @@ const CustomerApp = {
         const name = selectedOpt.getAttribute('data-name') || '';
         const id = selectedOpt.value;
 
-        const isComment = name.toLowerCase().includes('comment') || (CustomerApp.currentCategory || '').toLowerCase().includes('comment');
+        const isCatSpecial = (CustomerApp.currentCategory || '').toLowerCase().includes('likex special') || (CustomerApp.currentCategory || '').toLowerCase().includes('special very good');
+        const isComment = name.toLowerCase().includes('comment') || (!isCatSpecial && (CustomerApp.currentCategory || '').toLowerCase().includes('comment'));
         const isCustomComment = isComment && (name.toLowerCase().includes('custom') || name.toLowerCase().includes('emoji') || name.toLowerCase().includes('random'));
         const min = isComment ? Math.max(50, rawMin) : rawMin;
 
@@ -1469,7 +1491,8 @@ const CustomerApp = {
     const quantity = Number(qtyInput.value);
     const commentsBox = document.getElementById('new-order-comments');
     
-    const isComment = (serviceName || '').toLowerCase().includes('comment') || (CustomerApp.currentCategory || '').toLowerCase().includes('comment');
+    const isCatSpecial = (CustomerApp.currentCategory || '').toLowerCase().includes('likex special') || (CustomerApp.currentCategory || '').toLowerCase().includes('special very good');
+    const isComment = (serviceName || '').toLowerCase().includes('comment') || (!isCatSpecial && (CustomerApp.currentCategory || '').toLowerCase().includes('comment'));
     const isCustomComment = isComment && ((serviceName || '').toLowerCase().includes('custom') || (serviceName || '').toLowerCase().includes('emoji') || (serviceName || '').toLowerCase().includes('random'));
     const min = isComment ? Math.max(50, rawMin) : rawMin;
 
