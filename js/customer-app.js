@@ -669,6 +669,7 @@ const CustomerApp = {
 
     // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
     const JAP_AVERAGE_TIMES = {
+      '5994': '⚡ Instant (0 - 15m)',
       '1837': '⚡ Instant (0 - 15m)',
       '10323': '⏱️ 6 - 8 Hours',
       '10147': '⏱️ 22h 52m',
@@ -705,6 +706,10 @@ const CustomerApp = {
 
     if (JAP_AVERAGE_TIMES[rawId]) {
       return JAP_AVERAGE_TIMES[rawId];
+    }
+
+    if (rawId === '5994' || idStr.includes('5994')) {
+      return '⚡ Instant (0 - 15m)';
     }
 
     if (rawId === '1837' || idStr.includes('1837')) {
