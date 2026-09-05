@@ -137,6 +137,10 @@ class SmmStateStore {
         enabled: true,
         videoUrl: '',
         title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
+        description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
+      };
+    }
+
     // Initialize Live Provider Rates Auto-Sync Engine
     try {
       const savedRates = localStorage.getItem('likex_live_rates_cache');
