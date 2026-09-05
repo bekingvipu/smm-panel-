@@ -1018,6 +1018,15 @@ class SmmStateStore {
       return { success: false, message: 'Minimum 50 comments required' };
     }
 
+    let targetWholesaleCost = wholesaleCost;
+    if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
+      const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+      const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
+      targetWholesaleCost = foundSvc ? (foundSvc.rate || foundSvc.cost || 0.20) : 0.20;
+    }
+    const unitSellingPrice = this.getSellingPrice(targetWholesaleCost);
+    const totalCost = (unitSellingPrice / 1000) * Number(quantity);
+
     if (this.data.customer.balance < totalCost) {
       this.showToast('Insufficient wallet balance. Please add funds.', 'error');
       CustomerApp.openDepositModal();

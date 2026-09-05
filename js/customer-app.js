@@ -1554,24 +1554,29 @@ const CustomerApp = {
     const submitBtn = document.getElementById('btn-submit-order');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>⚡ Processing Order Refraction...</span>';
+      submitBtn.innerHTML = '<span>⚡ Processing Order...</span>';
     }
 
-    const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity, comments }, { silent: true });
+    try {
+      const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity, comments }, { silent: true });
 
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>⚡ Confirm & Place Order</span>';
-    }
-
-    if (res && res.success) {
-      CustomerApp.showOrderCelebrationModal({
-        orderId: res.orderId,
-        serviceName,
-        target,
-        quantity,
-        totalCost: res.totalCost || totalCost
-      });
+      if (res && res.success) {
+        CustomerApp.showOrderCelebrationModal({
+          orderId: res.orderId,
+          serviceName,
+          target,
+          quantity,
+          totalCost: res.totalCost || totalCost
+        });
+      }
+    } catch (err) {
+      console.error('Order placement error:', err);
+      store.showToast('Something went wrong while placing order. Please try again.', 'error');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>⚡ Confirm & Place Order</span>';
+      }
     }
   },
 
