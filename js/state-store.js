@@ -105,7 +105,7 @@ class SmmStateStore {
       } else {
         this.data.walletTutorial = {
           enabled: true,
-          videoUrl: '',
+          videoUrl: 'https://www.youtube.com/watch?v=NeXbmEnpSz0',
           title: 'How to Add Funds via UPI QR & UTR',
           description: 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
         };
@@ -113,7 +113,7 @@ class SmmStateStore {
     } catch (e) {
       this.data.walletTutorial = {
         enabled: true,
-        videoUrl: '',
+        videoUrl: 'https://www.youtube.com/watch?v=NeXbmEnpSz0',
         title: 'How to Add Funds via UPI QR & UTR',
         description: 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
       };
@@ -181,6 +181,16 @@ class SmmStateStore {
     try {
       localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial));
     } catch (e) {}
+
+    // Cloud sync to Supabase site_settings table
+    if (window.supabaseClient) {
+      window.supabaseClient.from('site_settings').upsert({
+        key: 'wallet_tutorial',
+        value: this.data.walletTutorial,
+        updated_at: new Date().toISOString()
+      }).catch(err => console.warn('[LikeX Cloud Sync] wallet_tutorial sync error:', err));
+    }
+
     this.notify();
     this.showToast('✅ Wallet Video Tutorial settings updated successfully!', 'success');
   }
@@ -195,6 +205,16 @@ class SmmStateStore {
     try {
       localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial));
     } catch (e) {}
+
+    // Cloud sync to Supabase site_settings table
+    if (window.supabaseClient) {
+      window.supabaseClient.from('site_settings').upsert({
+        key: 'earn_tutorial',
+        value: this.data.earnTutorial,
+        updated_at: new Date().toISOString()
+      }).catch(err => console.warn('[LikeX Cloud Sync] earn_tutorial sync error:', err));
+    }
+
     this.notify();
     this.showToast('✅ How to Earn Money settings updated successfully!', 'success');
   }
@@ -207,6 +227,16 @@ class SmmStateStore {
     try {
       localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement));
     } catch (e) {}
+
+    // Cloud sync to Supabase site_settings table
+    if (window.supabaseClient) {
+      window.supabaseClient.from('site_settings').upsert({
+        key: 'announcement_config',
+        value: this.data.announcement,
+        updated_at: new Date().toISOString()
+      }).catch(err => console.warn('[LikeX Cloud Sync] announcement sync error:', err));
+    }
+
     this.notify();
     this.showToast('✅ Announcement ticker updated successfully!', 'success');
   }
@@ -467,6 +497,11 @@ class SmmStateStore {
       }
     } catch (e) {}
 
+    // Sync Supabase global site settings (Videos, Announcements, etc.)
+    try {
+      this.syncGlobalSiteSettings();
+    } catch (e) {}
+
     // Calculate dynamic admin stats and sync Supabase data
     try {
       this.recalculateAdminStats();
@@ -478,6 +513,49 @@ class SmmStateStore {
       this.reconcilePendingOrders();
       this.syncOrdersStatus(true);
     } catch (e) {}
+  }
+
+  // Background sync Supabase global settings for all visitors
+  async syncGlobalSiteSettings() {
+    if (!window.supabaseClient) return;
+    try {
+      const { data: settingsData, error } = await window.supabaseClient
+        .from('site_settings')
+        .select('*');
+
+      if (settingsData && Array.isArray(settingsData) && !error) {
+        let changed = false;
+        settingsData.forEach(item => {
+          if (item.key === 'wallet_tutorial' && item.value) {
+            this.data.walletTutorial = {
+              ...this.data.walletTutorial,
+              ...item.value
+            };
+            try { localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial)); } catch(e){}
+            changed = true;
+          } else if (item.key === 'earn_tutorial' && item.value) {
+            this.data.earnTutorial = {
+              ...this.data.earnTutorial,
+              ...item.value
+            };
+            try { localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial)); } catch(e){}
+            changed = true;
+          } else if (item.key === 'announcement_config' && item.value) {
+            this.data.announcement = {
+              ...this.data.announcement,
+              ...item.value
+            };
+            try { localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement)); } catch(e){}
+            changed = true;
+          }
+        });
+        if (changed) {
+          this.notify();
+        }
+      }
+    } catch (err) {
+      console.warn('[LikeX Sync] Failed to sync global settings from Supabase:', err);
+    }
   }
 
   // Get all master orders across the entire system

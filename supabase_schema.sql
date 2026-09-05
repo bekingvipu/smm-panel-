@@ -215,6 +215,13 @@ VALUES
 ('TXN-904', 1, 'Refund', 'Refund for Order #44975 (Canceled Upstream)', 45.00, 158.00, 'Success')
 ON CONFLICT (id) DO NOTHING;
 
+-- 10. SITE SETTINGS TABLE (Cloud Sync for Video Tutorials, Announcements, & App Config)
+CREATE TABLE IF NOT EXISTS public.site_settings (
+    key VARCHAR(100) PRIMARY KEY,
+    value JSONB NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- =========================================================
 -- ROW-LEVEL SECURITY (RLS) - FIX SECURITY VULNERABILITIES
 -- Resolves Supabase error: rls_disabled_in_public
@@ -231,6 +238,7 @@ ALTER TABLE public.refill_requests ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.wallet_transactions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_tickets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.support_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 
 -- 1. Users policies (Allows app login, admin check and user registration)
 DROP POLICY IF EXISTS "Public access to users" ON public.users;
@@ -272,3 +280,7 @@ CREATE POLICY "Public access support tickets" ON public.support_tickets FOR ALL 
 
 DROP POLICY IF EXISTS "Public access support messages" ON public.support_messages;
 CREATE POLICY "Public access support messages" ON public.support_messages FOR ALL USING (true) WITH CHECK (true);
+
+-- 10. Site Settings (Cloud Sync for Admin Configs)
+DROP POLICY IF EXISTS "Public access site settings" ON public.site_settings;
+CREATE POLICY "Public access site settings" ON public.site_settings FOR ALL USING (true) WITH CHECK (true);
