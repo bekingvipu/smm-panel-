@@ -932,10 +932,10 @@ const CustomerApp = {
           </select>
 
           <!-- Custom Category Trigger Card -->
-          <div class="custom-dropdown-card" id="custom-cat-trigger-card" onclick="CustomerApp.toggleCategoryDropdown(event)">
+          <div class="custom-dropdown-card ${(this.currentCategory || '').toLowerCase().includes('likex special') ? 'likex-special-trigger' : ''}" id="custom-cat-trigger-card" onclick="CustomerApp.toggleCategoryDropdown(event)">
             <div class="custom-dropdown-trigger">
               <div class="custom-dropdown-value" id="custom-cat-selected-text">
-                <span style="font-size: 16px; flex-shrink: 0; line-height: 1;">📂</span>
+                <span style="font-size: 16px; flex-shrink: 0; line-height: 1;">${(this.currentCategory || '').toLowerCase().includes('likex special') ? '⭐' : '📂'}</span>
                 <span class="custom-dropdown-title" style="font-size: 14px; font-weight: 800;">${this.currentCategory || 'Select Category'}</span>
               </div>
               <svg class="custom-dropdown-chevron" id="custom-cat-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -948,10 +948,14 @@ const CustomerApp = {
               ${categories.map(c => {
                 const count = filteredServices.filter(s => s.category === c).length;
                 const isSelected = c === this.currentCategory;
+                const isSpecial = c.toLowerCase().includes('likex special') || c.toLowerCase().includes('special very good');
                 return `
-                  <div class="custom-dropdown-item ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectCategoryItem(event, '${c.replace(/'/g, "\\'")}')">
-                    <span class="custom-item-text">📂 ${c}</span>
-                    <span class="custom-item-count">(${count})</span>
+                  <div class="custom-dropdown-item ${isSpecial ? 'likex-special-category-item' : ''} ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectCategoryItem(event, '${c.replace(/'/g, "\\'")}')">
+                    <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap;">
+                      <span class="custom-item-text" style="${isSpecial ? 'font-weight: 900; color: inherit;' : ''}">📁 ${c}</span>
+                      ${isSpecial ? `<span class="likex-special-pill">⭐ VIP CHOICE</span>` : ''}
+                    </div>
+                    <span class="custom-item-count ${isSpecial ? 'special-count' : ''}">(${count})</span>
                   </div>
                 `;
               }).join('')}

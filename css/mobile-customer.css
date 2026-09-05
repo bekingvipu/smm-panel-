@@ -2077,6 +2077,18 @@
   transform: scale(0.99);
 }
 
+.likex-special-trigger .custom-dropdown-trigger {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), rgba(99, 102, 241, 0.05), var(--bg-surface));
+  border-color: rgba(245, 158, 11, 0.45);
+  box-shadow: 0 3px 12px rgba(245, 158, 11, 0.12);
+}
+
+[data-theme="dark"] .likex-special-trigger .custom-dropdown-trigger {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(99, 102, 241, 0.12), rgba(23, 25, 42, 0.95));
+  border-color: rgba(251, 191, 36, 0.5);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.22);
+}
+
 .custom-dropdown-value {
   display: flex;
   flex-direction: row;
@@ -2198,6 +2210,64 @@
   font-weight: 800;
   border-color: rgba(99, 102, 241, 0.3) !important;
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
+}
+
+/* 🌟 Distinctive Glowing Amber Highlight for LikeX Special Category */
+.custom-dropdown-item.likex-special-category-item {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(217, 119, 6, 0.06), rgba(99, 102, 241, 0.08)) !important;
+  border: 1.5px solid rgba(245, 158, 11, 0.42) !important;
+  color: #B45309 !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.12) !important;
+  margin-bottom: 4px;
+}
+
+[data-theme="dark"] .custom-dropdown-item.likex-special-category-item {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(217, 119, 6, 0.12), rgba(99, 102, 241, 0.16)) !important;
+  border-color: rgba(251, 191, 36, 0.55) !important;
+  color: #FDE68A !important;
+  box-shadow: 0 4px 18px rgba(245, 158, 11, 0.25) !important;
+}
+
+.custom-dropdown-item.likex-special-category-item:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(99, 102, 241, 0.12)) !important;
+  border-color: #D97706 !important;
+  transform: translateY(-1px);
+}
+
+.custom-dropdown-item.likex-special-category-item.selected {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(217, 119, 6, 0.14)) !important;
+  border-color: #D97706 !important;
+  color: #92400E !important;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.25) !important;
+}
+
+[data-theme="dark"] .custom-dropdown-item.likex-special-category-item.selected {
+  color: #FCD34D !important;
+  border-color: #F59E0B !important;
+}
+
+.likex-special-pill {
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #F59E0B, #D97706);
+  color: #FFFFFF;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.35);
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  text-transform: uppercase;
+}
+
+.custom-item-count.special-count {
+  font-weight: 800;
+  color: #D97706;
+}
+
+[data-theme="dark"] .custom-item-count.special-count {
+  color: #FCD34D;
 }
 
 .cat-check-icon {
