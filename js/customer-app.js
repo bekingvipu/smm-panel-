@@ -2540,6 +2540,12 @@ const CustomerApp = {
                     class="wallet-video-iframe"
                   ></iframe>
                 </div>
+                <div style="margin-top: 10px; display: flex; justify-content: center;">
+                  <a href="${tutorial.videoUrl || 'https://www.youtube.com/watch?v=NeXbmEnpSz0'}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; border-radius: 9999px; padding: 6px 14px; text-decoration: none;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    <span>Watch in YouTube App ↗</span>
+                  </a>
+                </div>
               ` : `
                 <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Scan the QR above, pay via UPI, and paste the 12-digit UTR to get instant funds!', 'info')">
                   <div class="wallet-video-play-btn">
@@ -2964,6 +2970,12 @@ const CustomerApp = {
                 allowfullscreen
                 class="wallet-video-iframe"
               ></iframe>
+            </div>
+            <div style="margin-top: 10px; display: flex; justify-content: center;">
+              <a href="${videoUrlToUse.startsWith('http') ? videoUrlToUse : 'https://www.youtube.com/watch?v=' + videoUrlToUse}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; border-radius: 9999px; padding: 6px 14px; text-decoration: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                <span>Watch in YouTube App ↗</span>
+              </a>
             </div>
           ` : `
             <div class="wallet-video-placeholder earn-video-placeholder" onclick="window.store.showToast('💡 Video tutorial will be uploaded soon by admin! Follow the interactive blueprint below.', 'info')">
