@@ -137,11 +137,22 @@ class SmmStateStore {
         enabled: true,
         videoUrl: '',
         title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
-        description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
-      };
+    // Initialize Live Provider Rates Auto-Sync Engine
+    try {
+      const savedRates = localStorage.getItem('likex_live_rates_cache');
+      this.liveRatesCache = savedRates ? JSON.parse(savedRates) : {};
+    } catch (e) {
+      this.liveRatesCache = {};
     }
+    this.lastRatesSyncTime = Number(localStorage.getItem('likex_last_rates_sync_time') || 0);
+    this.isSyncingLiveRates = false;
 
     this.initServerSync();
+
+    // Recurring automatic background sync of live provider rates every 30 minutes
+    setInterval(() => {
+      this.syncLiveRates(false);
+    }, 30 * 60 * 1000);
   }
 
   extractYouTubeEmbedUrl(url) {
@@ -264,6 +275,78 @@ class SmmStateStore {
     return 'other';
   }
 
+  // Retrieve live rate override from auto-sync cache if available
+  getLiveRateInfo(serviceId, rawId = null) {
+    if (!this.liveRatesCache) return null;
+    const sId = String(serviceId);
+    const rId = rawId ? String(rawId) : '';
+    
+    if (this.liveRatesCache[sId]) return this.liveRatesCache[sId];
+    if (rId && this.liveRatesCache[rId]) return this.liveRatesCache[rId];
+    if (sId.startsWith('wos-') && this.liveRatesCache[sId.replace('wos-', '')]) {
+      return this.liveRatesCache[sId.replace('wos-', '')];
+    }
+    if (sId.startsWith('jap-') && this.liveRatesCache[sId.replace('jap-', '')]) {
+      return this.liveRatesCache[sId.replace('jap-', '')];
+    }
+    return null;
+  }
+
+  // Live Auto-Rate Sync Engine: Silently pulls real-time wholesale rates from upstream provider APIs
+  async syncLiveRates(force = false) {
+    const now = Date.now();
+    // Cache for 30 minutes unless forced
+    if (!force && this.lastRatesSyncTime && (now - this.lastRatesSyncTime < 30 * 60 * 1000) && Object.keys(this.liveRatesCache || {}).length > 0) {
+      return { success: true, cached: true, count: Object.keys(this.liveRatesCache).length };
+    }
+
+    if (this.isSyncingLiveRates) return { success: false, busy: true };
+    this.isSyncingLiveRates = true;
+
+    let updatedCount = 0;
+    try {
+      const res = await fetch('/api/provider?action=services&provider=worldofsmm');
+      if (res.ok) {
+        const liveServices = await res.json();
+        if (Array.isArray(liveServices) && liveServices.length > 0) {
+          liveServices.forEach(s => {
+            const rawId = String(s.service || s.id);
+            const wosId = `wos-${rawId}`;
+            const rate = parseFloat(s.rate || s.cost || 0);
+            if (rate > 0) {
+              const rateData = {
+                rate: rate,
+                min: parseInt(s.min || 10, 10),
+                max: parseInt(s.max || 1000000, 10),
+                refill: Boolean(s.refill),
+                cancel: Boolean(s.cancel),
+                updatedAt: now
+              };
+              this.liveRatesCache[rawId] = rateData;
+              this.liveRatesCache[wosId] = rateData;
+              updatedCount++;
+            }
+          });
+        }
+      }
+
+      this.lastRatesSyncTime = now;
+      try {
+        localStorage.setItem('likex_live_rates_cache', JSON.stringify(this.liveRatesCache));
+        localStorage.setItem('likex_last_rates_sync_time', String(now));
+      } catch (e) {}
+
+      // Notify UI of updated prices across customer and admin views
+      this.notify();
+      return { success: true, updatedCount, timestamp: now };
+    } catch (err) {
+      console.warn('[LikeX Rate Sync] Error syncing live provider rates:', err);
+      return { success: false, error: err.message };
+    } finally {
+      this.isSyncingLiveRates = false;
+    }
+  }
+
   getActiveServices() {
     const base = window.JAP_SERVICES || [];
     const disabled = this.catalogCustomizations.disabledServiceIds;
@@ -275,7 +358,17 @@ class SmmStateStore {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
       if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
-        activeMap.set(sId, s);
+        const liveInfo = this.getLiveRateInfo(sId, rId);
+        const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
+        activeMap.set(sId, {
+          ...s,
+          cost: effectiveCost,
+          min: (liveInfo && liveInfo.min !== undefined) ? liveInfo.min : s.min,
+          max: (liveInfo && liveInfo.max !== undefined) ? liveInfo.max : s.max,
+          refill: (liveInfo && liveInfo.refill !== undefined) ? liveInfo.refill : s.refill,
+          cancel: (liveInfo && liveInfo.cancel !== undefined) ? liveInfo.cancel : s.cancel,
+          isLiveSynced: Boolean(liveInfo)
+        });
       }
     }
     // 2. Added/imported custom services take priority
@@ -283,7 +376,17 @@ class SmmStateStore {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
       if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
-        activeMap.set(sId, s);
+        const liveInfo = this.getLiveRateInfo(sId, rId);
+        const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
+        activeMap.set(sId, {
+          ...s,
+          cost: effectiveCost,
+          min: (liveInfo && liveInfo.min !== undefined) ? liveInfo.min : s.min,
+          max: (liveInfo && liveInfo.max !== undefined) ? liveInfo.max : s.max,
+          refill: (liveInfo && liveInfo.refill !== undefined) ? liveInfo.refill : s.refill,
+          cancel: (liveInfo && liveInfo.cancel !== undefined) ? liveInfo.cancel : s.cancel,
+          isLiveSynced: Boolean(liveInfo)
+        });
       }
     }
 
@@ -506,6 +609,11 @@ class SmmStateStore {
     try {
       this.recalculateAdminStats();
       this.syncSupabaseDataForAdmin();
+    } catch (e) {}
+
+    // Auto-sync real-time provider wholesale rates to protect profit margins
+    try {
+      this.syncLiveRates(false);
     } catch (e) {}
 
     // Auto-reconcile failed orders and sync live status
@@ -1018,21 +1126,6 @@ class SmmStateStore {
       return { success: false, message: 'Minimum 50 comments required' };
     }
 
-    let targetWholesaleCost = wholesaleCost;
-    if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
-      const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
-      const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
-      targetWholesaleCost = foundSvc ? (foundSvc.rate || foundSvc.cost || 0.20) : 0.20;
-    }
-    const unitSellingPrice = this.getSellingPrice(targetWholesaleCost);
-    const totalCost = (unitSellingPrice / 1000) * Number(quantity);
-
-    if (this.data.customer.balance < totalCost) {
-      this.showToast('Insufficient wallet balance. Please add funds.', 'error');
-      CustomerApp.openDepositModal();
-      return { success: false, message: 'Insufficient balance' };
-    }
-
     // Determine provider & raw service id
     let targetProvider = 'worldofsmm';
     let rawServiceId = serviceId;
@@ -1053,6 +1146,25 @@ class SmmStateStore {
     }
 
     const providerDisplayName = targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API');
+
+    // Dynamic Live Wholesale Rate Lookup to protect profit margin
+    let targetWholesaleCost = wholesaleCost;
+    const liveInfo = this.getLiveRateInfo(serviceId, rawServiceId);
+    if (liveInfo && liveInfo.rate > 0) {
+      targetWholesaleCost = liveInfo.rate;
+    } else if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
+      const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+      const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
+      targetWholesaleCost = foundSvc ? (foundSvc.cost || foundSvc.rate || 0.20) : 0.20;
+    }
+    const unitSellingPrice = this.getSellingPrice(targetWholesaleCost);
+    const totalCost = (unitSellingPrice / 1000) * Number(quantity);
+
+    if (this.data.customer.balance < totalCost) {
+      this.showToast('Insufficient wallet balance. Please add funds.', 'error');
+      CustomerApp.openDepositModal();
+      return { success: false, message: 'Insufficient balance' };
+    }
 
     // Sanitize target URL to prevent bot issues (strips ?igsi=..., handles @handle)
     const cleanedTarget = this.cleanTargetUrl(target);

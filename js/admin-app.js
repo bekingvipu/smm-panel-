@@ -1238,6 +1238,38 @@ const AdminApp = {
         </div>
       </div>
 
+      <!-- LIVE PROVIDER RATE AUTO-SYNC & PROFIT PROTECTION -->
+      <div class="card" style="background: var(--card-bg); border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+              🔄
+            </div>
+            <div>
+              <h4 style="font-size: 15.5px; font-weight: 800; color: var(--text-main); margin: 0;">
+                Live Provider Rate Auto-Sync & Profit Shield
+              </h4>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin: 2px 0 0;">
+                Real-time API sync protects against provider price hikes. Automatically adjusts customer selling prices so you never sell at a loss.
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span class="badge badge-success" style="font-size: 12px; padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+              Auto-Sync Active (30m)
+            </span>
+            <button class="btn btn-sm btn-primary" onclick="AdminApp.handleForceSyncLiveRates(this)" style="display: inline-flex; align-items: center; gap: 6px;">
+              <span>🔄 Sync Live Rates Now</span>
+            </button>
+          </div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--text-muted); border-top: 1px dashed var(--border-color); padding-top: 8px;">
+          <span>Last Synced: <strong>${store.lastRatesSyncTime ? new Date(store.lastRatesSyncTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending Initial Sync'}</strong></span>
+          <span>Live Synced Rates in Cache: <strong>${Object.keys(store.liveRatesCache || {}).length}</strong></span>
+        </div>
+      </div>
+
       <!-- Services Table -->
       <div class="sync-table-container" style="margin-top: 20px;">
         <table class="sync-data-table">
@@ -1298,6 +1330,25 @@ const AdminApp = {
       return;
     }
     window.store.applyGlobalMarkup(val);
+  },
+
+  async handleForceSyncLiveRates(btn) {
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳ Syncing API Rates...</span>';
+    }
+    const res = await window.store.syncLiveRates(true);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🔄 Sync Live Rates Now</span>';
+    }
+    if (res && res.success) {
+      const count = res.updatedCount || Object.keys(window.store.liveRatesCache || {}).length;
+      window.store.showToast(`✅ Successfully synced ${count} live service rates from providers!`, 'success');
+      this.render(document.getElementById('screen-container'));
+    } else {
+      window.store.showToast('⚠️ Could not sync live provider rates. Check network/API connection.', 'error');
+    }
   },
 
   // --- PROVIDER SERVICES MANAGER & BATCH ACTIONS ---
