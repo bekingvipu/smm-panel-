@@ -402,39 +402,39 @@ const CustomerApp = {
             <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">STEP 04</span>
           </div>
           <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0;">
-            Place the order on LikeX for ₹25 using your client's profile link. <br/>
-            <strong>You pocket ₹74 instant pure profit (300% margin) on every single order!</strong>
+            Place the order on LikeX for ₹89 using your client's profile link. <br/>
+            <strong>You pocket ₹210 instant pure profit (240% margin) on every single order!</strong>
           </p>
         </div>
 
         <!-- Profit Calculator Breakdown Card -->
         <div class="card" style="padding: 20px; border-radius: 20px; background: var(--bg-subtle); border: 1.5px dashed var(--primary); text-align: center;">
           <div style="font-size: 11.5px; color: var(--primary); font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;">
-            📊 Real Profit Math (Per Order)
+            📊 Real Profit Math (1,000 Followers Order)
           </div>
           
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 14px 0;">
             <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 12px;">
               <div style="font-size: 11px; color: var(--text-muted);">Client Pays</div>
-              <div style="font-size: 16px; font-weight: 900; color: var(--text-main); margin-top: 2px;">₹99</div>
+              <div style="font-size: 16px; font-weight: 900; color: var(--text-main); margin-top: 2px;">₹299</div>
             </div>
             <div style="background: var(--bg-surface); padding: 10px 6px; border-radius: 12px;">
               <div style="font-size: 11px; color: var(--text-muted);">LikeX Cost</div>
-              <div style="font-size: 16px; font-weight: 900; color: #EF4444; margin-top: 2px;">- ₹25</div>
+              <div style="font-size: 16px; font-weight: 900; color: #EF4444; margin-top: 2px;">- ₹89</div>
             </div>
             <div style="background: rgba(37, 211, 102, 0.12); border: 1px solid #25D366; padding: 10px 6px; border-radius: 12px;">
               <div style="font-size: 11px; color: #075E54; font-weight: 700;">Your Profit</div>
-              <div style="font-size: 16px; font-weight: 900; color: #128C7E; margin-top: 2px;">+ ₹74</div>
+              <div style="font-size: 16px; font-weight: 900; color: #128C7E; margin-top: 2px;">+ ₹210</div>
             </div>
           </div>
 
           <div style="background: var(--bg-surface); border-radius: 14px; padding: 12px; margin-top: 10px;">
             <div style="font-size: 12px; color: var(--text-muted);">Estimated Monthly Income Potential:</div>
             <div style="font-size: 24px; font-weight: 900; color: var(--primary); margin: 4px 0;">
-              ₹22,200 to ₹44,400 / month
+              ₹31,500 to ₹63,000 / month
             </div>
             <div style="font-size: 11.5px; color: var(--text-secondary);">
-              (Calculated on just 10 to 20 daily orders with zero inventory risk)
+              (Calculated on just 5 to 10 daily orders with zero inventory risk)
             </div>
           </div>
         </div>
@@ -2743,6 +2743,107 @@ const CustomerApp = {
   },
 
   // 6. HOW TO EARN MONEY / RESELLER BUSINESS MASTERCLASS (FULL PAGE)
+  earnPresets: {
+    ig_followers: { name: '1,000 Instagram HQ Refill Followers', wholesale: 89, defaultRetail: 299 },
+    ig_reels: { name: '10,000 Instagram Reel Views', wholesale: 5, defaultRetail: 99 },
+    ig_likes: { name: '1,000 Instagram Post Likes', wholesale: 9, defaultRetail: 69 },
+    yt_subs: { name: '1,000 YouTube Subscribers', wholesale: 299, defaultRetail: 1199 },
+    tg_members: { name: '1,000 Telegram Channel Members', wholesale: 55, defaultRetail: 249 }
+  },
+
+  onEarnServiceChange() {
+    const select = document.getElementById('earn-sim-service');
+    const priceInput = document.getElementById('earn-sim-price');
+    if (!select || !priceInput) return;
+    const key = select.value;
+    const preset = this.earnPresets[key] || this.earnPresets.ig_followers;
+    priceInput.value = preset.defaultRetail;
+    this.updateEarnSimulator();
+  },
+
+  setEarnMarkup(multiplier) {
+    const select = document.getElementById('earn-sim-service');
+    const priceInput = document.getElementById('earn-sim-price');
+    if (!select || !priceInput) return;
+    const key = select.value;
+    const preset = this.earnPresets[key] || this.earnPresets.ig_followers;
+    priceInput.value = Math.round(preset.wholesale * multiplier);
+    
+    document.querySelectorAll('.earn-multiplier-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    const activeBtn = document.getElementById('markup-' + multiplier + 'x');
+    if (activeBtn) activeBtn.classList.add('active');
+
+    this.updateEarnSimulator();
+  },
+
+  updateEarnSimulator() {
+    const select = document.getElementById('earn-sim-service');
+    const ordersSlider = document.getElementById('earn-sim-orders');
+    const priceInput = document.getElementById('earn-sim-price');
+    if (!select || !ordersSlider || !priceInput) return;
+
+    const key = select.value;
+    const preset = this.earnPresets[key] || this.earnPresets.ig_followers;
+    const orders = parseInt(ordersSlider.value, 10) || 5;
+    const unitWholesale = preset.wholesale;
+    const unitRetail = parseFloat(priceInput.value) || preset.defaultRetail;
+
+    const dailyRevenue = orders * unitRetail;
+    const dailyCost = orders * unitWholesale;
+    const dailyProfit = Math.max(0, dailyRevenue - dailyCost);
+    const monthlyProfit = dailyProfit * 30;
+    const marginPct = unitWholesale > 0 ? Math.round(((unitRetail - unitWholesale) / unitWholesale) * 100) : 0;
+
+    const ordersValEl = document.getElementById('earn-sim-orders-val');
+    const wholesaleValEl = document.getElementById('earn-sim-wholesale-val');
+    const dailyRevEl = document.getElementById('earn-sim-daily-rev');
+    const dailyProfitEl = document.getElementById('earn-sim-daily-profit');
+    const monthlyProfitEl = document.getElementById('earn-sim-monthly-profit');
+    const marginBadgeEl = document.getElementById('earn-sim-margin-badge');
+
+    if (ordersValEl) ordersValEl.textContent = `${orders} Client Orders / Day`;
+    if (wholesaleValEl) wholesaleValEl.textContent = `₹${dailyCost.toLocaleString('en-IN')}`;
+    if (dailyRevEl) dailyRevEl.textContent = `₹${dailyRevenue.toLocaleString('en-IN')}`;
+    if (dailyProfitEl) dailyProfitEl.textContent = `+₹${dailyProfit.toLocaleString('en-IN')}`;
+    if (monthlyProfitEl) monthlyProfitEl.textContent = `₹${monthlyProfit.toLocaleString('en-IN')} / mo`;
+    if (marginBadgeEl) marginBadgeEl.textContent = `+${marginPct}% Profit Margin 🔥`;
+  },
+
+  copyRateCardText() {
+    const rateCardText = `🌟 *OFFICIAL SOCIAL MEDIA GROWTH AGENCY RATE CARD* 🌟
+⚡ Direct High-Speed Delivery • 100% Safe & Secure
+
+📸 *INSTAGRAM SERVICES:*
+• 1,000 Real HQ Followers: ₹299 (Refill Guarantee)
+• 2,000 Real HQ Followers: ₹549
+• 5,000 Real HQ Followers: ₹1,299
+• 10,000 Viral Reel Views: ₹99
+• 50,000 Viral Reel Views: ₹299
+• 1,000 High Quality Post Likes: ₹69
+
+▶️ *YOUTUBE SERVICES:*
+• 1,000 Real Subscribers: ₹1,199 (Monetization Safe)
+• 5,000 High Retention Views: ₹699
+
+🔥 *POPULAR COMBO PACKAGES:*
+💎 *Starter Creator Pack:* 1,000 Followers + 10k Views + 500 Likes = *₹399* (Save ₹68)
+👑 *Business Authority Pack:* 5,000 Followers + 50k Views + 2,500 Likes = *₹1,499* (Save ₹248)
+
+💬 *To place an order or customize a package, reply directly to this message!*`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(rateCardText).then(() => {
+        window.store.showToast('📋 Complete Rate Card copied to clipboard! Ready to send on WhatsApp.', 'success');
+      }).catch(() => {
+        window.store.showToast('Rate card ready to share!', 'info');
+      });
+    } else {
+      window.store.showToast('📋 Rate card ready to share!', 'info');
+    }
+  },
+
   renderEarnTab(store) {
     const earnConfig = (store.data && store.data.earnTutorial) || {
       enabled: true,
@@ -2753,19 +2854,19 @@ const CustomerApp = {
     const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(earnConfig.videoUrl) : '';
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 920px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
         
         <!-- Hero Banner with Neon Glow -->
         <div class="earn-hero-banner">
           <div class="earn-hero-badge">
             <span class="earn-pulse-dot"></span>
-            <span>🔥 ZERO INVESTMENT • 300%–1000% PROFIT MARGIN</span>
+            <span>🔥 ZERO INVESTMENT • 100% REAL PROFIT BLUEPRINT</span>
           </div>
           <h1 class="earn-hero-title">
             How to Earn ₹30,000–₹1,00,000/Month with SMM Reselling
           </h1>
           <p class="earn-hero-sub">
-            Start your own automated Social Media Marketing & Creator Growth Agency in India. No technical skills, no coding, and ₹0 inventory capital required.
+            Start your own automated Social Media Marketing & Creator Growth Agency in India. Buy services at direct server wholesale rates on LikeX and resell with 250% to 1500% profit margins!
           </p>
 
           <div class="earn-hero-stats-row">
@@ -2774,8 +2875,8 @@ const CustomerApp = {
               <div class="earn-stat-lbl">Upfront Capital</div>
             </div>
             <div class="earn-stat-box">
-              <div class="earn-stat-val">300%–1000%</div>
-              <div class="earn-stat-lbl">Pure Profit Margin</div>
+              <div class="earn-stat-val">250%–1500%</div>
+              <div class="earn-stat-lbl">Real Profit Margin</div>
             </div>
             <div class="earn-stat-box">
               <div class="earn-stat-val">0–60s</div>
@@ -2806,7 +2907,7 @@ const CustomerApp = {
               ></iframe>
             </div>
           ` : `
-            <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Video tutorial will be uploaded soon by admin! Follow the step-by-step blueprint below.', 'info')">
+            <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Video tutorial will be uploaded soon by admin! Follow the interactive blueprint below.', 'info')">
               <div class="wallet-video-play-btn" style="background: linear-gradient(135deg, #4F46E5, #7C3AED);">
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               </div>
@@ -2820,15 +2921,137 @@ const CustomerApp = {
           `}
         </div>
 
-        <!-- Profit Calculator / Real Margin Examples -->
+        <!-- 🚀 INTERACTIVE LIVE PROFIT SIMULATOR (DYNAMIC CALCULATOR) -->
+        <div class="earn-sim-container">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px;">
+                <span>⚡ LIVE SIMULATOR</span>
+              </div>
+              <h3 style="font-size: 20px; font-weight: 900; color: var(--text-main); margin: 2px 0 0;">
+                🧮 Interactive Reseller Profit Calculator
+              </h3>
+            </div>
+            <span id="earn-sim-margin-badge" class="badge badge-success" style="font-size: 12px; font-weight: 800; padding: 6px 12px;">
+              +236% Profit Margin 🔥
+            </span>
+          </div>
+
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+            Adjust the sliders below to see your exact daily profits and monthly income based on real LikeX server wholesale rates:
+          </p>
+
+          <div class="earn-sim-inputs-grid">
+            <!-- Select Service -->
+            <div class="earn-sim-input-box">
+              <label class="earn-sim-input-label">
+                <span>📦 Select Service Package:</span>
+              </label>
+              <select id="earn-sim-service" class="form-input" onchange="CustomerApp.onEarnServiceChange()" style="font-weight: 700; height: 46px; border-radius: 12px;">
+                <option value="ig_followers" selected>📸 1,000 Instagram HQ Followers (Wholesale ₹89)</option>
+                <option value="ig_reels">🎬 10,000 Instagram Reel Views (Wholesale ₹5)</option>
+                <option value="ig_likes">❤️ 1,000 Instagram Post Likes (Wholesale ₹9)</option>
+                <option value="yt_subs">▶️ 1,000 YouTube Subscribers (Wholesale ₹299)</option>
+                <option value="tg_members">✈️ 1,000 Telegram Members (Wholesale ₹55)</option>
+              </select>
+            </div>
+
+            <!-- Client Selling Price -->
+            <div class="earn-sim-input-box">
+              <label class="earn-sim-input-label">
+                <span>🏷️ Your Client Price (Per Order):</span>
+                <span style="font-size: 11px; color: var(--text-muted);">Quick Markup:</span>
+              </label>
+              <div style="display: flex; gap: 8px;">
+                <div style="position: relative; flex: 1;">
+                  <span style="position: absolute; left: 12px; top: 12px; font-weight: 800; color: var(--text-muted);">₹</span>
+                  <input 
+                    type="number" 
+                    id="earn-sim-price" 
+                    value="299" 
+                    min="10" 
+                    max="10000" 
+                    class="form-input" 
+                    oninput="CustomerApp.updateEarnSimulator()" 
+                    style="font-weight: 800; font-size: 16px; padding-left: 28px; height: 46px; border-radius: 12px;"
+                  />
+                </div>
+              </div>
+              <div class="earn-multiplier-pills">
+                <button type="button" class="earn-multiplier-btn" id="markup-2x" onclick="CustomerApp.setEarnMarkup(2)">2x (100% Profit)</button>
+                <button type="button" class="earn-multiplier-btn active" id="markup-3.4x" onclick="CustomerApp.setEarnMarkup(3.4)">3.4x (240% Profit)</button>
+                <button type="button" class="earn-multiplier-btn" id="markup-5x" onclick="CustomerApp.setEarnMarkup(5)">5x (400% Profit)</button>
+              </div>
+            </div>
+
+            <!-- Daily Orders Slider -->
+            <div class="earn-sim-input-box" style="grid-column: 1 / -1;">
+              <div class="earn-sim-input-label">
+                <span>👥 Daily Client Orders:</span>
+                <span id="earn-sim-orders-val" style="font-weight: 900; color: var(--primary); font-size: 14px;">5 Client Orders / Day</span>
+              </div>
+              <input 
+                type="range" 
+                id="earn-sim-orders" 
+                min="1" 
+                max="50" 
+                value="5" 
+                class="earn-sim-range-slider" 
+                oninput="CustomerApp.updateEarnSimulator()"
+              />
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); margin-top: 2px;">
+                <span>1 client (Part time)</span>
+                <span>10 clients (Regular)</span>
+                <span>25 clients (Agency)</span>
+                <span>50 clients (Power Agency)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dynamic Results Display -->
+          <div class="earn-sim-results-grid">
+            <div class="earn-sim-result-card">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">Client Pays You</span>
+              <span id="earn-sim-daily-rev" style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-top: 2px;">₹1,495</span>
+              <span style="font-size: 10.5px; color: var(--text-secondary);">Daily revenue</span>
+            </div>
+
+            <div class="earn-sim-result-card">
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 700;">LikeX Wholesale</span>
+              <span id="earn-sim-wholesale-val" style="font-size: 18px; font-weight: 900; color: #EF4444; margin-top: 2px;">- ₹445</span>
+              <span style="font-size: 10.5px; color: var(--text-secondary);">Direct server cost</span>
+            </div>
+
+            <div class="earn-sim-result-card" style="background: rgba(16, 185, 129, 0.08); border-color: rgba(16, 185, 129, 0.3);">
+              <span style="font-size: 11px; color: #047857; font-weight: 800;">Daily Net Profit</span>
+              <span id="earn-sim-daily-profit" style="font-size: 18px; font-weight: 900; color: #10B981; margin-top: 2px;">+₹1,050</span>
+              <span style="font-size: 10.5px; color: #065F46; font-weight: 700;">Direct to your UPI</span>
+            </div>
+          </div>
+
+          <!-- Highlight Monthly Card -->
+          <div class="earn-sim-monthly-card">
+            <div style="font-size: 12px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.8px;">
+              🌟 Projected Monthly Net Income
+            </div>
+            <div id="earn-sim-monthly-profit" class="earn-sim-monthly-val">
+              ₹31,500 / mo
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary);">
+              Calculated on just <strong>5 daily orders</strong> with 100% upfront UPI collection and ₹0 inventory risk!
+            </div>
+          </div>
+        </div>
+
+        <!-- Realistic Wholesale vs Retail Breakdown Cards -->
         <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
             <div>
               <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin: 0;">
-                📊 Real Profit Margin Examples (Wholesale vs Retail)
+                📊 Real Wholesale vs Retail Market Pricing
               </h3>
               <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
-                See how much pure profit you make on every single client order:
+                Actual server costs on LikeX vs standard market client pricing in India:
               </p>
             </div>
             <span class="badge badge-success" style="font-size: 12px; font-weight: 800;">
@@ -2837,29 +3060,29 @@ const CustomerApp = {
           </div>
 
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
-            <!-- Example 1 -->
+            <!-- Example 1: IG Followers -->
             <div class="profit-comparison-tile">
               <div class="profit-tile-header">
                 <span style="font-size: 20px;">📸</span>
-                <span style="font-weight: 800; font-size: 14px; color: var(--text-main);">1,000 Instagram Followers</span>
+                <span style="font-weight: 800; font-size: 14px; color: var(--text-main);">1,000 Instagram HQ Followers</span>
               </div>
               <div class="profit-calc-rows">
                 <div class="profit-row">
                   <span style="color: var(--text-muted);">LikeX Wholesale Cost:</span>
-                  <span style="font-weight: 800; color: #10B981;">₹13 – ₹25</span>
+                  <span style="font-weight: 800; color: #EF4444;">₹79 – ₹95</span>
                 </div>
                 <div class="profit-row">
                   <span style="color: var(--text-muted);">You Sell to Client at:</span>
-                  <span style="font-weight: 800; color: var(--primary);">₹199 – ₹299</span>
+                  <span style="font-weight: 800; color: var(--primary);">₹249 – ₹399</span>
                 </div>
                 <div class="profit-row total-profit-row">
                   <span style="font-weight: 800; color: var(--text-main);">Your Net Profit:</span>
-                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹174 – ₹274 (900%)</span>
+                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹170 – ₹304 (300%)</span>
                 </div>
               </div>
             </div>
 
-            <!-- Example 2 -->
+            <!-- Example 2: Reel Views -->
             <div class="profit-comparison-tile">
               <div class="profit-tile-header">
                 <span style="font-size: 20px;">🎬</span>
@@ -2868,7 +3091,7 @@ const CustomerApp = {
               <div class="profit-calc-rows">
                 <div class="profit-row">
                   <span style="color: var(--text-muted);">LikeX Wholesale Cost:</span>
-                  <span style="font-weight: 800; color: #10B981;">₹4 – ₹8</span>
+                  <span style="font-weight: 800; color: #EF4444;">₹3 – ₹7</span>
                 </div>
                 <div class="profit-row">
                   <span style="color: var(--text-muted);">You Sell to Client at:</span>
@@ -2876,12 +3099,12 @@ const CustomerApp = {
                 </div>
                 <div class="profit-row total-profit-row">
                   <span style="font-weight: 800; color: var(--text-main);">Your Net Profit:</span>
-                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹91 – ₹141 (1200%)</span>
+                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹92 – ₹142 (1500%)</span>
                 </div>
               </div>
             </div>
 
-            <!-- Example 3 -->
+            <!-- Example 3: YouTube Subscribers -->
             <div class="profit-comparison-tile">
               <div class="profit-tile-header">
                 <span style="font-size: 20px;">▶️</span>
@@ -2890,7 +3113,7 @@ const CustomerApp = {
               <div class="profit-calc-rows">
                 <div class="profit-row">
                   <span style="color: var(--text-muted);">LikeX Wholesale Cost:</span>
-                  <span style="font-weight: 800; color: #10B981;">₹220 – ₹350</span>
+                  <span style="font-weight: 800; color: #EF4444;">₹280 – ₹350</span>
                 </div>
                 <div class="profit-row">
                   <span style="color: var(--text-muted);">You Sell to Client at:</span>
@@ -2898,10 +3121,66 @@ const CustomerApp = {
                 </div>
                 <div class="profit-row total-profit-row">
                   <span style="font-weight: 800; color: var(--text-main);">Your Net Profit:</span>
-                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹779 – ₹1,149 (400%)</span>
+                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹719 – ₹1,149 (300%)</span>
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Ready-to-Send Client Rate Card & Combo Packs -->
+        <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0;">
+                📑 Ready-to-Send Client Rate Card
+              </h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
+                Share this rate card with your WhatsApp and Instagram clients to close orders easily:
+              </p>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" onclick="CustomerApp.copyRateCardText()" style="font-weight: 800; border-radius: 10px; height: 38px;">
+              📋 Copy Rate Card for WhatsApp
+            </button>
+          </div>
+
+          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 14px;">
+            <table class="earn-rate-card-table">
+              <thead>
+                <tr>
+                  <th>Package Name</th>
+                  <th>LikeX Wholesale</th>
+                  <th>Recommended Client Price</th>
+                  <th>Your Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="font-weight: 800; color: var(--text-main);">💎 Starter Creator Pack (1k Followers + 10k Views + 500 Likes)</td>
+                  <td style="color: #EF4444; font-weight: 700;">₹98</td>
+                  <td style="color: var(--primary); font-weight: 800;">₹399</td>
+                  <td style="color: #10B981; font-weight: 900;">+₹301 (300%)</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 800; color: var(--text-main);">🚀 Viral Reel Booster (50k Reel Views + 2k Likes)</td>
+                  <td style="color: #EF4444; font-weight: 700;">₹42</td>
+                  <td style="color: var(--primary); font-weight: 800;">₹299</td>
+                  <td style="color: #10B981; font-weight: 900;">+₹257 (600%)</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 800; color: var(--text-main);">👑 Business Authority Pack (5k Followers + 50k Views + 2.5k Likes)</td>
+                  <td style="color: #EF4444; font-weight: 700;">₹480</td>
+                  <td style="color: var(--primary); font-weight: 800;">₹1,499</td>
+                  <td style="color: #10B981; font-weight: 900;">+₹1,019 (210%)</td>
+                </tr>
+                <tr>
+                  <td style="font-weight: 800; color: var(--text-main);">▶️ YouTube Monetization Push (1,000 Subscribers)</td>
+                  <td style="color: #EF4444; font-weight: 700;">₹299</td>
+                  <td style="color: var(--primary); font-weight: 800;">₹1,199</td>
+                  <td style="color: #10B981; font-weight: 900;">+₹900 (300%)</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
@@ -2972,7 +3251,7 @@ const CustomerApp = {
                   📋 Copy Text
                 </button>
               </div>
-              <div id="script-1" class="script-text-content">"Hey! 👋 Loved your recent reels! We help creators boost their Instagram authority & reach with genuine active followers, likes & views. Special creator trial offer: 1,000 Real Followers for just ₹199 (instant delivery & refill guarantee). Would you like to boost your profile today?"</div>
+              <div id="script-1" class="script-text-content">"Hey! 👋 Loved your recent reels! We help creators boost their Instagram authority & reach with genuine active followers, likes & views. Special creator trial offer: 1,000 Real Followers for just ₹299 (instant delivery & refill guarantee). Would you like to boost your profile today?"</div>
             </div>
 
             <!-- Script 2 -->
@@ -2983,7 +3262,18 @@ const CustomerApp = {
                   📋 Copy Text
                 </button>
               </div>
-              <div id="script-2" class="script-text-content">"Hello team! 🌟 We noticed your business page on Instagram. High follower counts build instant customer trust and sales. We are offering a Complete Brand Credibility Package: 2,000 Followers + 500 Likes on latest 5 posts for just ₹399. Let us know if you'd like to get started!"</div>
+              <div id="script-2" class="script-text-content">"Hello team! 🌟 We noticed your business page on Instagram. High follower counts build instant customer trust and sales. We are offering a Complete Brand Credibility Package: 2,000 Followers + 500 Likes on latest 5 posts for just ₹599. Let us know if you'd like to get started!"</div>
+            </div>
+
+            <!-- Script 3 -->
+            <div class="script-template-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 800; font-size: 13.5px; color: var(--primary);">Template 3: For Friends & Freelancers</span>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.copyScriptText('script-3')" style="font-weight: 700; border-radius: 8px;">
+                  📋 Copy Text
+                </button>
+              </div>
+              <div id="script-3" class="script-text-content">"Hey bro! If you or anyone in your circle needs followers, reel views, or YouTube subscribers to grow fast, let me know! I provide direct server instant delivery at the best rates in India with non-drop refill guarantee. Drop a message anytime! 🚀"</div>
             </div>
           </div>
         </div>
@@ -3007,13 +3297,13 @@ const CustomerApp = {
             </div>
             <div class="milestone-box highlight">
               <div style="font-size: 12px; font-weight: 700; color: #4F46E5;">5 Clients / Day 🔥</div>
-              <div style="font-size: 20px; font-weight: 900; color: #4F46E5; margin: 4px 0;">₹30,000 / mo</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">₹1,000 daily profit</div>
+              <div style="font-size: 20px; font-weight: 900; color: #4F46E5; margin: 4px 0;">₹31,500 / mo</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">₹1,050 daily profit</div>
             </div>
             <div class="milestone-box highlight-gold">
               <div style="font-size: 12px; font-weight: 700; color: #D97706;">15 Clients / Day 👑</div>
-              <div style="font-size: 20px; font-weight: 900; color: #D97706; margin: 4px 0;">₹90,000 / mo</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">₹3,000 daily profit</div>
+              <div style="font-size: 20px; font-weight: 900; color: #D97706; margin: 4px 0;">₹94,500 / mo</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">₹3,150 daily profit</div>
             </div>
           </div>
         </div>

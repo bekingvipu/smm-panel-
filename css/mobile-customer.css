@@ -3250,3 +3250,170 @@
   background: rgba(245, 158, 11, 0.08);
   box-shadow: 0 4px 14px rgba(245, 158, 11, 0.18);
 }
+
+/* ==========================================================================
+   INTERACTIVE PROFIT SIMULATOR & RATE CARD STYLES
+   ========================================================================== */
+
+.earn-sim-container {
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(16, 185, 129, 0.05));
+  border: 1.5px solid rgba(99, 102, 241, 0.25);
+  border-radius: 20px;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+[data-theme="dark"] .earn-sim-container {
+  background: linear-gradient(135deg, rgba(30, 27, 75, 0.5), rgba(6, 78, 59, 0.3));
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+.earn-sim-inputs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.earn-sim-input-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.earn-sim-input-label {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--text-main);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.earn-sim-range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--border-color);
+  outline: none;
+  transition: background 0.2s ease;
+}
+
+.earn-sim-range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4F46E5, #10B981);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.earn-sim-range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+.earn-multiplier-pills {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.earn-multiplier-btn {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 999px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.earn-multiplier-btn:hover, .earn-multiplier-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(79, 70, 229, 0.3);
+}
+
+.earn-sim-results-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+}
+
+.earn-sim-result-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 12px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.earn-sim-monthly-card {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(99, 102, 241, 0.08));
+  border: 1.5px solid #10B981;
+  border-radius: 18px;
+  padding: 18px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 20px rgba(16, 185, 129, 0.12);
+}
+
+.earn-sim-monthly-val {
+  font-size: 28px;
+  font-weight: 900;
+  color: #10B981;
+  letter-spacing: -0.02em;
+  text-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+/* Rate Card Table Styles */
+.earn-rate-card-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  font-size: 13px;
+}
+
+.earn-rate-card-table th {
+  background: var(--bg-subtle);
+  padding: 12px 14px;
+  font-weight: 800;
+  color: var(--text-main);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.earn-rate-card-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+}
+
+.earn-rate-card-table tr:last-child td {
+  border-bottom: none;
+}
+
+.earn-rate-card-table tr:hover td {
+  background: var(--bg-subtle);
+}
+
