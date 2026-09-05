@@ -2299,24 +2299,29 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 2px;
+  flex-wrap: nowrap;
+  margin-top: 6px;
+  width: 100%;
 }
 
 .service-tag-badges {
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+  gap: 5px;
+  flex-shrink: 1;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .service-tag-pill {
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
-  padding: 2px 6px;
+  padding: 1.5px 5px;
   border-radius: 4px;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   text-transform: uppercase;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .service-tag-pill.cheapest {
@@ -2338,11 +2343,13 @@
 }
 
 .service-row-price {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 800;
   color: #059669;
   margin-left: auto;
   white-space: nowrap;
+  flex-shrink: 0;
+  text-align: right;
 }
 
 /* ==========================================================================

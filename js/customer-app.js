@@ -1186,20 +1186,19 @@ const CustomerApp = {
     if (!service) return [];
     const tags = [];
     const name = (service.name || '').toLowerCase();
+    const id = String(service.id || service.rawId || '');
 
-    if (name.includes('cheapest') || name.includes('lowest') || (service.cost && service.cost < 0.15)) {
+    if (name.includes('cheapest') || name.includes('lowest') || (service.cost && service.cost < 0.10)) {
       tags.push({ label: 'CHEAPEST', type: 'cheapest' });
+    } else {
+      tags.push({ label: 'BEST SELLER', type: 'fast' });
     }
-    if (name.includes('instant') || name.includes('fast') || name.includes('0-1 min') || name.includes('speed') || name.includes('views')) {
-      tags.push({ label: 'INSTANT & FAST', type: 'fast' });
-    }
+
     if (service.refill || name.includes('refill') || name.includes('r30') || name.includes('365')) {
       tags.push({ label: 'REFILL', type: 'refill' });
     }
-    if (tags.length === 0) {
-      tags.push({ label: 'BEST SELLER', type: 'fast' });
-    }
-    return tags;
+
+    return tags.slice(0, 2);
   },
 
   toggleCategoryDropdown(e) {
