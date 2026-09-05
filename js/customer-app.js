@@ -1963,60 +1963,40 @@ const CustomerApp = {
 
     return `
       <div style="display: flex; flex-direction: column; max-width: 800px; margin: 0 auto; width: 100%;">
-        <div class="orders-history-header" style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px;">
+        <div class="orders-history-header" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
           <div>
-            <h1 class="orders-history-title" style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.02em;">Orders History</h1>
-            <div style="display: flex; align-items: center; gap: 8px; margin-top: 5px;">
-              <span class="badge" style="background: rgba(108, 92, 231, 0.12); color: var(--primary); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 9999px; border: 1px solid rgba(108, 92, 231, 0.25);">
-                ${allOrders.length} Total Orders
-              </span>
-              <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-secondary); font-weight: 600;">
-                <span class="live-pulse-dot"></span>
-                <span>Live Server</span>
-              </span>
-            </div>
+            <h1 class="orders-history-title">Orders History</h1>
+            <span class="badge badge-primary" style="font-size: 13px; padding: 6px 14px; border-radius: 9999px;">
+              ${allOrders.length} Total Orders
+            </span>
           </div>
-
-          <button 
-            type="button" 
-            class="btn-sync-premium" 
-            id="btn-live-sync-orders" 
-            title="Fetch real-time order status from server" 
-            onclick="CustomerApp.triggerSyncOrders(this)"
-          >
-            <svg class="sync-svg-icon" viewBox="0 0 24 24">
-              <path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0 0 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 0 0 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/>
-            </svg>
-            <span class="sync-label">Live Status Sync</span>
+          <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700; padding: 7px 14px; border-color: var(--primary); color: var(--primary);" onclick="store.syncOrdersStatus()">
+            <span>🔄</span>
+            <span>Live Status Sync</span>
           </button>
         </div>
 
-        <div class="orders-glass-search">
-          <span class="orders-glass-icon">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-          </span>
+        <div class="orders-search-bar">
+          <span class="orders-search-icon">🔍</span>
           <input 
             type="text" 
-            class="orders-glass-input" 
-            placeholder="Search by Order ID, Service name, or Status..." 
-            value="${this.ordersSearch || ''}" 
+            class="orders-search-input" 
+            placeholder="Search by ID, Service, or Status" 
+            value="${this.ordersSearch}" 
             oninput="CustomerApp.handleOrdersSearch(this.value)" 
           />
         </div>
 
-        <div class="orders-segmented-nav">
-          <button class="orders-segmented-btn ${filter === 'all' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('all')">All (${allOrders.length})</button>
-          <button class="orders-segmented-btn ${filter === 'completed' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('completed')">Completed</button>
-          <button class="orders-segmented-btn ${filter === 'processing' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('processing')">Processing</button>
-          <button class="orders-segmented-btn ${filter === 'in_progress' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('in_progress')">In Progress</button>
+        <div class="orders-filter-chips">
+          <button class="orders-filter-pill ${filter === 'all' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('all')">All</button>
+          <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('completed')">Completed</button>
+          <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('processing')">Processing</button>
+          <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('in_progress')">In Progress</button>
         </div>
 
-        <div style="display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; flex-direction: column; gap: 4px;">
           ${allOrders.length === 0 ? `
-            <div class="card" style="text-align: center; padding: 48px 20px; border-radius: var(--radius-lg); background: var(--glass-bg); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border);">
+            <div class="card" style="text-align: center; padding: 48px 20px; border-radius: var(--radius-lg);">
               <div style="font-size: 44px; margin-bottom: 12px;">🛒</div>
               <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main);">No Orders Placed Yet</h3>
               <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 400px; margin-left: auto; margin-right: auto;">
@@ -2027,8 +2007,8 @@ const CustomerApp = {
               </button>
             </div>
           ` : filtered.length === 0 ? `
-            <div class="card" style="text-align: center; padding: 40px 20px; color: var(--text-muted); background: var(--glass-bg); backdrop-filter: var(--glass-blur); border: 1px solid var(--glass-border); border-radius: 16px;">
-              🔍 No orders found matching "<strong>${this.ordersSearch}</strong>".
+            <div class="card" style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+              No orders found matching your search.
             </div>
           ` : filtered.map(order => this.renderHistoryCard(order, store)).join('')}
         </div>
@@ -2121,27 +2101,6 @@ const CustomerApp = {
         `}
       </div>
     `;
-  },
-
-  async triggerSyncOrders(btn) {
-    if (!btn) btn = document.getElementById('btn-live-sync-orders');
-    if (btn) {
-      btn.classList.add('is-syncing');
-      const label = btn.querySelector('.sync-label');
-      if (label) label.textContent = 'Syncing...';
-    }
-
-    try {
-      await window.store.syncOrdersStatus();
-    } finally {
-      setTimeout(() => {
-        if (btn) {
-          btn.classList.remove('is-syncing');
-          const label = btn.querySelector('.sync-label');
-          if (label) label.textContent = 'Live Status Sync';
-        }
-      }, 500);
-    }
   },
 
   setOrdersFilter(filter) {
