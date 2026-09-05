@@ -97,7 +97,70 @@ class SmmStateStore {
       };
     }
 
+    // Initialize Wallet Video Tutorial Config
+    try {
+      const savedVideo = localStorage.getItem('likex_wallet_tutorial_config');
+      if (savedVideo) {
+        this.data.walletTutorial = JSON.parse(savedVideo);
+      } else {
+        this.data.walletTutorial = {
+          enabled: true,
+          videoUrl: '',
+          title: 'How to Add Funds via UPI QR & UTR',
+          description: 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
+        };
+      }
+    } catch (e) {
+      this.data.walletTutorial = {
+        enabled: true,
+        videoUrl: '',
+        title: 'How to Add Funds via UPI QR & UTR',
+        description: 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
+      };
+    }
+
     this.initServerSync();
+  }
+
+  extractYouTubeEmbedUrl(url) {
+    if (!url) return '';
+    const cleanUrl = String(url).trim();
+    if (!cleanUrl) return '';
+
+    if (cleanUrl.includes('youtube.com/embed/')) {
+      return cleanUrl;
+    }
+
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/;
+    const match = cleanUrl.match(regExp);
+
+    if (match && match[2] && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}?rel=0&modestbranding=1`;
+    }
+
+    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+      return `https://www.youtube.com/embed/${cleanUrl}?rel=0&modestbranding=1`;
+    }
+
+    if (cleanUrl.startsWith('http://') || cleanUrl.startsWith('https://')) {
+      return cleanUrl;
+    }
+
+    return '';
+  }
+
+  updateWalletTutorial(config) {
+    this.data.walletTutorial = {
+      enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
+      videoUrl: String(config.videoUrl || '').trim(),
+      title: String(config.title || 'How to Add Funds via UPI QR & UTR').trim(),
+      description: String(config.description || 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.').trim()
+    };
+    try {
+      localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial));
+    } catch (e) {}
+    this.notify();
+    this.showToast('✅ Wallet Video Tutorial settings updated successfully!', 'success');
   }
 
   updateAnnouncement(text, enabled = true) {

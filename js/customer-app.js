@@ -2449,6 +2449,78 @@ const CustomerApp = {
           </div>
         </div>
 
+        <!-- Step-by-Step Video Guide on How to Add Funds (Above Transaction History) -->
+        ${(() => {
+          const tutorial = (store.data && store.data.walletTutorial) || {
+            enabled: true,
+            videoUrl: '',
+            title: 'How to Add Funds via UPI QR & UTR',
+            description: 'Watch this quick step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
+          };
+
+          if (!tutorial.enabled) return '';
+
+          const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(tutorial.videoUrl) : '';
+
+          return `
+            <div class="wallet-video-tutorial-card">
+              <div class="wallet-video-header">
+                <div class="wallet-video-badge">
+                  <span class="wallet-video-pulse-dot"></span>
+                  <span>VIDEO GUIDE</span>
+                </div>
+                <h3 class="wallet-video-title">${tutorial.title || 'How to Add Funds to LikeX Wallet'}</h3>
+                <p class="wallet-video-subtitle">${tutorial.description || 'Watch 1-minute step-by-step tutorial to scan QR, pay via UPI, and paste 12-digit UTR.'}</p>
+              </div>
+
+              ${embedUrl ? `
+                <div class="wallet-video-embed-container">
+                  <iframe 
+                    src="${embedUrl}" 
+                    title="LikeX Wallet Deposit Video Guide" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                    allowfullscreen
+                    class="wallet-video-iframe"
+                  ></iframe>
+                </div>
+              ` : `
+                <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Scan the QR above, pay via UPI, and paste the 12-digit UTR to get instant funds!', 'info')">
+                  <div class="wallet-video-play-btn">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  </div>
+                  <div style="font-weight: 800; font-size: 14.5px; color: var(--text-main); margin-top: 10px;">
+                    Step-by-Step UPI Deposit Guide
+                  </div>
+                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 420px;">
+                    Scan the QR above ➔ Pay any amount (Min ₹10) ➔ Copy 12-digit UTR ➔ Paste in box & click Verify.
+                  </div>
+                </div>
+              `}
+
+              <!-- 4 Quick Step Pills -->
+              <div class="wallet-quick-steps-grid">
+                <div class="wallet-step-item">
+                  <div class="wallet-step-num">1</div>
+                  <div class="wallet-step-text">Scan Paytm / UPI QR above with any UPI app</div>
+                </div>
+                <div class="wallet-step-item">
+                  <div class="wallet-step-num">2</div>
+                  <div class="wallet-step-text">Pay desired amount (Min ₹10, Zero fee)</div>
+                </div>
+                <div class="wallet-step-item">
+                  <div class="wallet-step-num">3</div>
+                  <div class="wallet-step-text">Copy 12-Digit UPI UTR from payment receipt</div>
+                </div>
+                <div class="wallet-step-item">
+                  <div class="wallet-step-num">4</div>
+                  <div class="wallet-step-text">Paste UTR in box & click Verify for instant credit</div>
+                </div>
+              </div>
+            </div>
+          `;
+        })()}
+
         <div>
           <div class="section-header-row" style="margin-bottom: 14px;">
             <div class="section-title">Transaction History</div>

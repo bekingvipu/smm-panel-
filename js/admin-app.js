@@ -208,6 +208,7 @@ const AdminApp = {
 
     let contentHtml = '';
     if (tab === 'dashboard') contentHtml = this.renderDashboard(store);
+    else if (tab === 'wallet_settings') contentHtml = this.renderWalletSettings(store);
     else if (tab === 'alerts') contentHtml = this.renderAlertsManager(store);
     else if (tab === 'providers') contentHtml = this.renderProviders(store);
     else if (tab === 'provider_services') contentHtml = this.renderProviderServicesManager(store);
@@ -233,6 +234,10 @@ const AdminApp = {
             <li class="admin-nav-item ${tab === 'dashboard' ? 'active' : ''}" onclick="store.setAdminTab('dashboard')">
               <span class="nav-icon">📊</span>
               <span>Dashboard</span>
+            </li>
+            <li class="admin-nav-item ${tab === 'wallet_settings' ? 'active' : ''}" onclick="store.setAdminTab('wallet_settings')">
+              <span class="nav-icon">🎥</span>
+              <span>Wallet Video & Guide</span>
             </li>
             <li class="admin-nav-item ${tab === 'alerts' ? 'active' : ''}" onclick="store.setAdminTab('alerts')">
               <span class="nav-icon">🔔</span>
@@ -313,6 +318,7 @@ const AdminApp = {
 
   getTabTitle(tab) {
     if (tab === 'dashboard') return 'Dashboard';
+    if (tab === 'wallet_settings') return 'Wallet Video Tutorial & Payment Settings';
     if (tab === 'alerts') return 'Low Balance Alerts & Multi-Channel Gateway';
     if (tab === 'providers') return 'Provider Management';
     if (tab === 'provider_services') return 'Provider Services & Live Catalog Importer';
@@ -321,6 +327,143 @@ const AdminApp = {
     if (tab === 'orders') return 'All Orders Master Table';
     if (tab === 'support') return 'Support Ticket Queue';
     return 'Admin Console';
+  },
+
+  // WALLET VIDEO TUTORIAL & UPI SETTINGS MANAGER
+  renderWalletSettings(store) {
+    const tutorial = (store.data && store.data.walletTutorial) || {
+      enabled: true,
+      videoUrl: '',
+      title: 'How to Add Funds via UPI QR & UTR',
+      description: 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
+    };
+    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(tutorial.videoUrl) : '';
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1000px;">
+        <!-- Header Banner -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.08)); border: 1.5px solid rgba(99, 102, 241, 0.3); padding: 24px; border-radius: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.15); color: #4F46E5; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px;">
+                <span>🎥 WALLET VIDEO GUIDE</span>
+              </div>
+              <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin-top: 8px; margin-bottom: 4px;">
+                Wallet Video Tutorial Configuration
+              </h2>
+              <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
+                Paste your YouTube video link below to display it in the customer wallet tab (above Transaction History).
+              </p>
+            </div>
+            <div>
+              <button type="button" onclick="window.navigateToRoute('/')" class="btn btn-secondary" style="font-weight: 700; border-radius: 12px;">
+                👁️ View Customer Wallet
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Video Configuration Card -->
+        <div class="card" style="padding: 26px; border: 1.5px solid var(--border-color); border-radius: 20px;">
+          <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">
+            <span>⚙️</span>
+            <span>YouTube Video Tutorial Settings</span>
+          </h3>
+
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <!-- YouTube URL Input -->
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 13.5px;">
+                <span>YouTube Unlisted / Public Video URL or Video ID:</span>
+                <span class="form-label-hint">Paste unlisted link, short link, or watch URL</span>
+              </label>
+              <input 
+                type="text" 
+                id="admin-wallet-video-url" 
+                class="form-input" 
+                value="${tutorial.videoUrl || ''}" 
+                placeholder="e.g. https://youtu.be/xxxxxx or https://www.youtube.com/watch?v=xxxxxx" 
+                style="font-size: 14px; font-weight: 600; min-height: 48px; border-radius: 12px;" 
+                oninput="AdminApp.previewWalletVideoUrl(this.value)"
+              />
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                💡 <strong>Supports all YouTube formats:</strong> Unlisted link (<code>https://youtu.be/xxxx</code>), standard link (<code>https://youtube.com/watch?v=xxxx</code>), shorts, or direct 11-digit video ID.
+              </div>
+            </div>
+
+            <!-- Title & Subtitle Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 13px;">Tutorial Heading / Title:</label>
+                <input 
+                  type="text" 
+                  id="admin-wallet-video-title" 
+                  class="form-input" 
+                  value="${tutorial.title || 'How to Add Funds via UPI QR & UTR'}" 
+                  placeholder="e.g. How to Add Funds via UPI QR & UTR" 
+                  style="min-height: 46px; border-radius: 12px;" 
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 13px;">Visibility in Wallet Screen:</label>
+                <select id="admin-wallet-video-enabled" class="form-select" style="min-height: 46px; border-radius: 12px; font-weight: 700;">
+                  <option value="true" ${tutorial.enabled ? 'selected' : ''}>✅ Visible in Customer Wallet</option>
+                  <option value="false" ${!tutorial.enabled ? 'selected' : ''}>❌ Hidden / Disabled</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-weight: 700; font-size: 13px;">Description / Instructions Note:</label>
+              <textarea 
+                id="admin-wallet-video-desc" 
+                class="form-textarea" 
+                rows="2" 
+                placeholder="Short guide text to display above/under the video..." 
+                style="border-radius: 12px; font-size: 13.5px;"
+              >${tutorial.description || ''}</textarea>
+            </div>
+
+            <!-- Live Video Preview Inside Admin -->
+            <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
+              <label style="font-weight: 800; font-size: 13px; color: var(--text-main); display: block; margin-bottom: 10px;">
+                📺 Live Video Preview:
+              </label>
+              <div id="admin-video-preview-box" style="max-width: 540px; border-radius: 16px; overflow: hidden; border: 1.5px solid var(--border-color); background: #000;">
+                ${embedUrl ? `
+                  <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+                    <iframe 
+                      src="${embedUrl}" 
+                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                ` : `
+                  <div style="padding: 36px 20px; text-align: center; color: #94A3B8;">
+                    <div style="font-size: 32px; margin-bottom: 6px;">🎥</div>
+                    <div style="font-weight: 700;">No Video URL set yet</div>
+                    <div style="font-size: 12px; margin-top: 2px;">Paste a YouTube video link above to see the live preview.</div>
+                  </div>
+                `}
+              </div>
+            </div>
+
+            <!-- Save Action Button -->
+            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
+              <button 
+                type="button" 
+                class="btn btn-primary btn-lg" 
+                onclick="AdminApp.saveWalletTutorialSettings()" 
+                style="font-weight: 800; padding: 12px 32px; border-radius: 14px;"
+              >
+                💾 Save Video Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
   // DEDICATED LOW BALANCE & QUEUED ORDER ALERTS MANAGER TAB
@@ -837,6 +980,48 @@ const AdminApp = {
     const text = textEl.value.trim();
     const enabled = toggleEl.checked;
     window.store.updateAnnouncement(text, enabled);
+  },
+
+  previewWalletVideoUrl(val) {
+    const store = window.store;
+    const box = document.getElementById('admin-video-preview-box');
+    if (!box) return;
+    const embed = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(val) : '';
+    if (embed) {
+      box.innerHTML = `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+          <iframe 
+            src="${embed}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+            allowfullscreen
+          ></iframe>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="padding: 36px 20px; text-align: center; color: #94A3B8;">
+          <div style="font-size: 32px; margin-bottom: 6px;">🎥</div>
+          <div style="font-weight: 700;">No Video URL set yet</div>
+          <div style="font-size: 12px; margin-top: 2px;">Paste a YouTube video link above to see the live preview.</div>
+        </div>
+      `;
+    }
+  },
+
+  saveWalletTutorialSettings() {
+    const urlInput = document.getElementById('admin-wallet-video-url');
+    const titleInput = document.getElementById('admin-wallet-video-title');
+    const descInput = document.getElementById('admin-wallet-video-desc');
+    const enabledSelect = document.getElementById('admin-wallet-video-enabled');
+
+    const config = {
+      videoUrl: urlInput ? urlInput.value.trim() : '',
+      title: titleInput ? titleInput.value.trim() : '',
+      description: descInput ? descInput.value.trim() : '',
+      enabled: enabledSelect ? enabledSelect.value === 'true' : true
+    };
+
+    window.store.updateWalletTutorial(config);
   },
 
   saveAlertSettings() {
