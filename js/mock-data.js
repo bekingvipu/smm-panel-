@@ -95,7 +95,7 @@ window.SMM_MOCK = {
   // 2-Level Structured Services (Sub-Category -> Packages with tiered rates)
   customerServices: [
     // -------------------------------------------------------------
-    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (JAP 10323, 5994, 1837 & 6149)
+    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (JAP 10323, 5994, 1837 & WOS 6149)
     // -------------------------------------------------------------
     {
       id: 'jap-10323',
@@ -103,7 +103,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: '🌟 LikeX Special Very Good [Followers, Views, Likes & Comments]',
       customerName: '10323 - LikeX Special Very Good Instagram Followers [Max 50K] [Refill: 30D] [Speed: 6-8 Hours]',
-      pricePer1k: 0.705, // ₹67.28
+      pricePer1k: 0.4702,
       min: 10,
       max: 50000,
       deliverySpeed: '⏱️ 6 - 8 Hours (Up to 100K/D)',
@@ -112,8 +112,8 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: '🌟 LikeX Special Very Good Quality Followers connected directly via JustAnotherPanel (JAP). 30-Day auto-refill guarantee.',
       japId: '10323',
-      wholesaleCost: 0.705, // ₹67.28 wholesale
-      markupPercent: 0,
+      wholesaleCost: 0.4702,
+      markupPercent: 50,
       provider: 'jap'
     },
     {
@@ -122,7 +122,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: '🌟 LikeX Special Very Good [Followers, Views, Likes & Comments]',
       customerName: '5994 - LikeX Special Instagram Views [Max: 10M] [Start Time: 0-1 Hour] [Speed: 200K/D]',
-      pricePer1k: 0.001485, // ₹0.14
+      pricePer1k: 0.00099,
       min: 100,
       max: 10000000,
       deliverySpeed: '⚡ Instant (0 - 15m)',
@@ -131,8 +131,8 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: '🌟 LikeX Special Ultra-Fast Instagram Views connected directly via JustAnotherPanel (JAP). High speed up to 200K/Day.',
       japId: '5994',
-      wholesaleCost: 0.001485, // ₹0.14 wholesale
-      markupPercent: 0,
+      wholesaleCost: 0.00099,
+      markupPercent: 50,
       provider: 'jap'
     },
     {
@@ -141,7 +141,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: '🌟 LikeX Special Very Good [Followers, Views, Likes & Comments]',
       customerName: '1837 - LikeX Special Instagram Likes [Refill: No] [Max: 1M] [Start Time: 0-1 Hr] [Speed: Up to 300K/D]',
-      pricePer1k: 0.0409, // ₹3.90
+      pricePer1k: 0.0272,
       min: 10,
       max: 1000000,
       deliverySpeed: '⚡ Instant (0 - 1 Hr)',
@@ -150,28 +150,27 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: '🌟 LikeX Special Super Fast Instagram Likes connected directly via JustAnotherPanel (JAP). High speed up to 300K/Day.',
       japId: '1837',
-      wholesaleCost: 0.0409, // ₹3.90 wholesale
-      markupPercent: 0,
+      wholesaleCost: 0.0272,
+      markupPercent: 50,
       provider: 'jap'
     },
     {
-      id: 'jap-6149',
+      id: 'wos-6149',
       rawId: '6149',
       platform: 'instagram',
       subcategory: '🌟 LikeX Special Very Good [Followers, Views, Likes & Comments]',
-      customerName: '6149 - 🇮🇳LikeX Special Instagram Custom comments [Indian] 2k/day [Non drop]',
-      pricePer1k: 0.68835, // ₹65.66
+      customerName: '6149 - 🇮🇳Instagram Custom comments [Indian] 2k/day [Non drop]',
+      pricePer1k: 0.45889,
       min: 10,
       max: 10000,
       deliverySpeed: '⚡ Instant - 2K/Day [Non drop]',
       startTime: '0 - 1 Hour',
       refillSupported: false,
       refillPeriod: 'None',
-      description: '🌟 LikeX Special Real Indian Custom Comments connected directly via JustAnotherPanel (JAP). 2K/Day Non drop.',
-      japId: '6149',
-      wholesaleCost: 0.68835, // ₹65.66 wholesale
-      markupPercent: 0,
-      provider: 'jap'
+      description: '🌟 LikeX Special Real Indian Custom Comments connected directly via WorldOfSMM. 2K/Day Non drop.',
+      wholesaleCost: 0.45889,
+      markupPercent: 50,
+      provider: 'worldofsmm'
     },
 
     // -------------------------------------------------------------
