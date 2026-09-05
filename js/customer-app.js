@@ -2627,7 +2627,7 @@ const CustomerApp = {
     const recentOrders = store.data.orders || [];
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 720px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
+      <div style="display: flex; flex-direction: column; gap: 14px; max-width: 720px; margin: 0 auto; width: 100%; padding-bottom: 24px;">
         
         <!-- Sleek & Compact Hero Card -->
         <div class="card" style="text-align: center; background: linear-gradient(145deg, rgba(42, 171, 238, 0.06), rgba(37, 211, 102, 0.06)); border: 1px solid rgba(42, 171, 238, 0.25); border-radius: 20px; padding: 18px 16px; box-shadow: var(--shadow-sm); position: relative;">
@@ -2828,45 +2828,56 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Centered Official Contact Channels Footer -->
-        <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; background: var(--bg-surface);">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; align-items: center;">
-            <div style="padding: 8px;">
-              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
-                ✈️ Official Telegram Support
-              </div>
-              <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" style="font-size: 18px; font-weight: 900; color: #2AABEE; text-decoration: none; display: block; margin: 4px 0;">
-                @Likex_support
-              </a>
-              <div style="font-size: 11.5px; color: var(--text-secondary);">
-                Direct 1-on-1 Fast Resolution
-              </div>
+        <!-- Sleek Official Direct Contact Channels Grid -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+          <!-- Telegram Card -->
+          <a 
+            href="https://t.me/Likex_support" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="card" 
+            style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(42, 171, 238, 0.3); background: linear-gradient(135deg, rgba(42, 171, 238, 0.05), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-sm); transition: transform 0.2s;"
+          >
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(42, 171, 238, 0.15); color: #2AABEE; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+              ✈️
             </div>
+            <div style="flex: 1; min-width: 0; text-align: left;">
+              <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Telegram Support</div>
+              <div style="font-size: 14px; font-weight: 900; color: #2AABEE; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@Likex_support</div>
+            </div>
+          </a>
 
-            <div style="padding: 8px; border-left: 1px solid var(--border-color);">
-              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
-                💬 Official WhatsApp Helpline
-              </div>
-              <a href="https://wa.me/919837371137" target="_blank" rel="noopener noreferrer" style="font-size: 18px; font-weight: 900; color: #128C7E; text-decoration: none; display: block; margin: 4px 0;">
-                +91 9837371137
-              </a>
-              <div style="font-size: 11.5px; color: var(--text-secondary);">
-                Available 24 Hours • 7 Days a Week
-              </div>
+          <!-- WhatsApp Card -->
+          <a 
+            href="https://wa.me/919837371137" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="card" 
+            style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(37, 211, 102, 0.3); background: linear-gradient(135deg, rgba(37, 211, 102, 0.05), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-sm); transition: transform 0.2s;"
+          >
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(37, 211, 102, 0.15); color: #128C7E; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+              💬
             </div>
+            <div style="flex: 1; min-width: 0; text-align: left;">
+              <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">WhatsApp Helpline</div>
+              <div style="font-size: 14px; font-weight: 900; color: #128C7E; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">+91 9837371137</div>
+            </div>
+          </a>
 
-            <div style="padding: 8px; border-left: 1px solid var(--border-color);">
-              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
-                📧 Official Support Email
-              </div>
-              <a href="mailto:supporthubindia@gmail.com" style="font-size: 15px; font-weight: 900; color: #EA4335; text-decoration: none; display: block; margin: 4px 0; word-break: break-all;">
-                supporthubindia@gmail.com
-              </a>
-              <div style="font-size: 11.5px; color: var(--text-secondary);">
-                Direct Priority Inbox • 24/7 Monitored
-              </div>
+          <!-- Email Card -->
+          <a 
+            href="mailto:supporthubindia@gmail.com" 
+            class="card" 
+            style="display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 16px; border: 1px solid rgba(234, 67, 53, 0.3); background: linear-gradient(135deg, rgba(234, 67, 53, 0.05), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-sm); transition: transform 0.2s;"
+          >
+            <div style="width: 40px; height: 40px; border-radius: 12px; background: rgba(234, 67, 53, 0.15); color: #EA4335; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;">
+              📧
             </div>
-          </div>
+            <div style="flex: 1; min-width: 0; text-align: left;">
+              <div style="font-size: 10.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Official Email</div>
+              <div style="font-size: 13px; font-weight: 900; color: #EA4335; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">supporthubindia@gmail.com</div>
+            </div>
+          </a>
         </div>
 
       </div>
