@@ -1327,6 +1327,8 @@ const CustomerApp = {
         if (badge) {
           badge.className = `badge ${refill ? 'badge-success' : 'badge-neutral'}`;
           badge.textContent = refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty';
+        }
+
         const cleanId = String(id).replace(/^wos-/, '');
         const triggerBadge = document.getElementById('trigger-service-id-badge');
         if (triggerBadge) triggerBadge.textContent = cleanId;
