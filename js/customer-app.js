@@ -856,6 +856,13 @@ const CustomerApp = {
           </p>
         </div>
 
+        <!-- Trust Micro-Badges Row -->
+        <div class="order-trust-badges-row">
+          <div class="trust-pill-badge"><span>⚡</span> Instant Delivery</div>
+          <div class="trust-pill-badge"><span>🔒</span> 24/7 Automated</div>
+          <div class="trust-pill-badge"><span>⭐</span> 4.9 Rating</div>
+        </div>
+
         <!-- Clean Unified Search Bar -->
         <div class="order-search-box-wrap">
           <svg class="order-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">

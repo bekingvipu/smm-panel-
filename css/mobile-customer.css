@@ -322,7 +322,7 @@
 .platform-chips-scroll::-webkit-scrollbar { display: none; }
 
 .platform-chip {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 8px 16px;
@@ -330,18 +330,80 @@
   border: 1.5px solid var(--border-color);
   border-radius: var(--radius-full);
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--text-main);
   white-space: nowrap;
   cursor: pointer;
-  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.platform-chip:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
 }
 
 .platform-chip.active {
-  background: var(--primary);
+  background: linear-gradient(135deg, #4F46E5 0%, #6366F1 100%);
   color: #FFFFFF;
-  border-color: var(--primary);
-  box-shadow: 0 3px 8px rgba(108, 92, 231, 0.3);
+  border-color: #4F46E5;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.35);
+}
+
+.platform-chip.active[data-platform="instagram"] {
+  background: linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #FCB045 100%);
+  border-color: #FD1D1D;
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(253, 29, 29, 0.35);
+}
+
+.platform-chip.active[data-platform="instagram"] svg path {
+  fill: #FFFFFF !important;
+}
+
+.platform-chip.active[data-platform="tiktok"] {
+  background: #0F172A;
+  border-color: #00F2FE;
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(0, 242, 254, 0.25);
+}
+
+.platform-chip.active[data-platform="youtube"] {
+  background: linear-gradient(135deg, #FF0000 0%, #DC2626 100%);
+  border-color: #FF0000;
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.35);
+}
+
+.platform-chip.active[data-platform="youtube"] svg path {
+  fill: #FFFFFF !important;
+}
+
+.platform-chip.active[data-platform="telegram"] {
+  background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
+  border-color: #229ED9;
+  color: #FFFFFF;
+  box-shadow: 0 4px 16px rgba(34, 158, 217, 0.35);
+}
+
+.platform-chip.active[data-platform="telegram"] svg path {
+  fill: #FFFFFF !important;
+}
+
+.platform-chip-count {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.07);
+  color: inherit;
+  margin-left: 2px;
+}
+
+.platform-chip.active .platform-chip-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #FFFFFF;
 }
 
 /* Service Details Info Box */
@@ -1705,55 +1767,27 @@
 .order-hero-banner-pro {
   position: relative;
   text-align: center;
-  padding: 42px 24px 34px;
+  padding: 38px 24px 30px;
   border-radius: 24px;
   overflow: hidden;
   background: 
-    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(108, 92, 231, 0.16) 0%, rgba(139, 92, 246, 0.06) 55%, transparent 100%),
+    radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.18) 0%, rgba(168, 85, 247, 0.08) 45%, rgba(255, 255, 255, 0.95) 80%),
     var(--bg-surface);
-  border: 1.5px solid rgba(108, 92, 231, 0.18);
-  box-shadow: 0 12px 36px -6px rgba(108, 92, 231, 0.09), 0 2px 6px rgba(0, 0, 0, 0.02);
-  margin-bottom: 24px;
+  border: 1.5px solid rgba(99, 102, 241, 0.2);
+  box-shadow: 0 16px 40px -10px rgba(99, 102, 241, 0.16), 0 0 0 1px rgba(99, 102, 241, 0.1);
+  margin-bottom: 16px;
 }
 
 [data-theme="dark"] .order-hero-banner-pro {
   background: 
-    radial-gradient(ellipse 80% 70% at 50% 0%, rgba(108, 92, 231, 0.26) 0%, rgba(139, 92, 246, 0.1) 60%, transparent 100%),
-    rgba(23, 25, 42, 0.88);
-  border-color: rgba(139, 124, 246, 0.28);
-}
-
-/* Subtle dot grid pattern in top-left & top-right corners */
-.order-hero-banner-pro::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 140px;
-  height: 120px;
-  background-image: radial-gradient(rgba(108, 92, 231, 0.28) 1.5px, transparent 1.5px);
-  background-size: 15px 15px;
-  mask-image: radial-gradient(ellipse at 0% 0%, black 50%, transparent 85%);
-  -webkit-mask-image: radial-gradient(ellipse at 0% 0%, black 50%, transparent 85%);
-  pointer-events: none;
-}
-
-.order-hero-banner-pro::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 140px;
-  height: 120px;
-  background-image: radial-gradient(rgba(108, 92, 231, 0.28) 1.5px, transparent 1.5px);
-  background-size: 15px 15px;
-  mask-image: radial-gradient(ellipse at 100% 0%, black 50%, transparent 85%);
-  -webkit-mask-image: radial-gradient(ellipse at 100% 0%, black 50%, transparent 85%);
-  pointer-events: none;
+    radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.28) 0%, rgba(139, 92, 246, 0.12) 60%, transparent 100%),
+    rgba(23, 25, 42, 0.92);
+  border-color: rgba(139, 124, 246, 0.3);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6);
 }
 
 .order-hero-title {
-  font-size: 38px;
+  font-size: 34px;
   font-weight: 900;
   letter-spacing: -0.035em;
   color: #0F172A;
@@ -1765,37 +1799,15 @@
   color: #F8FAFC;
 }
 
-.order-hero-accent-line {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  margin-top: 10px;
-}
-
-.order-hero-accent-bar {
-  width: 48px;
-  height: 4px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #6C5CE7, #8B5CF6);
-}
-
-.order-hero-accent-dot {
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: #8B5CF6;
-}
-
 .order-hero-sub {
-  font-size: 15px;
+  font-size: 14.5px;
   color: var(--text-secondary);
-  margin-top: 12px;
+  margin-top: 10px;
   font-weight: 500;
-  max-width: 520px;
+  max-width: 500px;
   margin-left: auto;
   margin-right: auto;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .order-hero-top-row {
@@ -1812,15 +1824,59 @@
   align-items: center;
   justify-content: center;
   text-align: center;
-  background: rgba(108, 92, 231, 0.09);
-  border: 1.5px solid rgba(108, 92, 231, 0.25);
+  background: rgba(99, 102, 241, 0.1);
+  border: 1.5px solid rgba(99, 102, 241, 0.28);
   border-radius: 999px;
   padding: 6px 16px !important;
   font-size: 12px;
-  font-weight: 700;
-  color: var(--primary);
+  font-weight: 800;
+  color: #4F46E5;
   letter-spacing: 0.02em;
   line-height: 1;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.12);
+}
+
+[data-theme="dark"] .order-hero-pill-badge {
+  color: #A5B4FC;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
+/* Trust Badges Trio Row */
+.order-trust-badges-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.trust-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+}
+
+.trust-pill-badge:hover {
+  transform: translateY(-1px);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+[data-theme="dark"] .trust-pill-badge {
+  background: rgba(26, 29, 45, 0.7);
+  border-color: rgba(139, 124, 246, 0.2);
+  color: #F8FAFC;
 }
 
 /* ==========================================================================
