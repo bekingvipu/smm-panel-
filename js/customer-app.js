@@ -2854,18 +2854,18 @@ const CustomerApp = {
     const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(earnConfig.videoUrl) : '';
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 920px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
+      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 920px; margin: 0 auto; width: 100%; padding-bottom: 8px;">
         
         <!-- Hero Banner with Neon Glow -->
-        <div class="earn-hero-banner">
-          <div class="earn-hero-badge">
+        <div class="earn-hero-banner" style="text-align: center;">
+          <div class="earn-hero-badge" style="margin: 0 auto 12px;">
             <span class="earn-pulse-dot"></span>
             <span>🔥 ZERO INVESTMENT • 100% REAL PROFIT BLUEPRINT</span>
           </div>
-          <h1 class="earn-hero-title">
+          <h1 class="earn-hero-title" style="text-align: center;">
             How to Earn ₹30,000–₹1,00,000/Month with SMM Reselling
           </h1>
-          <p class="earn-hero-sub">
+          <p class="earn-hero-sub" style="text-align: center; margin-left: auto; margin-right: auto;">
             Start your own automated Social Media Marketing & Creator Growth Agency in India. Buy services at direct server wholesale rates on LikeX and resell with 250% to 1500% profit margins!
           </p>
 
@@ -2886,13 +2886,13 @@ const CustomerApp = {
         </div>
 
         <!-- Dedicated Video Tutorial Section (YouTube Unlisted / Public Player) -->
-        <div class="wallet-video-tutorial-card" style="border-color: rgba(99, 102, 241, 0.3);">
-          <div class="wallet-video-header">
-            <div class="wallet-video-badge" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1)); border-color: rgba(99, 102, 241, 0.3); color: #4F46E5;">
-              <span>🎬 VIDEO MASTERCLASS</span>
+        <div class="wallet-video-tutorial-card" style="border-color: rgba(99, 102, 241, 0.3); text-align: center;">
+          <div class="wallet-video-header" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+            <div class="wallet-video-badge" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1)); border-color: rgba(99, 102, 241, 0.3); color: #4F46E5; margin: 0 auto;">
+              <span>VIDEO MASTERCLASS</span>
             </div>
-            <h3 class="wallet-video-title">${earnConfig.title || 'How to Earn Money: Full Step-by-Step Video Tutorial'}</h3>
-            <p class="wallet-video-subtitle">${earnConfig.description || 'Watch this 2-minute video blueprint to learn how to acquire your first 10 clients and start earning instant profits directly to your UPI.'}</p>
+            <h3 class="wallet-video-title" style="text-align: center;">${earnConfig.title || 'How to Earn Money: Full Step-by-Step Video Tutorial'}</h3>
+            <p class="wallet-video-subtitle" style="text-align: center; margin: 4px auto 0;">${earnConfig.description || 'Watch this 2-minute video blueprint to learn how to acquire your first 10 clients and start earning instant profits directly to your UPI.'}</p>
           </div>
 
           ${embedUrl ? `
@@ -2923,21 +2923,19 @@ const CustomerApp = {
 
         <!-- 🚀 INTERACTIVE LIVE PROFIT SIMULATOR (DYNAMIC CALCULATOR) -->
         <div class="earn-sim-container">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-            <div>
-              <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px;">
-                <span>⚡ LIVE SIMULATOR</span>
-              </div>
-              <h3 style="font-size: 20px; font-weight: 900; color: var(--text-main); margin: 2px 0 0;">
-                🧮 Interactive Reseller Profit Calculator
-              </h3>
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px;">
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px;">
+              <span>LIVE SIMULATOR</span>
             </div>
-            <span id="earn-sim-margin-badge" class="badge badge-success" style="font-size: 12px; font-weight: 800; padding: 6px 12px;">
+            <h3 style="font-size: 20px; font-weight: 900; color: var(--text-main); margin: 0; text-align: center;">
+              Interactive Reseller Profit Calculator
+            </h3>
+            <span id="earn-sim-margin-badge" class="badge badge-success" style="font-size: 12px; font-weight: 800; padding: 5px 12px; margin-top: 2px;">
               +236% Profit Margin 🔥
             </span>
           </div>
 
-          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0; text-align: center;">
             Adjust the sliders below to see your exact daily profits and monthly income based on real LikeX server wholesale rates:
           </p>
 
@@ -2945,21 +2943,21 @@ const CustomerApp = {
             <!-- Select Service -->
             <div class="earn-sim-input-box">
               <label class="earn-sim-input-label">
-                <span>📦 Select Service Package:</span>
+                <span>Select Service Package:</span>
               </label>
               <select id="earn-sim-service" class="form-input" onchange="CustomerApp.onEarnServiceChange()" style="font-weight: 700; height: 46px; border-radius: 12px;">
-                <option value="ig_followers" selected>📸 1,000 Instagram HQ Followers (Wholesale ₹89)</option>
-                <option value="ig_reels">🎬 10,000 Instagram Reel Views (Wholesale ₹5)</option>
-                <option value="ig_likes">❤️ 1,000 Instagram Post Likes (Wholesale ₹9)</option>
-                <option value="yt_subs">▶️ 1,000 YouTube Subscribers (Wholesale ₹299)</option>
-                <option value="tg_members">✈️ 1,000 Telegram Members (Wholesale ₹55)</option>
+                <option value="ig_followers" selected>1,000 Instagram HQ Followers (Wholesale ₹89)</option>
+                <option value="ig_reels">10,000 Instagram Reel Views (Wholesale ₹5)</option>
+                <option value="ig_likes">1,000 Instagram Post Likes (Wholesale ₹9)</option>
+                <option value="yt_subs">1,000 YouTube Subscribers (Wholesale ₹299)</option>
+                <option value="tg_members">1,000 Telegram Members (Wholesale ₹55)</option>
               </select>
             </div>
 
             <!-- Client Selling Price -->
             <div class="earn-sim-input-box">
               <label class="earn-sim-input-label">
-                <span>🏷️ Your Client Price (Per Order):</span>
+                <span>Your Client Price (Per Order):</span>
                 <span style="font-size: 11px; color: var(--text-muted);">Quick Markup:</span>
               </label>
               <div style="display: flex; gap: 8px;">
@@ -2987,7 +2985,7 @@ const CustomerApp = {
             <!-- Daily Orders Slider -->
             <div class="earn-sim-input-box" style="grid-column: 1 / -1;">
               <div class="earn-sim-input-label">
-                <span>👥 Daily Client Orders:</span>
+                <span>Daily Client Orders:</span>
                 <span id="earn-sim-orders-val" style="font-weight: 900; color: var(--primary); font-size: 14px;">5 Client Orders / Day</span>
               </div>
               <input 
@@ -3032,12 +3030,12 @@ const CustomerApp = {
           <!-- Highlight Monthly Card -->
           <div class="earn-sim-monthly-card">
             <div style="font-size: 12px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.8px;">
-              🌟 Projected Monthly Net Income
+              Projected Monthly Net Income
             </div>
             <div id="earn-sim-monthly-profit" class="earn-sim-monthly-val">
               ₹31,500 / mo
             </div>
-            <div style="font-size: 12px; color: var(--text-secondary);">
+            <div style="font-size: 12px; color: var(--text-secondary); text-align: center;">
               Calculated on just <strong>5 daily orders</strong> with 100% upfront UPI collection and ₹0 inventory risk!
             </div>
           </div>
@@ -3045,16 +3043,14 @@ const CustomerApp = {
 
         <!-- Realistic Wholesale vs Retail Breakdown Cards -->
         <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
-            <div>
-              <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin: 0;">
-                📊 Real Wholesale vs Retail Market Pricing
-              </h3>
-              <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
-                Actual server costs on LikeX vs standard market client pricing in India:
-              </p>
-            </div>
-            <span class="badge badge-success" style="font-size: 12px; font-weight: 800;">
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 6px; margin-bottom: 16px;">
+            <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin: 0; text-align: center;">
+              Real Wholesale vs Retail Market Pricing
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 0; text-align: center;">
+              Actual server costs on LikeX vs standard market client pricing in India:
+            </p>
+            <span class="badge badge-success" style="font-size: 11.5px; font-weight: 800; margin-top: 4px;">
               High Profit Margin 🔥
             </span>
           </div>
@@ -3130,21 +3126,19 @@ const CustomerApp = {
 
         <!-- Ready-to-Send Client Rate Card & Combo Packs -->
         <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
-            <div>
-              <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0;">
-                📑 Ready-to-Send Client Rate Card
-              </h3>
-              <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
-                Share this rate card with your WhatsApp and Instagram clients to close orders easily:
-              </p>
-            </div>
-            <button type="button" class="btn btn-primary btn-sm" onclick="CustomerApp.copyRateCardText()" style="font-weight: 800; border-radius: 10px; height: 38px;">
-              📋 Copy Rate Card for WhatsApp
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; margin-bottom: 16px;">
+            <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0; text-align: center;">
+              Ready-to-Send Client Rate Card
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 0; text-align: center;">
+              Share this rate card with your WhatsApp and Instagram clients to close orders easily:
+            </p>
+            <button type="button" class="btn btn-primary btn-sm" onclick="CustomerApp.copyRateCardText()" style="font-weight: 800; border-radius: 10px; height: 38px; margin-top: 4px;">
+              Copy Rate Card for WhatsApp
             </button>
           </div>
 
-          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 14px;">
+          <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; margin-bottom: 6px;">
             <table class="earn-rate-card-table">
               <thead>
                 <tr>
@@ -3156,25 +3150,25 @@ const CustomerApp = {
               </thead>
               <tbody>
                 <tr>
-                  <td style="font-weight: 800; color: var(--text-main);">💎 Starter Creator Pack (1k Followers + 10k Views + 500 Likes)</td>
+                  <td style="font-weight: 800; color: var(--text-main);">Starter Creator Pack (1k Followers + 10k Views + 500 Likes)</td>
                   <td style="color: #EF4444; font-weight: 700;">₹98</td>
                   <td style="color: var(--primary); font-weight: 800;">₹399</td>
                   <td style="color: #10B981; font-weight: 900;">+₹301 (300%)</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: 800; color: var(--text-main);">🚀 Viral Reel Booster (50k Reel Views + 2k Likes)</td>
+                  <td style="font-weight: 800; color: var(--text-main);">Viral Reel Booster (50k Reel Views + 2k Likes)</td>
                   <td style="color: #EF4444; font-weight: 700;">₹42</td>
                   <td style="color: var(--primary); font-weight: 800;">₹299</td>
                   <td style="color: #10B981; font-weight: 900;">+₹257 (600%)</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: 800; color: var(--text-main);">👑 Business Authority Pack (5k Followers + 50k Views + 2.5k Likes)</td>
+                  <td style="font-weight: 800; color: var(--text-main);">Business Authority Pack (5k Followers + 50k Views + 2.5k Likes)</td>
                   <td style="color: #EF4444; font-weight: 700;">₹480</td>
                   <td style="color: var(--primary); font-weight: 800;">₹1,499</td>
                   <td style="color: #10B981; font-weight: 900;">+₹1,019 (210%)</td>
                 </tr>
                 <tr>
-                  <td style="font-weight: 800; color: var(--text-main);">▶️ YouTube Monetization Push (1,000 Subscribers)</td>
+                  <td style="font-weight: 800; color: var(--text-main);">YouTube Monetization Push (1,000 Subscribers)</td>
                   <td style="color: #EF4444; font-weight: 700;">₹299</td>
                   <td style="color: var(--primary); font-weight: 800;">₹1,199</td>
                   <td style="color: #10B981; font-weight: 900;">+₹900 (300%)</td>
@@ -3186,8 +3180,8 @@ const CustomerApp = {
 
         <!-- 4-Step Action Blueprint -->
         <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
-          <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin-bottom: 16px;">
-            🚀 The 4-Step Step-by-Step Blueprint
+          <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin-bottom: 16px; text-align: center;">
+            The 4-Step Step-by-Step Blueprint
           </h3>
 
           <div style="display: flex; flex-direction: column; gap: 14px;">
@@ -3235,10 +3229,10 @@ const CustomerApp = {
 
         <!-- Ready-to-Use WhatsApp Pitch Scripts (with 1-Click Copy) -->
         <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
-          <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-bottom: 6px;">
-            💬 Ready-to-Use Client Pitch Templates
+          <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-bottom: 6px; text-align: center;">
+            Ready-to-Use Client Pitch Templates
           </h3>
-          <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 16px;">
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 16px; text-align: center;">
             Copy and send these proven messages to creators and business owners on Instagram DM or WhatsApp:
           </p>
 
@@ -3248,7 +3242,7 @@ const CustomerApp = {
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-weight: 800; font-size: 13.5px; color: var(--primary);">Template 1: For Instagram Creators / Influencers</span>
                 <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.copyScriptText('script-1')" style="font-weight: 700; border-radius: 8px;">
-                  📋 Copy Text
+                  Copy Text
                 </button>
               </div>
               <div id="script-1" class="script-text-content">"Hey! 👋 Loved your recent reels! We help creators boost their Instagram authority & reach with genuine active followers, likes & views. Special creator trial offer: 1,000 Real Followers for just ₹299 (instant delivery & refill guarantee). Would you like to boost your profile today?"</div>
@@ -3259,7 +3253,7 @@ const CustomerApp = {
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-weight: 800; font-size: 13.5px; color: var(--primary);">Template 2: For Local Shops, Cafes & Salons</span>
                 <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.copyScriptText('script-2')" style="font-weight: 700; border-radius: 8px;">
-                  📋 Copy Text
+                  Copy Text
                 </button>
               </div>
               <div id="script-2" class="script-text-content">"Hello team! 🌟 We noticed your business page on Instagram. High follower counts build instant customer trust and sales. We are offering a Complete Brand Credibility Package: 2,000 Followers + 500 Likes on latest 5 posts for just ₹599. Let us know if you'd like to get started!"</div>
@@ -3270,7 +3264,7 @@ const CustomerApp = {
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="font-weight: 800; font-size: 13.5px; color: var(--primary);">Template 3: For Friends & Freelancers</span>
                 <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.copyScriptText('script-3')" style="font-weight: 700; border-radius: 8px;">
-                  📋 Copy Text
+                  Copy Text
                 </button>
               </div>
               <div id="script-3" class="script-text-content">"Hey bro! If you or anyone in your circle needs followers, reel views, or YouTube subscribers to grow fast, let me know! I provide direct server instant delivery at the best rates in India with non-drop refill guarantee. Drop a message anytime! 🚀"</div>
@@ -3278,48 +3272,48 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- Daily Income Roadmap / Milestones -->
+        <!-- Daily Income Roadmap / Milestones (Clean 2x2 Grid) -->
         <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(99, 102, 241, 0.04));">
-          <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-bottom: 14px;">
-            📈 Daily Income Milestones Roadmap
+          <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-bottom: 14px; text-align: center;">
+            Daily Income Milestones Roadmap
           </h3>
 
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
             <div class="milestone-box">
-              <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">1 Client / Day</div>
-              <div style="font-size: 20px; font-weight: 900; color: #10B981; margin: 4px 0;">₹6,000 / mo</div>
-              <div style="font-size: 11px; color: var(--text-muted);">₹200 daily profit</div>
+              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary);">1 Client / Day</div>
+              <div style="font-size: 18px; font-weight: 900; color: #10B981; margin: 3px 0;">₹6,000 / mo</div>
+              <div style="font-size: 10.5px; color: var(--text-muted);">₹200 daily profit</div>
             </div>
             <div class="milestone-box">
-              <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">3 Clients / Day</div>
-              <div style="font-size: 20px; font-weight: 900; color: #10B981; margin: 4px 0;">₹18,000 / mo</div>
-              <div style="font-size: 11px; color: var(--text-muted);">₹600 daily profit</div>
+              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary);">3 Clients / Day</div>
+              <div style="font-size: 18px; font-weight: 900; color: #10B981; margin: 3px 0;">₹18,000 / mo</div>
+              <div style="font-size: 10.5px; color: var(--text-muted);">₹600 daily profit</div>
             </div>
             <div class="milestone-box highlight">
-              <div style="font-size: 12px; font-weight: 700; color: #4F46E5;">5 Clients / Day 🔥</div>
-              <div style="font-size: 20px; font-weight: 900; color: #4F46E5; margin: 4px 0;">₹31,500 / mo</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">₹1,050 daily profit</div>
+              <div style="font-size: 11.5px; font-weight: 700; color: #4F46E5;">5 Clients / Day 🔥</div>
+              <div style="font-size: 18px; font-weight: 900; color: #4F46E5; margin: 3px 0;">₹31,500 / mo</div>
+              <div style="font-size: 10.5px; color: var(--text-secondary);">₹1,050 daily profit</div>
             </div>
             <div class="milestone-box highlight-gold">
-              <div style="font-size: 12px; font-weight: 700; color: #D97706;">15 Clients / Day 👑</div>
-              <div style="font-size: 20px; font-weight: 900; color: #D97706; margin: 4px 0;">₹94,500 / mo</div>
-              <div style="font-size: 11px; color: var(--text-secondary);">₹3,150 daily profit</div>
+              <div style="font-size: 11.5px; font-weight: 700; color: #D97706;">15 Clients / Day 👑</div>
+              <div style="font-size: 18px; font-weight: 900; color: #D97706; margin: 3px 0;">₹94,500 / mo</div>
+              <div style="font-size: 10.5px; color: var(--text-secondary);">₹3,150 daily profit</div>
             </div>
           </div>
         </div>
 
-        <!-- Action CTA Buttons -->
-        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
-          <button class="btn btn-primary btn-lg btn-refraction" onclick="store.setCustomerTab('new_order')" style="height: 52px; font-size: 16px; border-radius: 14px;">
-            <span>🚀 Start Reselling Now (Go to Services)</span>
+        <!-- Action CTA Buttons (Fixed Bottom Snug Spacing) -->
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 0px;">
+          <button class="btn btn-primary btn-lg btn-refraction" onclick="store.setCustomerTab('new_order')" style="height: 50px; font-size: 15.5px; border-radius: 14px;">
+            <span>Start Reselling Now (Go to Services)</span>
           </button>
           
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-            <button class="btn btn-secondary" onclick="store.setCustomerTab('wallet')" style="font-weight: 700; border-radius: 12px; height: 46px;">
-              💳 Add Funds to Wallet
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button class="btn btn-secondary" onclick="store.setCustomerTab('wallet')" style="font-weight: 700; border-radius: 12px; height: 44px; font-size: 13.5px;">
+              Add Funds to Wallet
             </button>
-            <a href="https://wa.me/919837371137?text=Hi%20LikeX%2C%20I%20want%20to%20start%20my%20SMM%20reselling%20business%20and%20need%20mentorship." target="_blank" rel="noopener noreferrer" class="btn btn-success" style="font-weight: 700; border-radius: 12px; height: 46px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <span>💬 WhatsApp VIP Help</span>
+            <a href="https://wa.me/919837371137?text=Hi%20LikeX%2C%20I%20want%20to%20start%20my%20SMM%20reselling%20business%20and%20need%20mentorship." target="_blank" rel="noopener noreferrer" class="btn btn-success" style="font-weight: 700; border-radius: 12px; height: 44px; font-size: 13.5px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>WhatsApp VIP Help</span>
             </a>
           </div>
         </div>

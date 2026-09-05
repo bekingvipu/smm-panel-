@@ -3225,8 +3225,8 @@
 .milestone-box {
   background: var(--bg-surface);
   border: 1.5px solid var(--border-color);
-  padding: 16px 14px;
-  border-radius: 16px;
+  padding: 12px 8px;
+  border-radius: 14px;
   text-align: center;
   display: flex;
   flex-direction: column;
