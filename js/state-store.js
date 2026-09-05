@@ -805,27 +805,61 @@ class SmmStateStore {
     });
   }
 
-  showToast(message, type = 'info') {
+  showToast(message, type = 'info', title = null) {
     const container = document.getElementById('toast-container');
     if (!container) return;
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     
-    let icon = 'ℹ️';
-    if (type === 'success') icon = '✅';
-    if (type === 'error') icon = '⚠️';
-    if (type === 'refill') icon = '🔄';
+    let defaultTitle = 'Notification';
+    let iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
 
-    toast.innerHTML = `<span>${icon}</span> <span>${message}</span>`;
+    if (type === 'success') {
+      defaultTitle = 'Success';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`;
+    } else if (type === 'error') {
+      defaultTitle = 'Attention';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+    } else if (type === 'warning') {
+      defaultTitle = 'Warning';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>`;
+    } else if (type === 'refill' || type === 'sync') {
+      defaultTitle = 'Live Sync';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>`;
+    }
+
+    const heading = title || defaultTitle;
+
+    toast.innerHTML = `
+      <div class="toast-icon-wrap">${iconSvg}</div>
+      <div class="toast-content">
+        <div class="toast-title">${heading}</div>
+        <div class="toast-message">${message}</div>
+      </div>
+      <button type="button" class="toast-close-btn" title="Dismiss">✕</button>
+      <div class="toast-progress-bar" style="animation-duration: 3800ms;"></div>
+    `;
+
+    const closeBtn = toast.querySelector('.toast-close-btn');
+    const dismiss = () => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(-14px) scale(0.95)';
+      setTimeout(() => toast.remove(), 250);
+    };
+
+    if (closeBtn) {
+      closeBtn.addEventListener('click', dismiss);
+    }
+
+    // Limit maximum stacked toasts to 3
+    if (container.children.length >= 3) {
+      container.firstElementChild.remove();
+    }
+
     container.appendChild(toast);
 
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(-10px)';
-      toast.style.transition = 'all 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
+    setTimeout(dismiss, 3800);
   }
 
   async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost, comments }, options = {}) {
@@ -1012,9 +1046,11 @@ class SmmStateStore {
     return { success: true, orderId: assignedOrderId, totalCost };
   }
 
-  // Live Status Synchronization from Upstream Provider
   async syncOrdersStatus(silent = false) {
-    if (!this.data.orders || this.data.orders.length === 0) return 0;
+    if (!this.data.orders || this.data.orders.length === 0) {
+      if (!silent) this.showToast('No active orders to sync yet.', 'info', 'Live Status');
+      return 0;
+    }
 
     let updatedCount = 0;
     for (const order of this.data.orders) {
@@ -1063,7 +1099,11 @@ class SmmStateStore {
       this.saveUserData();
       this.notify();
       if (!silent) {
-        this.showToast(`🔄 Synchronized ${updatedCount} orders with live server!`, 'success');
+        this.showToast(`Successfully synchronized ${updatedCount} order(s) with live upstream servers!`, 'success', 'Live Sync Complete');
+      }
+    } else {
+      if (!silent) {
+        this.showToast('All active orders are up-to-date and progressing normally! ⚡', 'success', 'Server Status Active');
       }
     }
     return updatedCount;
