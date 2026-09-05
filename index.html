@@ -42,53 +42,92 @@
   <!-- Floating Toast Notifications -->
   <div id="toast-container" class="toast-container"></div>
 
-  <!-- Floating Telegram Quick Support Button -->
-  <a 
-    href="https://t.me/Likex_support" 
-    target="_blank" 
-    rel="noopener noreferrer" 
-    class="floating-telegram-btn" 
-    id="global-telegram-support" 
-    title="Chat on Telegram (@Likex_support)"
-  >
-    <span class="tg-pulse-ring"></span>
-    <span class="tg-pulse-ring tg-pulse-ring-2"></span>
-    <span class="tg-icon-wrap">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.64 8.8C16.49 10.38 15.84 14.23 15.51 16.01C15.37 16.76 15.09 17.01 14.83 17.04C14.25 17.09 13.81 16.66 13.25 16.29C12.37 15.71 11.87 15.35 11.02 14.79C10.03 14.14 10.67 13.79 11.23 13.2C11.38 13.05 13.93 10.73 13.98 10.52C13.99 10.49 13.99 10.4 13.94 10.35C13.88 10.3 13.8 10.32 13.74 10.34C13.65 10.36 12.27 11.27 9.6 13.07C9.21 13.34 8.85 13.47 8.53 13.46C8.17 13.45 7.49 13.26 6.98 13.09C6.36 12.89 5.86 12.78 5.9 12.44C5.92 12.26 6.17 12.08 6.64 11.89C9.56 10.62 11.51 9.81 12.48 9.4C15.25 8.25 15.82 8.05 16.2 8.05C16.28 8.05 16.47 8.07 16.59 8.17C16.69 8.25 16.72 8.36 16.73 8.44C16.73 8.52 16.74 8.7 16.64 8.8Z" fill="white"/>
-      </svg>
-    </span>
-    <span class="tg-tooltip-pill">
-      <span style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 11px; color: var(--text-secondary);">Telegram VIP Support</span>
-        <span style="font-size: 12.5px; font-weight: 800; color: #0088cc;">@Likex_support</span>
-      </span>
-    </span>
-  </a>
+  <!-- Floating VIP Support Desk Widget (Telegram + WhatsApp in 1 Clean Button) -->
+  <div class="floating-support-hub" id="floating-support-hub">
+    <!-- Support Options Popup Menu -->
+    <div class="support-popup-menu" id="support-popup-menu">
+      <div class="support-popup-header">
+        <div>
+          <div class="support-live-dot-wrap">
+            <span class="support-live-dot"></span>
+            <span>24/7 VIP HELP DESK</span>
+          </div>
+          <h4 class="support-header-title">How can we help you?</h4>
+        </div>
+        <button type="button" class="support-popup-close-btn" id="support-popup-close-btn" aria-label="Close">
+          ✕
+        </button>
+      </div>
 
-  <!-- Floating WhatsApp Quick Support Button with Expanding Pulse Ring Animation -->
-  <a 
-    href="https://wa.me/919837371137?text=Hi%20SMM%20Pro%2C%20I%20need%20assistance%20with%20an%20order" 
-    target="_blank" 
-    rel="noopener noreferrer" 
-    class="floating-whatsapp-btn" 
-    id="global-whatsapp-support" 
-    title="Chat on WhatsApp (+91 9837371137)"
-  >
-    <span class="wa-pulse-ring"></span>
-    <span class="wa-pulse-ring wa-pulse-ring-2"></span>
-    <span class="wa-icon-wrap">
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-        <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.04 14.69 2 12.04 2ZM12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.59 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.44 19.65L5.27 16.62L5.07 16.3C4.24 14.98 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.67 12.05 3.67ZM8.53 7.33C8.37 7.33 8.1 7.39 7.87 7.64C7.65 7.89 7.02 8.48 7.02 9.69C7.02 10.9 7.9 12.07 8.02 12.24C8.15 12.4 9.73 14.85 12.18 15.9C14.21 16.78 14.63 16.61 15.08 16.57C15.52 16.52 16.51 15.97 16.72 15.4C16.92 14.82 16.92 14.33 16.86 14.22C16.8 14.12 16.64 14.06 16.4 13.94C16.15 13.82 14.97 13.24 14.75 13.16C14.53 13.08 14.37 13.04 14.21 13.28C14.04 13.53 13.57 14.08 13.43 14.25C13.29 14.41 13.14 14.43 12.9 14.31C12.65 14.19 11.87 13.93 10.93 13.1C10.2 12.45 9.71 11.65 9.57 11.41C9.43 11.16 9.56 11.03 9.68 10.91C9.79 10.8 9.93 10.62 10.05 10.47C10.17 10.33 10.21 10.23 10.29 10.06C10.37 9.9 10.33 9.75 10.27 9.63C10.21 9.51 9.73 8.33 9.53 7.84C9.33 7.37 9.13 7.43 8.98 7.43C8.84 7.42 8.68 7.42 8.53 7.33Z" fill="white"/>
-      </svg>
-    </span>
-    <span class="wa-tooltip-pill">
-      <span style="display: flex; flex-direction: column; text-align: left;">
-        <span style="font-size: 11px; color: var(--text-secondary);">WhatsApp VIP Support</span>
-        <span style="font-size: 12.5px; font-weight: 800; color: #128C7E;">+91 9837371137</span>
+      <div class="support-popup-body">
+        <!-- Telegram VIP Support -->
+        <a 
+          href="https://t.me/Likex_support" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="support-channel-btn support-btn-tg"
+        >
+          <div class="support-channel-icon tg-bg">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.64 8.8C16.49 10.38 15.84 14.23 15.51 16.01C15.37 16.76 15.09 17.01 14.83 17.04C14.25 17.09 13.81 16.66 13.25 16.29C12.37 15.71 11.87 15.35 11.02 14.79C10.03 14.14 10.67 13.79 11.23 13.2C11.38 13.05 13.93 10.73 13.98 10.52C13.99 10.49 13.99 10.4 13.94 10.35C13.88 10.3 13.8 10.32 13.74 10.34C13.65 10.36 12.27 11.27 9.6 13.07C9.21 13.34 8.85 13.47 8.53 13.46C8.17 13.45 7.49 13.26 6.98 13.09C6.36 12.89 5.86 12.78 5.9 12.44C5.92 12.26 6.17 12.08 6.64 11.89C9.56 10.62 11.51 9.81 12.48 9.4C15.25 8.25 15.82 8.05 16.2 8.05C16.28 8.05 16.47 8.07 16.59 8.17C16.69 8.25 16.72 8.36 16.73 8.44C16.73 8.52 16.74 8.7 16.64 8.8Z" fill="white"/>
+            </svg>
+          </div>
+          <div class="support-channel-details">
+            <span class="support-channel-name">Telegram Support</span>
+            <span class="support-channel-sub">@Likex_support • Instant 1-on-1</span>
+          </div>
+          <span class="support-arrow">→</span>
+        </a>
+
+        <!-- WhatsApp VIP Support -->
+        <a 
+          href="https://wa.me/919837371137?text=Hi%20LikeX%20Support%2C%20I%20need%20assistance%20with%20an%20order" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          class="support-channel-btn support-btn-wa"
+        >
+          <div class="support-channel-icon wa-bg">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.04 14.69 2 12.04 2ZM12.05 3.67C14.25 3.67 16.31 4.53 17.87 6.09C19.42 7.65 20.28 9.72 20.28 11.92C20.28 16.46 16.59 20.15 12.04 20.15C10.56 20.15 9.11 19.76 7.85 19.01L7.55 18.83L4.44 19.65L5.27 16.62L5.07 16.3C4.24 14.98 3.81 13.47 3.81 11.91C3.81 7.37 7.5 3.67 12.05 3.67ZM8.53 7.33C8.37 7.33 8.1 7.39 7.87 7.64C7.65 7.89 7.02 8.48 7.02 9.69C7.02 10.9 7.9 12.07 8.02 12.24C8.15 12.4 9.73 14.85 12.18 15.9C14.21 16.78 14.63 16.61 15.08 16.57C15.52 16.52 16.51 15.97 16.72 15.4C16.92 14.82 16.92 14.33 16.86 14.22C16.8 14.12 16.64 14.06 16.4 13.94C16.15 13.82 14.97 13.24 14.75 13.16C14.53 13.08 14.37 13.04 14.21 13.28C14.04 13.53 13.57 14.08 13.43 14.25C13.29 14.41 13.14 14.43 12.9 14.31C12.65 14.19 11.87 13.93 10.93 13.1C10.2 12.45 9.71 11.65 9.57 11.41C9.43 11.16 9.56 11.03 9.68 10.91C9.79 10.8 9.93 10.62 10.05 10.47C10.17 10.33 10.21 10.23 10.29 10.06C10.37 9.9 10.33 9.75 10.27 9.63C10.21 9.51 9.73 8.33 9.53 7.84C9.33 7.37 9.13 7.43 8.98 7.43C8.84 7.42 8.68 7.42 8.53 7.33Z" fill="white"/>
+            </svg>
+          </div>
+          <div class="support-channel-details">
+            <span class="support-channel-name">WhatsApp Support</span>
+            <span class="support-channel-sub">+91 9837371137 • ~90 sec reply</span>
+          </div>
+          <span class="support-arrow">→</span>
+        </a>
+      </div>
+
+      <div class="support-popup-footer">
+        <span>Prefer Email? <a href="mailto:supporthubindia@gmail.com">supporthubindia@gmail.com</a></span>
+      </div>
+    </div>
+
+    <!-- Main Single Floating Trigger Button -->
+    <button 
+      type="button" 
+      class="support-main-trigger-btn" 
+      id="support-main-trigger" 
+      aria-expanded="false" 
+      aria-label="Open 24/7 VIP Support Menu"
+      title="Open 24/7 Support Desk"
+    >
+      <span class="support-pulse-ring"></span>
+      <span class="support-pulse-ring support-pulse-ring-2"></span>
+      <span class="support-trigger-icon-wrap">
+        <span class="icon-chat-open">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </span>
+        <span class="icon-close-x">✕</span>
       </span>
-    </span>
-  </a>
+      <span class="support-tooltip-pill">
+        <span>💬 24/7 VIP Support</span>
+      </span>
+    </button>
+  </div>
 
   <!-- JavaScript Modules with Cache-Busting Versioning -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

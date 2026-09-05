@@ -104,6 +104,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Floating VIP Support Hub Interactivity (WhatsApp + Telegram Speed-Dial)
+  const supportHub = document.getElementById('floating-support-hub');
+  const supportTrigger = document.getElementById('support-main-trigger');
+  const supportCloseBtn = document.getElementById('support-popup-close-btn');
+
+  if (supportHub && supportTrigger) {
+    const toggleSupportHub = (e) => {
+      e.stopPropagation();
+      const isOpen = supportHub.classList.toggle('open');
+      supportTrigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    };
+
+    const closeSupportHub = () => {
+      supportHub.classList.remove('open');
+      supportTrigger.setAttribute('aria-expanded', 'false');
+    };
+
+    supportTrigger.addEventListener('click', toggleSupportHub);
+
+    if (supportCloseBtn) {
+      supportCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeSupportHub();
+      });
+    }
+
+    // Auto-close when clicking any support channel link
+    supportHub.querySelectorAll('.support-channel-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        setTimeout(closeSupportHub, 200);
+      });
+    });
+
+    // Close when clicking anywhere outside the hub
+    document.addEventListener('click', (e) => {
+      if (!supportHub.contains(e.target)) {
+        closeSupportHub();
+      }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeSupportHub();
+      }
+    });
+  }
+
   // Single Clean Initial Render
   renderApp(true);
 });
