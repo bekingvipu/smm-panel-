@@ -843,8 +843,8 @@ const CustomerApp = {
             <span class="order-hero-pill-badge">
               <span>Lowest Wholesale Rates Guaranteed</span>
             </span>
-            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" style="font-size: 11.5px; padding: 5px 12px; border-radius: 999px;">
-              ${activeService.refill ? '🛡️ Refill Protected' : 'Wholesale Direct'}
+            <span class="wholesale-direct-green-badge">
+              ${activeService.refill ? '🛡️ Refill Protected' : '⚡ Wholesale Direct'}
             </span>
           </div>
 

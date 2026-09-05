@@ -83,7 +83,8 @@
 }
 
 .mobile-brand-logo-img {
-  height: 28px;
+  height: 34px;
+  max-height: 36px;
   width: auto;
   object-fit: contain;
   display: block;
