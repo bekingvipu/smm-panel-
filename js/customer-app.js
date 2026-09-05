@@ -908,24 +908,48 @@ const CustomerApp = {
           </div>
         ` : ''}
 
-        <!-- Cascading Dropdown 1: Category Selection -->
-        <div class="form-group">
+        <!-- Cascading Dropdown 1: Category Selection (Custom Inline Dropdown) -->
+        <div class="form-group" style="position: relative;" id="custom-cat-dropdown-group">
           <label class="form-label">
             <span style="font-weight: 800;">1. Select Category</span>
             <span class="form-label-hint">${categories.length} Categories Available</span>
           </label>
-          <div class="select-wrapper">
-            <select class="form-input custom-select" id="new-order-category-select" onchange="CustomerApp.handleCategoryChange(this.value)">
+
+          <!-- Hidden Native Select for 100% calculation compatibility -->
+          <select id="new-order-category-select" style="display: none;" onchange="CustomerApp.handleCategoryChange(this.value)">
+            ${categories.map(c => `<option value="${c.replace(/"/g, '&quot;')}" ${c === this.currentCategory ? 'selected' : ''}>${c}</option>`).join('')}
+          </select>
+
+          <!-- Custom Category Trigger Card -->
+          <div class="custom-dropdown-card" id="custom-cat-trigger-card" onclick="CustomerApp.toggleCategoryDropdown(event)">
+            <div class="custom-dropdown-trigger">
+              <div class="custom-dropdown-value" id="custom-cat-selected-text">
+                <span>📂</span>
+                <span style="font-weight: 700;">${this.currentCategory || 'Select Category'}</span>
+              </div>
+              <svg class="custom-dropdown-chevron" id="custom-cat-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"></polyline>
+              </svg>
+            </div>
+
+            <!-- Custom Category Dropdown List (White Clean Menu) -->
+            <div class="custom-dropdown-menu" id="custom-cat-dropdown-menu" style="display: none;">
               ${categories.map(c => {
                 const count = filteredServices.filter(s => s.category === c).length;
-                return `<option value="${c.replace(/"/g, '&quot;')}" ${c === this.currentCategory ? 'selected' : ''}>📂 ${c} (${count})</option>`;
+                const isSelected = c === this.currentCategory;
+                return `
+                  <div class="custom-dropdown-item ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectCategoryItem(event, '${c.replace(/'/g, "\\'")}')">
+                    <span class="custom-item-text">📂 ${c}</span>
+                    <span class="custom-item-count">(${count})</span>
+                  </div>
+                `;
               }).join('')}
-            </select>
+            </div>
           </div>
         </div>
 
-        <!-- Cascading Dropdown 2: Specific Service Package (Rich Custom Picker matching Image 1) -->
-        <div class="form-group">
+        <!-- Cascading Dropdown 2: Specific Service Package (Custom Inline Dropdown) -->
+        <div class="form-group" style="position: relative;" id="custom-service-dropdown-group">
           <label class="form-label">
             <span style="font-weight: 800;">2. Select Service Package</span>
             <span class="form-label-hint">${activePackages.length} Options in this Category</span>
@@ -945,20 +969,46 @@ const CustomerApp = {
             }).join('')}
           </select>
 
-          <!-- Custom Rich Service Trigger Card (Matching Image 1) -->
-          <div class="custom-service-select-card" id="custom-service-select-trigger-wrap">
-            <button type="button" class="custom-service-trigger-btn" onclick="CustomerApp.openServicePackageModal()" title="Click to view & select package">
+          <!-- Custom Service Package Trigger Card -->
+          <div class="custom-dropdown-card" id="custom-service-trigger-card" onclick="CustomerApp.toggleServiceDropdown(event)">
+            <div class="custom-dropdown-trigger">
               <div class="trigger-service-info">
                 <span class="service-id-pill" id="trigger-service-id-badge">${String(activeService.rawId || activeService.id || '6808').replace(/^wos-/, '')}</span>
                 <span class="trigger-service-text" id="trigger-service-name-text">${activeService.name || 'Select Service Package'}</span>
               </div>
               <div class="trigger-right-badge">
                 <span class="trigger-service-rate" id="trigger-service-rate-text">≈ ${store.formatMoney(sellingPrice)}/1K</span>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--text-muted); margin-left: 2px;">
+                <svg class="custom-dropdown-chevron" id="custom-service-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
               </div>
-            </button>
+            </div>
+
+            <!-- Custom Service Dropdown List (White Clean Menu with ID Pills & Tags) -->
+            <div class="custom-dropdown-menu" id="custom-service-dropdown-menu" style="display: none;">
+              ${activePackages.map(s => {
+                const isSelected = String(s.id) === String(activeService.id);
+                const p = store.getSellingPrice(s.cost || 0.1);
+                const tags = this.getServiceTags(s);
+                const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '');
+                return `
+                  <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackageItem(event, '${s.id}')">
+                    <div class="service-row-top">
+                      <span class="service-row-id">${cleanId}</span>
+                      <span class="service-row-title">- ${s.name}</span>
+                    </div>
+                    <div class="service-row-bottom">
+                      <div class="service-tag-badges">
+                        ${tags.map(t => `<span class="service-tag-pill ${t.type}">${t.label}</span>`).join('')}
+                      </div>
+                      <div class="service-row-price">
+                        ≈ ${store.formatMoney(p)} per 1000
+                      </div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
           </div>
         </div>
 
@@ -1141,80 +1191,54 @@ const CustomerApp = {
     return tags;
   },
 
-  openServicePackageModal() {
-    const rawServices = window.mockServices || [];
-    const store = window.store;
-    const isExcluded = (s) => (s.name || '').toLowerCase().includes('emergency') || (s.category || '').toLowerCase().includes('emergency');
-    const filteredServices = rawServices.filter(s => {
-      if (isExcluded(s)) return false;
-      const plat = s.platform || 'other';
-      return (this.currentPlatform === 'all' || plat === this.currentPlatform);
-    });
-    const activePackages = filteredServices.filter(s => s.category === this.currentCategory);
-    if (activePackages.length === 0) return;
+  toggleCategoryDropdown(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('custom-cat-dropdown-menu');
+    const chevron = document.getElementById('custom-cat-chevron');
+    const serviceMenu = document.getElementById('custom-service-dropdown-menu');
+    const serviceChevron = document.getElementById('custom-service-chevron');
 
-    const currentSelect = document.getElementById('new-order-service-select');
-    const currentId = currentSelect ? currentSelect.value : (activePackages[0] ? activePackages[0].id : '');
+    if (serviceMenu) serviceMenu.style.display = 'none';
+    if (serviceChevron) serviceChevron.style.transform = 'rotate(0deg)';
 
-    let modal = document.getElementById('service-package-modal-backdrop');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'service-package-modal-backdrop';
-      modal.className = 'service-package-modal-backdrop';
-      modal.onclick = (e) => {
-        if (e.target === modal) CustomerApp.closeServicePackageModal();
-      };
-      document.body.appendChild(modal);
-    }
-
-    modal.innerHTML = `
-      <div class="service-package-sheet" onclick="event.stopPropagation()">
-        <div class="sheet-handle-bar"></div>
-        <div class="service-package-sheet-header">
-          <div class="service-package-sheet-title">
-            <span>📦</span>
-            <span>Select Service Package (${activePackages.length})</span>
-          </div>
-          <button type="button" class="service-package-sheet-close" onclick="CustomerApp.closeServicePackageModal()" title="Close">&times;</button>
-        </div>
-        <div class="service-package-options-list">
-          ${activePackages.map(s => {
-            const isSelected = String(s.id) === String(currentId);
-            const p = store.getSellingPrice(s.cost || 0.1);
-            const tags = this.getServiceTags(s);
-            const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '');
-            return `
-              <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackage('${s.id}')">
-                <div class="service-row-top">
-                  <span class="service-row-id">${cleanId}</span>
-                  <span class="service-row-title">- ${s.name}</span>
-                </div>
-                <div class="service-row-bottom">
-                  <div class="service-tag-badges">
-                    ${tags.map(t => `<span class="service-tag-pill ${t.type}">${t.label}</span>`).join('')}
-                  </div>
-                  <div class="service-row-price">
-                    ≈ ${store.formatMoney(p)} per 1000
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      </div>
-    `;
-
-    modal.classList.add('active');
-  },
-
-  closeServicePackageModal() {
-    const modal = document.getElementById('service-package-modal-backdrop');
-    if (modal) {
-      modal.classList.remove('active');
+    if (menu) {
+      const isVisible = menu.style.display === 'flex' || menu.style.display === 'block';
+      menu.style.display = isVisible ? 'none' : 'flex';
+      if (chevron) chevron.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
     }
   },
 
-  selectServicePackage(serviceId) {
+  selectCategoryItem(e, cat) {
+    if (e) e.stopPropagation();
+    this.currentCategory = cat;
+    const select = document.getElementById('new-order-category-select');
+    if (select) {
+      select.value = cat;
+    }
+    this.closeAllCustomDropdowns();
+    const screenContainer = document.getElementById('screen-container');
+    this.render(screenContainer);
+  },
+
+  toggleServiceDropdown(e) {
+    if (e) e.stopPropagation();
+    const menu = document.getElementById('custom-service-dropdown-menu');
+    const chevron = document.getElementById('custom-service-chevron');
+    const catMenu = document.getElementById('custom-cat-dropdown-menu');
+    const catChevron = document.getElementById('custom-cat-chevron');
+
+    if (catMenu) catMenu.style.display = 'none';
+    if (catChevron) catChevron.style.transform = 'rotate(0deg)';
+
+    if (menu) {
+      const isVisible = menu.style.display === 'flex' || menu.style.display === 'block';
+      menu.style.display = isVisible ? 'none' : 'flex';
+      if (chevron) chevron.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+    }
+  },
+
+  selectServicePackageItem(e, serviceId) {
+    if (e) e.stopPropagation();
     const serviceSelect = document.getElementById('new-order-service-select');
     if (serviceSelect) {
       serviceSelect.value = serviceId;
@@ -1231,8 +1255,30 @@ const CustomerApp = {
       if (text) text.textContent = s.name;
       const rate = document.getElementById('trigger-service-rate-text');
       if (rate) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1)) + '/1K';
+
+      const menu = document.getElementById('custom-service-dropdown-menu');
+      if (menu) {
+        menu.querySelectorAll('.service-option-row').forEach(row => {
+          row.classList.remove('selected');
+        });
+      }
+      if (e && e.currentTarget) {
+        e.currentTarget.classList.add('selected');
+      }
     }
-    this.closeServicePackageModal();
+    this.closeAllCustomDropdowns();
+  },
+
+  closeAllCustomDropdowns() {
+    const catMenu = document.getElementById('custom-cat-dropdown-menu');
+    const catChevron = document.getElementById('custom-cat-chevron');
+    if (catMenu) catMenu.style.display = 'none';
+    if (catChevron) catChevron.style.transform = 'rotate(0deg)';
+
+    const serviceMenu = document.getElementById('custom-service-dropdown-menu');
+    const serviceChevron = document.getElementById('custom-service-chevron');
+    if (serviceMenu) serviceMenu.style.display = 'none';
+    if (serviceChevron) serviceChevron.style.transform = 'rotate(0deg)';
   },
 
   handleSearch(val) {
@@ -2945,3 +2991,12 @@ const CustomerApp = {
 };
 
 window.CustomerApp = CustomerApp;
+
+// Global listener to close custom inline dropdowns on outside tap
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.custom-dropdown-container')) {
+    if (window.CustomerApp && typeof window.CustomerApp.closeAllCustomDropdowns === 'function') {
+      window.CustomerApp.closeAllCustomDropdowns();
+    }
+  }
+});
