@@ -2063,11 +2063,13 @@
 
 .custom-dropdown-value {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
   text-align: left;
   overflow: hidden;
   flex: 1;
+  min-width: 0;
   padding-right: 8px;
 }
 
@@ -2079,6 +2081,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.35;
+  flex: 1;
 }
 
 .custom-dropdown-subtitle {

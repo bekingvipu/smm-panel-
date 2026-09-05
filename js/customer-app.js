@@ -929,8 +929,8 @@ const CustomerApp = {
           <div class="custom-dropdown-card" id="custom-cat-trigger-card" onclick="CustomerApp.toggleCategoryDropdown(event)">
             <div class="custom-dropdown-trigger">
               <div class="custom-dropdown-value" id="custom-cat-selected-text">
-                <span>📂</span>
-                <span style="font-weight: 700;">${this.currentCategory || 'Select Category'}</span>
+                <span style="font-size: 16px; flex-shrink: 0; line-height: 1;">📂</span>
+                <span class="custom-dropdown-title" style="font-size: 14px; font-weight: 800;">${this.currentCategory || 'Select Category'}</span>
               </div>
               <svg class="custom-dropdown-chevron" id="custom-cat-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="6 9 12 15 18 9"></polyline>
