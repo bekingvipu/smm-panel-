@@ -838,13 +838,13 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special') || (this.currentCategory || '').toLowerCase().includes('special very good');
 
     if (isLikeXSpecial) {
-      // User-defined Flagship Order: 1. Followers (10323), 2. Views (5994), 3. Likes (1837), 4. Custom Comments (6149)
+      // User-defined Flagship Order: 1. Followers (10323), 2. Likes (1837), 3. Views (5994), 4. Custom Comments (6149)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
         const name = (s.name || '').toLowerCase();
         if (id === '10323' || (name.includes('likex special') && name.includes('follower'))) return 1;
-        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 2;
-        if (id === '1837' || (name.includes('likex special') && name.includes('like'))) return 3;
+        if (id === '1837' || (name.includes('likex special') && name.includes('like'))) return 2;
+        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 3;
         if (id === '6149' || name.includes('comment')) return 4;
         return 5;
       };
