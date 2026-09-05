@@ -87,13 +87,13 @@ class SmmStateStore {
       } else {
         this.data.announcement = {
           enabled: true,
-          text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+          text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 WhatsApp: +91 9837371137 • ✈️ Telegram: @Likex_support • 🛡️ 365-Day Refill & Drop Protection Guarantee"
         };
       }
     } catch (e) {
       this.data.announcement = {
         enabled: true,
-        text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+        text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 WhatsApp: +91 9837371137 • ✈️ Telegram: @Likex_support • 🛡️ 365-Day Refill & Drop Protection Guarantee"
       };
     }
 

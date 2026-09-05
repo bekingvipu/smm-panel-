@@ -8,7 +8,7 @@ const CustomerApp = {
   renderAnnouncementBar(store) {
     const announce = (store && store.data && store.data.announcement) || {
       enabled: true,
-      text: "⚡ Welcome to LikeX! • 👑 India's Direct Wholesale SMM & Creator Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 24/7 WhatsApp VIP Support: +91 9837371137 • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+      text: "⚡ Welcome to LikeX! • 👑 India's Direct Wholesale SMM & Creator Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 WhatsApp: +91 9837371137 • ✈️ Telegram: @Likex_support • 🛡️ 365-Day Refill & Drop Protection Guarantee"
     };
 
     if (!announce.enabled || !announce.text) return '';
@@ -2180,8 +2180,11 @@ const CustomerApp = {
             <button class="btn btn-lg" style="background: #FFFFFF; color: var(--primary); font-weight: 800; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);" onclick="store.setCustomerTab('new_order')">
               🛒 Place Your Order
             </button>
+            <a href="https://t.me/Likex_support" target="_blank" class="btn btn-secondary btn-lg" style="background: rgba(42,171,238,0.3); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
+              ✈️ Telegram VIP
+            </a>
             <a href="https://wa.me/919837371137" target="_blank" class="btn btn-secondary btn-lg" style="background: rgba(255,255,255,0.2); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
-              💬 WhatsApp VIP Support
+              💬 WhatsApp Support
             </a>
           </div>
         </div>
@@ -2618,7 +2621,7 @@ const CustomerApp = {
     `;
   },
 
-  // 5. 24/7 WHATSAPP & EMAIL LIVE SUPPORT DESK (CENTERED & ULTRA-PREMIUM)
+  // 5. 24/7 WHATSAPP, TELEGRAM & EMAIL LIVE SUPPORT DESK (CENTERED & ULTRA-PREMIUM)
   renderSupportTab(store) {
     const userEmail = store.data.isLoggedIn ? store.data.customer.email : '';
     const recentOrders = store.data.orders || [];
@@ -2627,12 +2630,12 @@ const CustomerApp = {
       <div style="display: flex; flex-direction: column; gap: 20px; max-width: 720px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
         
         <!-- Premium Hero Card (Centered) -->
-        <div class="card" style="text-align: center; background: linear-gradient(145deg, rgba(37, 211, 102, 0.08), rgba(18, 140, 126, 0.14)); border: 1.5px solid rgba(37, 211, 102, 0.4); border-radius: 24px; padding: 34px 22px; box-shadow: 0 12px 30px rgba(37, 211, 102, 0.12); position: relative; overflow: hidden;">
+        <div class="card" style="text-align: center; background: linear-gradient(145deg, rgba(42, 171, 238, 0.08), rgba(37, 211, 102, 0.09)); border: 1.5px solid rgba(42, 171, 238, 0.35); border-radius: 24px; padding: 34px 22px; box-shadow: 0 12px 30px rgba(42, 171, 238, 0.12); position: relative; overflow: hidden;">
           
           <!-- Live Status Badge -->
           <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px; background: rgba(37, 211, 102, 0.16); border: 1px solid rgba(37, 211, 102, 0.35); color: #075E54; font-size: 11.5px; font-weight: 800; padding: 6px 16px; border-radius: 999px; margin-bottom: 14px; letter-spacing: 0.5px;">
             <span style="width: 8px; height: 8px; border-radius: 50%; background: #25D366; box-shadow: 0 0 10px #25D366; display: inline-block;"></span>
-            <span>24/7 LIVE SUPPORT ACTIVE</span>
+            <span>24/7 MULTI-CHANNEL SUPPORT LIVE</span>
           </div>
 
           <!-- Main Heading -->
@@ -2641,36 +2644,49 @@ const CustomerApp = {
           </h2>
           
           <!-- Subtitle -->
-          <p style="font-size: 13.5px; color: var(--text-secondary); margin: 10px auto 0; max-width: 460px; line-height: 1.6;">
-            Need instant refill, payment verification, or order speedup? Reach our 24/7 WhatsApp VIP support or send an email to our helpdesk.
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin: 10px auto 0; max-width: 490px; line-height: 1.6;">
+            Need instant refill, payment verification, or order speedup? Reach our 24/7 Telegram VIP desk, WhatsApp helpline, or email team.
           </p>
 
           <!-- Primary Contact Actions -->
           <div style="margin-top: 22px; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px;">
             <a 
+              href="https://t.me/Likex_support" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="btn" 
+              style="background: linear-gradient(135deg, #2AABEE, #229ED9); color: #ffffff; font-weight: 800; font-size: 15px; padding: 13px 24px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 8px 24px rgba(42, 171, 238, 0.4); transition: transform 0.2s;"
+            >
+              <span style="font-size: 18px;">✈️</span>
+              <span>Telegram Support</span>
+            </a>
+
+            <a 
               href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need assistance with my account' + (userEmail ? ' (' + userEmail + ')' : ''))}" 
               target="_blank" 
               rel="noopener noreferrer" 
               class="btn" 
-              style="background: linear-gradient(135deg, #25D366, #128C7E); color: #ffffff; font-weight: 800; font-size: 15px; padding: 13px 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 8px 24px rgba(37, 211, 102, 0.4); transition: transform 0.2s;"
+              style="background: linear-gradient(135deg, #25D366, #128C7E); color: #ffffff; font-weight: 800; font-size: 15px; padding: 13px 24px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 8px 24px rgba(37, 211, 102, 0.35); transition: transform 0.2s;"
             >
-              <span style="font-size: 20px;">💬</span>
-              <span>Chat on WhatsApp</span>
+              <span style="font-size: 19px;">💬</span>
+              <span>WhatsApp VIP</span>
             </a>
 
             <a 
               href="mailto:supporthubindia@gmail.com?subject=${encodeURIComponent('LikeX Support Request' + (userEmail ? ' - ' + userEmail : ''))}" 
               class="btn" 
-              style="background: linear-gradient(135deg, #EA4335, #C5221F); color: #ffffff; font-weight: 800; font-size: 15px; padding: 13px 26px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 8px 24px rgba(234, 67, 53, 0.35); transition: transform 0.2s;"
+              style="background: linear-gradient(135deg, #EA4335, #C5221F); color: #ffffff; font-weight: 800; font-size: 15px; padding: 13px 22px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 8px 24px rgba(234, 67, 53, 0.35); transition: transform 0.2s;"
             >
-              <span style="font-size: 18px;">✉️</span>
-              <span>Email Support</span>
+              <span style="font-size: 17px;">✉️</span>
+              <span>Email</span>
             </a>
           </div>
 
           <!-- Quick Micro Info -->
           <div style="font-size: 12px; color: var(--text-muted); margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px;">
-            <span>⚡ WhatsApp: <strong>~90 sec reply</strong></span>
+            <span>✈️ Telegram: <strong>@Likex_support (~60 sec)</strong></span>
+            <span>•</span>
+            <span>💬 WhatsApp: <strong>~90 sec reply</strong></span>
             <span>•</span>
             <span>📧 Email: <strong>supporthubindia@gmail.com</strong></span>
           </div>
@@ -2679,7 +2695,29 @@ const CustomerApp = {
         <!-- Centered Quick Actions Section -->
         <div style="display: flex; flex-direction: column; gap: 16px;">
           
-          <!-- 1. Order Refill Card -->
+          <!-- 1. Telegram 1-on-1 VIP Direct Card -->
+          <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1.5px solid rgba(42, 171, 238, 0.3); background: linear-gradient(180deg, rgba(42, 171, 238, 0.04), transparent); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
+            <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(42, 171, 238, 0.14); color: #2AABEE; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.2);">
+              ✈️
+            </div>
+            <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+              Telegram 1-on-1 VIP Helpdesk
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 440px; line-height: 1.5;">
+              Connect directly with our senior support executive for instant replies, order updates & custom deals.
+            </p>
+            <a 
+              href="https://t.me/Likex_support" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="btn btn-outline btn-block"
+              style="border-color: #2AABEE; color: #2AABEE; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
+            >
+              Open Telegram (@Likex_support) →
+            </a>
+          </div>
+
+          <!-- 2. Order Refill Card -->
           <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
             <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(59, 130, 246, 0.12); color: #2563EB; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(59, 130, 246, 0.18);">
               🔄
@@ -2690,18 +2728,29 @@ const CustomerApp = {
             <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 420px; line-height: 1.5;">
               Followers or likes dropped? Send your Order ID for instant priority refill.
             </p>
-            <a 
-              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              class="btn btn-outline btn-block"
-              style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
-            >
-              Request Refill on WhatsApp →
-            </a>
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 420px; justify-content: center; flex-wrap: wrap;">
+              <a 
+                href="https://t.me/Likex_support" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-outline"
+                style="border-color: #2AABEE; color: #2AABEE; font-weight: 800; border-radius: 14px; height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; flex: 1; min-width: 170px;"
+              >
+                Refill on Telegram →
+              </a>
+              <a 
+                href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-outline"
+                style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; flex: 1; min-width: 170px;"
+              >
+                Refill on WhatsApp →
+              </a>
+            </div>
           </div>
 
-          <!-- 2. UPI & Payment Card -->
+          <!-- 3. UPI & Payment Card -->
           <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
             <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(16, 185, 129, 0.12); color: #059669; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(16, 185, 129, 0.18);">
               💳
@@ -2712,18 +2761,29 @@ const CustomerApp = {
             <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 420px; line-height: 1.5;">
               Paid via Paytm, PhonePe, or GPay? Send screenshot & UTR number for instant wallet top-up.
             </p>
-            <a 
-              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              class="btn btn-outline btn-block"
-              style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
-            >
-              Send Payment Screenshot →
-            </a>
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 420px; justify-content: center; flex-wrap: wrap;">
+              <a 
+                href="https://t.me/Likex_support" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-outline"
+                style="border-color: #2AABEE; color: #2AABEE; font-weight: 800; border-radius: 14px; height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; flex: 1; min-width: 170px;"
+              >
+                Send on Telegram →
+              </a>
+              <a 
+                href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-outline"
+                style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; flex: 1; min-width: 170px;"
+              >
+                Send on WhatsApp →
+              </a>
+            </div>
           </div>
 
-          <!-- 3. Direct Email Support Card -->
+          <!-- 4. Direct Email Support Card -->
           <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
             <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(234, 67, 53, 0.12); color: #EA4335; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.18);">
               📧
@@ -2743,7 +2803,7 @@ const CustomerApp = {
             </a>
           </div>
 
-          <!-- 4. Bulk & Wholesale Inquiry -->
+          <!-- 5. Bulk & Wholesale Inquiry -->
           <div class="card" style="text-align: center; padding: 26px 20px; border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; align-items: center;">
             <div style="width: 58px; height: 58px; border-radius: 18px; background: rgba(168, 85, 247, 0.12); color: #7C3AED; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 14px rgba(168, 85, 247, 0.18);">
               ⚡
@@ -2754,26 +2814,49 @@ const CustomerApp = {
             <p style="font-size: 13px; color: var(--text-secondary); margin: 8px 0 18px; max-width: 420px; line-height: 1.5;">
               Placing massive agency orders or connecting via API? Talk with our wholesale team.
             </p>
-            <a 
-              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              class="btn btn-outline btn-block"
-              style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 46px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 14px; max-width: 360px;"
-            >
-              Inquire Wholesale Rates →
-            </a>
+            <div style="display: flex; gap: 10px; width: 100%; max-width: 420px; justify-content: center; flex-wrap: wrap;">
+              <a 
+                href="https://t.me/Likex_support" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-outline"
+                style="border-color: #2AABEE; color: #2AABEE; font-weight: 800; border-radius: 14px; height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; flex: 1; min-width: 170px;"
+              >
+                Inquire on Telegram →
+              </a>
+              <a 
+                href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-outline"
+                style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 800; border-radius: 14px; height: 44px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 13px; flex: 1; min-width: 170px;"
+              >
+                Inquire on WhatsApp →
+              </a>
+            </div>
           </div>
         </div>
 
         <!-- Centered Official Contact Channels Footer -->
         <div class="card" style="text-align: center; padding: 22px 18px; border-radius: 20px; background: var(--bg-surface);">
-          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; align-items: center;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 18px; align-items: center;">
             <div style="padding: 8px;">
+              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
+                ✈️ Official Telegram Support
+              </div>
+              <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" style="font-size: 18px; font-weight: 900; color: #2AABEE; text-decoration: none; display: block; margin: 4px 0;">
+                @Likex_support
+              </a>
+              <div style="font-size: 11.5px; color: var(--text-secondary);">
+                Direct 1-on-1 Fast Resolution
+              </div>
+            </div>
+
+            <div style="padding: 8px; border-left: 1px solid var(--border-color);">
               <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
                 💬 Official WhatsApp Helpline
               </div>
-              <a href="https://wa.me/919837371137" target="_blank" rel="noopener noreferrer" style="font-size: 19px; font-weight: 900; color: #128C7E; text-decoration: none; display: block; margin: 4px 0;">
+              <a href="https://wa.me/919837371137" target="_blank" rel="noopener noreferrer" style="font-size: 18px; font-weight: 900; color: #128C7E; text-decoration: none; display: block; margin: 4px 0;">
                 +91 9837371137
               </a>
               <div style="font-size: 11.5px; color: var(--text-secondary);">
@@ -2785,7 +2868,7 @@ const CustomerApp = {
               <div style="font-size: 11.5px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px;">
                 📧 Official Support Email
               </div>
-              <a href="mailto:supporthubindia@gmail.com" style="font-size: 16px; font-weight: 900; color: #EA4335; text-decoration: none; display: block; margin: 4px 0; word-break: break-all;">
+              <a href="mailto:supporthubindia@gmail.com" style="font-size: 15px; font-weight: 900; color: #EA4335; text-decoration: none; display: block; margin: 4px 0; word-break: break-all;">
                 supporthubindia@gmail.com
               </a>
               <div style="font-size: 11.5px; color: var(--text-secondary);">

@@ -2152,6 +2152,31 @@ const AdminApp = {
   renderAdminSupport(store) {
     return `
       <div style="display: flex; flex-direction: column; gap: 18px;">
+        <!-- Telegram VIP Support Card -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(42, 171, 238, 0.1), rgba(34, 158, 217, 0.15)); border: 1.5px solid #2AABEE; border-radius: var(--radius-xl); padding: 28px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(42, 171, 238, 0.2); color: #0284C7; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px;">
+                <span>✈️</span> <span>TELEGRAM VIP SUPPORT CENTER</span>
+              </div>
+              <h2 style="font-size: 22px; font-weight: 900; margin: 0; color: var(--text-main);">Telegram 1-on-1 Helpdesk</h2>
+              <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
+                Handle: <strong>@Likex_support</strong> • Ultra-fast communication, zero phone number exposure & full privacy.
+              </p>
+            </div>
+            <a 
+              href="https://t.me/Likex_support" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              class="btn" 
+              style="background: #2AABEE; color: #fff; font-weight: 800; font-size: 15px; padding: 12px 24px; border-radius: 9999px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 18px rgba(42, 171, 238, 0.4);"
+            >
+              <span>✈️</span> <span>Open Telegram Support</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- WhatsApp Support Card -->
         <div class="card" style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(18, 140, 126, 0.15)); border: 1.5px solid #25D366; border-radius: var(--radius-xl); padding: 28px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
@@ -2160,7 +2185,7 @@ const AdminApp = {
               </div>
               <h2 style="font-size: 22px; font-weight: 900; margin: 0; color: var(--text-main);">24/7 WhatsApp Customer Helpline</h2>
               <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
-                Helpline: <strong>+91 9837371137</strong> • Zero server storage overhead, real-time messaging & instant screenshot verification.
+                Helpline: <strong>+91 9837371137</strong> • Real-time messaging & instant screenshot verification.
               </p>
             </div>
             <a 
@@ -2178,7 +2203,7 @@ const AdminApp = {
         <div class="card" style="padding: 24px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 10px; color: var(--text-main);">Support Protocol</h3>
           <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;">
-            Customer inquiries regarding <strong>Order Refills</strong>, <strong>UPI Payment Manual Top-ups</strong>, and <strong>Service Inquiries</strong> are routed directly to your official WhatsApp number (<strong>+91 9837371137</strong>). Customers receive automatic pre-formatted templates with their Order IDs and Transaction IDs.
+            Customer inquiries regarding <strong>Order Refills</strong>, <strong>UPI Payment Manual Top-ups</strong>, and <strong>Service Inquiries</strong> are routed directly to your official Telegram desk (<strong>@Likex_support</strong>) and WhatsApp helpline (<strong>+91 9837371137</strong>).
           </p>
         </div>
       </div>

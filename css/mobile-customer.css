@@ -1804,6 +1804,120 @@
 }
 
 /* ==========================================================================
+   FLOATING TELEGRAM BUTTON WITH EXPANDING PULSE RINGS
+   ========================================================================== */
+.floating-telegram-btn {
+  position: fixed;
+  bottom: 96px;
+  right: 24px;
+  width: 58px;
+  height: 58px;
+  z-index: 99998;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-telegram-btn:hover {
+  transform: scale(1.08) translateY(-2px);
+}
+
+.tg-icon-wrap {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 26px rgba(42, 171, 238, 0.45), 0 2px 6px rgba(0, 0, 0, 0.12);
+  z-index: 2;
+  border: 2.5px solid #FFFFFF;
+}
+
+.tg-pulse-ring {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(42, 171, 238, 0.5);
+  animation: tg-ring-expand 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tg-pulse-ring-2 {
+  animation-delay: 1.2s;
+}
+
+@keyframes tg-ring-expand {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.85;
+  }
+  60% {
+    transform: scale(1.5);
+    opacity: 0.3;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+}
+
+.tg-tooltip-pill {
+  position: absolute;
+  right: 70px;
+  background: var(--bg-surface);
+  color: var(--text-main);
+  padding: 6px 14px;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  border: 1px solid var(--border-color);
+  opacity: 0;
+  transform: translateX(10px);
+  pointer-events: none;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.floating-telegram-btn:hover .tg-tooltip-pill {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+@media (max-width: 767px) {
+  .floating-telegram-btn {
+    bottom: 140px !important;
+    right: 16px !important;
+    left: auto !important;
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .tg-tooltip-pill {
+    display: none !important;
+  }
+  .tg-icon-wrap {
+    width: 48px !important;
+    height: 48px !important;
+  }
+  .tg-icon-wrap svg {
+    width: 24px !important;
+    height: 24px !important;
+  }
+  .tg-pulse-ring {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+/* ==========================================================================
    PLACE NEW ORDER HERO BANNER (MATCHING IMAGE 3)
    ========================================================================== */
 .order-hero-banner-pro {
