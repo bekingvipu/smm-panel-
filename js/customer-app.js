@@ -37,6 +37,7 @@ const CustomerApp = {
     let contentHtml = '';
     if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
     else if (tab === 'home' || tab === 'dashboard') contentHtml = this.renderHomeTab(store);
+    else if (tab === 'earn' || tab === 'how_to_earn') contentHtml = this.renderEarnTab(store);
     else if (tab === 'orders') contentHtml = this.renderOrdersTab(store);
     else if (tab === 'wallet') contentHtml = this.renderWalletTab(store);
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
@@ -53,6 +54,10 @@ const CustomerApp = {
           <a class="desktop-nav-link ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
             <span>🛒</span>
             <span>Services & Order</span>
+          </a>
+          <a class="desktop-nav-link ${tab === 'earn' ? 'active' : ''}" onclick="store.setCustomerTab('earn')">
+            <span>💰</span>
+            <span>How to Earn</span>
           </a>
           <a class="desktop-nav-link ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
             <span>⊞</span>
@@ -152,7 +157,7 @@ const CustomerApp = {
           <div class="drawer-section">
             <div class="drawer-section-title">Grow & Earn</div>
             <ul class="drawer-menu-list">
-              <li class="drawer-menu-item" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(99, 102, 241, 0.25);" onclick="CustomerApp.closeSideDrawer(); CustomerApp.openResellerGuideModal();">
+              <li class="drawer-menu-item" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(99, 102, 241, 0.25); cursor: pointer;" onclick="CustomerApp.closeSideDrawer(); window.store.setCustomerTab('earn');">
                 <div class="drawer-item-left">
                   <span class="drawer-item-icon">💰</span>
                   <div>
@@ -2735,6 +2740,317 @@ const CustomerApp = {
 
       </div>
     `;
+  },
+
+  // 6. HOW TO EARN MONEY / RESELLER BUSINESS MASTERCLASS (FULL PAGE)
+  renderEarnTab(store) {
+    const earnConfig = (store.data && store.data.earnTutorial) || {
+      enabled: true,
+      videoUrl: '',
+      title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
+      description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
+    };
+    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(earnConfig.videoUrl) : '';
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 900px; margin: 0 auto; width: 100%; padding-bottom: 105px;">
+        
+        <!-- Hero Banner with Neon Glow -->
+        <div class="earn-hero-banner">
+          <div class="earn-hero-badge">
+            <span class="earn-pulse-dot"></span>
+            <span>🔥 ZERO INVESTMENT • 300%–1000% PROFIT MARGIN</span>
+          </div>
+          <h1 class="earn-hero-title">
+            How to Earn ₹30,000–₹1,00,000/Month with SMM Reselling
+          </h1>
+          <p class="earn-hero-sub">
+            Start your own automated Social Media Marketing & Creator Growth Agency in India. No technical skills, no coding, and ₹0 inventory capital required.
+          </p>
+
+          <div class="earn-hero-stats-row">
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">₹0</div>
+              <div class="earn-stat-lbl">Upfront Capital</div>
+            </div>
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">300%–1000%</div>
+              <div class="earn-stat-lbl">Pure Profit Margin</div>
+            </div>
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">0–60s</div>
+              <div class="earn-stat-lbl">Auto Instant Delivery</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dedicated Video Tutorial Section (YouTube Unlisted / Public Player) -->
+        <div class="wallet-video-tutorial-card" style="border-color: rgba(99, 102, 241, 0.3);">
+          <div class="wallet-video-header">
+            <div class="wallet-video-badge" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1)); border-color: rgba(99, 102, 241, 0.3); color: #4F46E5;">
+              <span>🎬 VIDEO MASTERCLASS</span>
+            </div>
+            <h3 class="wallet-video-title">${earnConfig.title || 'How to Earn Money: Full Step-by-Step Video Tutorial'}</h3>
+            <p class="wallet-video-subtitle">${earnConfig.description || 'Watch this 2-minute video blueprint to learn how to acquire your first 10 clients and start earning instant profits directly to your UPI.'}</p>
+          </div>
+
+          ${embedUrl ? `
+            <div class="wallet-video-embed-container">
+              <iframe 
+                src="${embedUrl}" 
+                title="LikeX How to Earn Money Reseller Video Tutorial" 
+                frameborder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                allowfullscreen
+                class="wallet-video-iframe"
+              ></iframe>
+            </div>
+          ` : `
+            <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Video tutorial will be uploaded soon by admin! Follow the step-by-step blueprint below.', 'info')">
+              <div class="wallet-video-play-btn" style="background: linear-gradient(135deg, #4F46E5, #7C3AED);">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              </div>
+              <div style="font-weight: 800; font-size: 15px; color: var(--text-main); margin-top: 10px;">
+                Reseller Video Masterclass
+              </div>
+              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; max-width: 440px;">
+                Learn how thousands of creators & students in India earn daily by providing social media growth services.
+              </div>
+            </div>
+          `}
+        </div>
+
+        <!-- Profit Calculator / Real Margin Examples -->
+        <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin: 0;">
+                📊 Real Profit Margin Examples (Wholesale vs Retail)
+              </h3>
+              <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
+                See how much pure profit you make on every single client order:
+              </p>
+            </div>
+            <span class="badge badge-success" style="font-size: 12px; font-weight: 800;">
+              High Profit Margin 🔥
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px;">
+            <!-- Example 1 -->
+            <div class="profit-comparison-tile">
+              <div class="profit-tile-header">
+                <span style="font-size: 20px;">📸</span>
+                <span style="font-weight: 800; font-size: 14px; color: var(--text-main);">1,000 Instagram Followers</span>
+              </div>
+              <div class="profit-calc-rows">
+                <div class="profit-row">
+                  <span style="color: var(--text-muted);">LikeX Wholesale Cost:</span>
+                  <span style="font-weight: 800; color: #10B981;">₹13 – ₹25</span>
+                </div>
+                <div class="profit-row">
+                  <span style="color: var(--text-muted);">You Sell to Client at:</span>
+                  <span style="font-weight: 800; color: var(--primary);">₹199 – ₹299</span>
+                </div>
+                <div class="profit-row total-profit-row">
+                  <span style="font-weight: 800; color: var(--text-main);">Your Net Profit:</span>
+                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹174 – ₹274 (900%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Example 2 -->
+            <div class="profit-comparison-tile">
+              <div class="profit-tile-header">
+                <span style="font-size: 20px;">🎬</span>
+                <span style="font-weight: 800; font-size: 14px; color: var(--text-main);">10,000 Instagram Reel Views</span>
+              </div>
+              <div class="profit-calc-rows">
+                <div class="profit-row">
+                  <span style="color: var(--text-muted);">LikeX Wholesale Cost:</span>
+                  <span style="font-weight: 800; color: #10B981;">₹4 – ₹8</span>
+                </div>
+                <div class="profit-row">
+                  <span style="color: var(--text-muted);">You Sell to Client at:</span>
+                  <span style="font-weight: 800; color: var(--primary);">₹99 – ₹149</span>
+                </div>
+                <div class="profit-row total-profit-row">
+                  <span style="font-weight: 800; color: var(--text-main);">Your Net Profit:</span>
+                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹91 – ₹141 (1200%)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Example 3 -->
+            <div class="profit-comparison-tile">
+              <div class="profit-tile-header">
+                <span style="font-size: 20px;">▶️</span>
+                <span style="font-weight: 800; font-size: 14px; color: var(--text-main);">1,000 YouTube Subscribers</span>
+              </div>
+              <div class="profit-calc-rows">
+                <div class="profit-row">
+                  <span style="color: var(--text-muted);">LikeX Wholesale Cost:</span>
+                  <span style="font-weight: 800; color: #10B981;">₹220 – ₹350</span>
+                </div>
+                <div class="profit-row">
+                  <span style="color: var(--text-muted);">You Sell to Client at:</span>
+                  <span style="font-weight: 800; color: var(--primary);">₹999 – ₹1,499</span>
+                </div>
+                <div class="profit-row total-profit-row">
+                  <span style="font-weight: 800; color: var(--text-main);">Your Net Profit:</span>
+                  <span style="font-weight: 900; font-size: 15px; color: #10B981;">+₹779 – ₹1,149 (400%)</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 4-Step Action Blueprint -->
+        <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
+          <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin-bottom: 16px;">
+            🚀 The 4-Step Step-by-Step Blueprint
+          </h3>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <div class="earn-step-card">
+              <div class="earn-step-num-badge">1</div>
+              <div>
+                <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">Deposit Initial Funds (₹50–₹100) in LikeX</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45;">
+                  Go to the <strong>Add Funds</strong> tab and scan the UPI QR code with Paytm, PhonePe, or Google Pay. Paste the 12-digit UTR for instant credit.
+                </div>
+              </div>
+            </div>
+
+            <div class="earn-step-card">
+              <div class="earn-step-num-badge">2</div>
+              <div>
+                <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">Create Your Agency WhatsApp / Instagram Page</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45;">
+                  Make a simple profile named <em>"Social Media Growth Hub"</em> or post on your personal WhatsApp Status offering Followers, Likes & Views packages.
+                </div>
+              </div>
+            </div>
+
+            <div class="earn-step-card">
+              <div class="earn-step-num-badge">3</div>
+              <div>
+                <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">Pitch to Local Shops, Gyms, Cafes & Creators</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45;">
+                  Send messages to new creators or local businesses offering to boost their credibility. Collect payment upfront to your personal UPI ID.
+                </div>
+              </div>
+            </div>
+
+            <div class="earn-step-card">
+              <div class="earn-step-num-badge">4</div>
+              <div>
+                <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">Place Order on LikeX & Deliver in 0–60 Seconds</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; line-height: 1.45;">
+                  Enter client's username/link on LikeX. Our high-speed servers automatically complete the order while you keep 100% of the profit margin in your pocket!
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ready-to-Use WhatsApp Pitch Scripts (with 1-Click Copy) -->
+        <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px;">
+          <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-bottom: 6px;">
+            💬 Ready-to-Use Client Pitch Templates
+          </h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 16px;">
+            Copy and send these proven messages to creators and business owners on Instagram DM or WhatsApp:
+          </p>
+
+          <div style="display: flex; flex-direction: column; gap: 14px;">
+            <!-- Script 1 -->
+            <div class="script-template-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 800; font-size: 13.5px; color: var(--primary);">Template 1: For Instagram Creators / Influencers</span>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.copyScriptText('script-1')" style="font-weight: 700; border-radius: 8px;">
+                  📋 Copy Text
+                </button>
+              </div>
+              <div id="script-1" class="script-text-content">"Hey! 👋 Loved your recent reels! We help creators boost their Instagram authority & reach with genuine active followers, likes & views. Special creator trial offer: 1,000 Real Followers for just ₹199 (instant delivery & refill guarantee). Would you like to boost your profile today?"</div>
+            </div>
+
+            <!-- Script 2 -->
+            <div class="script-template-box">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 800; font-size: 13.5px; color: var(--primary);">Template 2: For Local Shops, Cafes & Salons</span>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.copyScriptText('script-2')" style="font-weight: 700; border-radius: 8px;">
+                  📋 Copy Text
+                </button>
+              </div>
+              <div id="script-2" class="script-text-content">"Hello team! 🌟 We noticed your business page on Instagram. High follower counts build instant customer trust and sales. We are offering a Complete Brand Credibility Package: 2,000 Followers + 500 Likes on latest 5 posts for just ₹399. Let us know if you'd like to get started!"</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Daily Income Roadmap / Milestones -->
+        <div class="card" style="padding: 24px; border: 1.5px solid var(--border-color); border-radius: 20px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(99, 102, 241, 0.04));">
+          <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin-bottom: 14px;">
+            📈 Daily Income Milestones Roadmap
+          </h3>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div class="milestone-box">
+              <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">1 Client / Day</div>
+              <div style="font-size: 20px; font-weight: 900; color: #10B981; margin: 4px 0;">₹6,000 / mo</div>
+              <div style="font-size: 11px; color: var(--text-muted);">₹200 daily profit</div>
+            </div>
+            <div class="milestone-box">
+              <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary);">3 Clients / Day</div>
+              <div style="font-size: 20px; font-weight: 900; color: #10B981; margin: 4px 0;">₹18,000 / mo</div>
+              <div style="font-size: 11px; color: var(--text-muted);">₹600 daily profit</div>
+            </div>
+            <div class="milestone-box highlight">
+              <div style="font-size: 12px; font-weight: 700; color: #4F46E5;">5 Clients / Day 🔥</div>
+              <div style="font-size: 20px; font-weight: 900; color: #4F46E5; margin: 4px 0;">₹30,000 / mo</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">₹1,000 daily profit</div>
+            </div>
+            <div class="milestone-box highlight-gold">
+              <div style="font-size: 12px; font-weight: 700; color: #D97706;">15 Clients / Day 👑</div>
+              <div style="font-size: 20px; font-weight: 900; color: #D97706; margin: 4px 0;">₹90,000 / mo</div>
+              <div style="font-size: 11px; color: var(--text-secondary);">₹3,000 daily profit</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Action CTA Buttons -->
+        <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;">
+          <button class="btn btn-primary btn-lg btn-refraction" onclick="store.setCustomerTab('new_order')" style="height: 52px; font-size: 16px; border-radius: 14px;">
+            <span>🚀 Start Reselling Now (Go to Services)</span>
+          </button>
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <button class="btn btn-secondary" onclick="store.setCustomerTab('wallet')" style="font-weight: 700; border-radius: 12px; height: 46px;">
+              💳 Add Funds to Wallet
+            </button>
+            <a href="https://wa.me/919837371137?text=Hi%20LikeX%2C%20I%20want%20to%20start%20my%20SMM%20reselling%20business%20and%20need%20mentorship." target="_blank" rel="noopener noreferrer" class="btn btn-success" style="font-weight: 700; border-radius: 12px; height: 46px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <span>💬 WhatsApp VIP Help</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
+  copyScriptText(elementId) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    const text = el.textContent.trim().replace(/^"|"$/g, '');
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(() => {
+        window.store.showToast('📋 Pitch template copied to clipboard!', 'success');
+      }).catch(() => {
+        window.store.showToast('Template ready to share!', 'info');
+      });
+    } else {
+      window.store.showToast('📋 Template ready to share!', 'info');
+    }
   },
 
   openAuthModal(defaultTab = 'login') {

@@ -119,6 +119,28 @@ class SmmStateStore {
       };
     }
 
+    // Initialize How to Earn Money Tutorial Config
+    try {
+      const savedEarnVideo = localStorage.getItem('likex_earn_tutorial_config');
+      if (savedEarnVideo) {
+        this.data.earnTutorial = JSON.parse(savedEarnVideo);
+      } else {
+        this.data.earnTutorial = {
+          enabled: true,
+          videoUrl: '',
+          title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
+          description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
+        };
+      }
+    } catch (e) {
+      this.data.earnTutorial = {
+        enabled: true,
+        videoUrl: '',
+        title: 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business',
+        description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
+      };
+    }
+
     this.initServerSync();
   }
 
@@ -161,6 +183,20 @@ class SmmStateStore {
     } catch (e) {}
     this.notify();
     this.showToast('✅ Wallet Video Tutorial settings updated successfully!', 'success');
+  }
+
+  updateEarnTutorial(config) {
+    this.data.earnTutorial = {
+      enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
+      videoUrl: String(config.videoUrl || '').trim(),
+      title: String(config.title || 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business').trim(),
+      description: String(config.description || 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.').trim()
+    };
+    try {
+      localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial));
+    } catch (e) {}
+    this.notify();
+    this.showToast('✅ How to Earn Money settings updated successfully!', 'success');
   }
 
   updateAnnouncement(text, enabled = true) {

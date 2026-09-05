@@ -329,15 +329,23 @@ const AdminApp = {
     return 'Admin Console';
   },
 
-  // WALLET VIDEO TUTORIAL & UPI SETTINGS MANAGER
+  // WALLET & EARN MONEY VIDEO TUTORIALS SETTINGS MANAGER
   renderWalletSettings(store) {
-    const tutorial = (store.data && store.data.walletTutorial) || {
+    const earnTutorial = (store.data && store.data.earnTutorial) || {
+      enabled: true,
+      videoUrl: '',
+      title: 'How to Earn ₹30,00,000/Month Starting Your SMM Reselling Business',
+      description: 'Watch this complete step-by-step video blueprint on how to buy SMM services at direct wholesale prices and resell to clients with 300% to 1000% pure profit.'
+    };
+    const earnEmbedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(earnTutorial.videoUrl) : '';
+
+    const walletTutorial = (store.data && store.data.walletTutorial) || {
       enabled: true,
       videoUrl: '',
       title: 'How to Add Funds via UPI QR & UTR',
       description: 'Watch this step-by-step video guide to add instant funds to your LikeX wallet using Paytm, PhonePe, or Google Pay.'
     };
-    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(tutorial.videoUrl) : '';
+    const walletEmbedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(walletTutorial.videoUrl) : '';
 
     return `
       <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1000px;">
@@ -346,52 +354,147 @@ const AdminApp = {
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
               <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.15); color: #4F46E5; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px;">
-                <span>🎥 WALLET VIDEO GUIDE</span>
+                <span>🎥 VIDEO TUTORIALS & GUIDES</span>
               </div>
               <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin-top: 8px; margin-bottom: 4px;">
-                Wallet Video Tutorial Configuration
+                YouTube Video Guides Configuration
               </h2>
               <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
-                Paste your YouTube video link below to display it in the customer wallet tab (above Transaction History).
+                Configure YouTube unlisted or public videos for <strong>"How to Earn Money"</strong> and <strong>"Add Funds Wallet"</strong> pages.
               </p>
             </div>
-            <div>
+            <div style="display: flex; gap: 8px;">
               <button type="button" onclick="window.navigateToRoute('/')" class="btn btn-secondary" style="font-weight: 700; border-radius: 12px;">
-                👁️ View Customer Wallet
+                👁️ View Customer App
               </button>
             </div>
           </div>
         </div>
 
-        <!-- Video Configuration Card -->
-        <div class="card" style="padding: 26px; border: 1.5px solid var(--border-color); border-radius: 20px;">
-          <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 18px; display: flex; align-items: center; gap: 8px;">
-            <span>⚙️</span>
-            <span>YouTube Video Tutorial Settings</span>
-          </h3>
+        <!-- 1. HOW TO EARN MONEY VIDEO CONFIGURATION CARD -->
+        <div class="card" style="padding: 26px; border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: 20px; background: linear-gradient(145deg, rgba(16, 185, 129, 0.02), var(--bg-surface));">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>💰</span>
+              <span>1. 'How to Earn Money' Video Tutorial (Reseller Page)</span>
+            </h3>
+            <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">GROW & EARN TAB</span>
+          </div>
 
-          <div style="display: flex; flex-direction: column; gap: 18px;">
-            <!-- YouTube URL Input -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
             <div class="form-group" style="margin-bottom: 0;">
               <label class="form-label" style="font-weight: 800; font-size: 13.5px;">
-                <span>YouTube Unlisted / Public Video URL or Video ID:</span>
-                <span class="form-label-hint">Paste unlisted link, short link, or watch URL</span>
+                <span>YouTube Unlisted / Public Video URL:</span>
+                <span class="form-label-hint">Paste unlisted link, watch URL, or shorts</span>
+              </label>
+              <input 
+                type="text" 
+                id="admin-earn-video-url" 
+                class="form-input" 
+                value="${earnTutorial.videoUrl || ''}" 
+                placeholder="e.g. https://youtu.be/xxxxxx or https://www.youtube.com/watch?v=xxxxxx" 
+                style="font-size: 14px; font-weight: 600; min-height: 48px; border-radius: 12px;" 
+                oninput="AdminApp.previewEarnVideoUrl(this.value)"
+              />
+              <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
+                💡 <strong>Supports all YouTube formats:</strong> Unlisted link (<code>https://youtu.be/xxxx</code>), standard link, shorts, or direct 11-digit video ID.
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 13px;">Tutorial Heading / Title:</label>
+                <input 
+                  type="text" 
+                  id="admin-earn-video-title" 
+                  class="form-input" 
+                  value="${earnTutorial.title || 'How to Earn ₹30,000–₹1,00,000/Month Starting Your SMM Reselling Business'}" 
+                  style="min-height: 46px; border-radius: 12px;" 
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 13px;">Visibility in 'How to Earn' Page:</label>
+                <select id="admin-earn-video-enabled" class="form-select" style="min-height: 46px; border-radius: 12px; font-weight: 700;">
+                  <option value="true" ${earnTutorial.enabled ? 'selected' : ''}>✅ Visible to Customers</option>
+                  <option value="false" ${!earnTutorial.enabled ? 'selected' : ''}>❌ Hidden / Disabled</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-weight: 700; font-size: 13px;">Description / Instructions:</label>
+              <textarea 
+                id="admin-earn-video-desc" 
+                class="form-textarea" 
+                rows="2" 
+                style="border-radius: 12px; font-size: 13.5px;"
+              >${earnTutorial.description || ''}</textarea>
+            </div>
+
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 14px;">
+              <label style="font-weight: 800; font-size: 13px; color: var(--text-main); display: block; margin-bottom: 8px;">
+                📺 Live Preview ('How to Earn Money' Video):
+              </label>
+              <div id="admin-earn-preview-box" style="max-width: 500px; border-radius: 16px; overflow: hidden; border: 1.5px solid var(--border-color); background: #000;">
+                ${earnEmbedUrl ? `
+                  <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+                    <iframe 
+                      src="${earnEmbedUrl}" 
+                      style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+                      allowfullscreen
+                    ></iframe>
+                  </div>
+                ` : `
+                  <div style="padding: 32px 20px; text-align: center; color: #94A3B8;">
+                    <div style="font-size: 30px; margin-bottom: 4px;">🎥</div>
+                    <div style="font-weight: 700;">No Video URL set yet</div>
+                    <div style="font-size: 12px;">Paste a YouTube link above to see live preview.</div>
+                  </div>
+                `}
+              </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                onclick="AdminApp.saveEarnTutorialSettings()" 
+                style="font-weight: 800; padding: 10px 28px; border-radius: 12px;"
+              >
+                💾 Save 'How to Earn' Video Settings
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. WALLET ADD FUNDS VIDEO CONFIGURATION CARD -->
+        <div class="card" style="padding: 26px; border: 1.5px solid rgba(99, 102, 241, 0.3); border-radius: 20px; background: linear-gradient(145deg, rgba(99, 102, 241, 0.02), var(--bg-surface));">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 8px;">
+            <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+              <span>💳</span>
+              <span>2. 'How to Add Funds' Video Tutorial (Wallet Page)</span>
+            </h3>
+            <span class="badge badge-primary" style="font-size: 11px; font-weight: 800;">WALLET TAB</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 13.5px;">
+                <span>YouTube Unlisted / Public Video URL:</span>
+                <span class="form-label-hint">Paste unlisted link, watch URL, or shorts</span>
               </label>
               <input 
                 type="text" 
                 id="admin-wallet-video-url" 
                 class="form-input" 
-                value="${tutorial.videoUrl || ''}" 
+                value="${walletTutorial.videoUrl || ''}" 
                 placeholder="e.g. https://youtu.be/xxxxxx or https://www.youtube.com/watch?v=xxxxxx" 
                 style="font-size: 14px; font-weight: 600; min-height: 48px; border-radius: 12px;" 
                 oninput="AdminApp.previewWalletVideoUrl(this.value)"
               />
-              <div style="font-size: 12px; color: var(--text-muted); margin-top: 5px;">
-                💡 <strong>Supports all YouTube formats:</strong> Unlisted link (<code>https://youtu.be/xxxx</code>), standard link (<code>https://youtube.com/watch?v=xxxx</code>), shorts, or direct 11-digit video ID.
-              </div>
             </div>
 
-            <!-- Title & Subtitle Grid -->
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-weight: 700; font-size: 13px;">Tutorial Heading / Title:</label>
@@ -399,8 +502,7 @@ const AdminApp = {
                   type="text" 
                   id="admin-wallet-video-title" 
                   class="form-input" 
-                  value="${tutorial.title || 'How to Add Funds via UPI QR & UTR'}" 
-                  placeholder="e.g. How to Add Funds via UPI QR & UTR" 
+                  value="${walletTutorial.title || 'How to Add Funds via UPI QR & UTR'}" 
                   style="min-height: 46px; border-radius: 12px;" 
                 />
               </div>
@@ -408,8 +510,8 @@ const AdminApp = {
               <div class="form-group" style="margin-bottom: 0;">
                 <label class="form-label" style="font-weight: 700; font-size: 13px;">Visibility in Wallet Screen:</label>
                 <select id="admin-wallet-video-enabled" class="form-select" style="min-height: 46px; border-radius: 12px; font-weight: 700;">
-                  <option value="true" ${tutorial.enabled ? 'selected' : ''}>✅ Visible in Customer Wallet</option>
-                  <option value="false" ${!tutorial.enabled ? 'selected' : ''}>❌ Hidden / Disabled</option>
+                  <option value="true" ${walletTutorial.enabled ? 'selected' : ''}>✅ Visible in Customer Wallet</option>
+                  <option value="false" ${!walletTutorial.enabled ? 'selected' : ''}>❌ Hidden / Disabled</option>
                 </select>
               </div>
             </div>
@@ -420,44 +522,41 @@ const AdminApp = {
                 id="admin-wallet-video-desc" 
                 class="form-textarea" 
                 rows="2" 
-                placeholder="Short guide text to display above/under the video..." 
                 style="border-radius: 12px; font-size: 13.5px;"
-              >${tutorial.description || ''}</textarea>
+              >${walletTutorial.description || ''}</textarea>
             </div>
 
-            <!-- Live Video Preview Inside Admin -->
-            <div style="margin-top: 10px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
-              <label style="font-weight: 800; font-size: 13px; color: var(--text-main); display: block; margin-bottom: 10px;">
-                📺 Live Video Preview:
+            <div style="border-top: 1px dashed var(--border-color); padding-top: 14px;">
+              <label style="font-weight: 800; font-size: 13px; color: var(--text-main); display: block; margin-bottom: 8px;">
+                📺 Live Preview ('Add Funds' Video):
               </label>
-              <div id="admin-video-preview-box" style="max-width: 540px; border-radius: 16px; overflow: hidden; border: 1.5px solid var(--border-color); background: #000;">
-                ${embedUrl ? `
+              <div id="admin-video-preview-box" style="max-width: 500px; border-radius: 16px; overflow: hidden; border: 1.5px solid var(--border-color); background: #000;">
+                ${walletEmbedUrl ? `
                   <div style="position: relative; padding-bottom: 56.25%; height: 0;">
                     <iframe 
-                      src="${embedUrl}" 
+                      src="${walletEmbedUrl}" 
                       style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
                       allowfullscreen
                     ></iframe>
                   </div>
                 ` : `
-                  <div style="padding: 36px 20px; text-align: center; color: #94A3B8;">
-                    <div style="font-size: 32px; margin-bottom: 6px;">🎥</div>
+                  <div style="padding: 32px 20px; text-align: center; color: #94A3B8;">
+                    <div style="font-size: 30px; margin-bottom: 4px;">🎥</div>
                     <div style="font-weight: 700;">No Video URL set yet</div>
-                    <div style="font-size: 12px; margin-top: 2px;">Paste a YouTube video link above to see the live preview.</div>
+                    <div style="font-size: 12px;">Paste a YouTube link above to see live preview.</div>
                   </div>
                 `}
               </div>
             </div>
 
-            <!-- Save Action Button -->
-            <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px;">
+            <div style="display: flex; justify-content: flex-end; margin-top: 6px;">
               <button 
                 type="button" 
-                class="btn btn-primary btn-lg" 
+                class="btn btn-primary" 
                 onclick="AdminApp.saveWalletTutorialSettings()" 
-                style="font-weight: 800; padding: 12px 32px; border-radius: 14px;"
+                style="font-weight: 800; padding: 10px 28px; border-radius: 12px;"
               >
-                💾 Save Video Settings
+                💾 Save Wallet Video Settings
               </button>
             </div>
           </div>
@@ -980,6 +1079,48 @@ const AdminApp = {
     const text = textEl.value.trim();
     const enabled = toggleEl.checked;
     window.store.updateAnnouncement(text, enabled);
+  },
+
+  previewEarnVideoUrl(val) {
+    const store = window.store;
+    const box = document.getElementById('admin-earn-preview-box');
+    if (!box) return;
+    const embed = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(val) : '';
+    if (embed) {
+      box.innerHTML = `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+          <iframe 
+            src="${embed}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+            allowfullscreen
+          ></iframe>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="padding: 32px 20px; text-align: center; color: #94A3B8;">
+          <div style="font-size: 30px; margin-bottom: 4px;">🎥</div>
+          <div style="font-weight: 700;">No Video URL set yet</div>
+          <div style="font-size: 12px;">Paste a YouTube link above to see live preview.</div>
+        </div>
+      `;
+    }
+  },
+
+  saveEarnTutorialSettings() {
+    const urlInput = document.getElementById('admin-earn-video-url');
+    const titleInput = document.getElementById('admin-earn-video-title');
+    const descInput = document.getElementById('admin-earn-video-desc');
+    const enabledSelect = document.getElementById('admin-earn-video-enabled');
+
+    const config = {
+      videoUrl: urlInput ? urlInput.value.trim() : '',
+      title: titleInput ? titleInput.value.trim() : '',
+      description: descInput ? descInput.value.trim() : '',
+      enabled: enabledSelect ? enabledSelect.value === 'true' : true
+    };
+
+    window.store.updateEarnTutorial(config);
   },
 
   previewWalletVideoUrl(val) {
