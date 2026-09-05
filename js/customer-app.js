@@ -2866,7 +2866,7 @@ const CustomerApp = {
             How to Earn ₹30,000–₹1,00,000/Month with SMM Reselling
           </h1>
           <p class="earn-hero-sub" style="text-align: center; margin-left: auto; margin-right: auto;">
-            Start your own automated Social Media Marketing & Creator Growth Agency in India. Buy services at direct server wholesale rates on LikeX and resell with 250% to 1500% profit margins!
+            Start your own automated Social Media Marketing & Creator Growth Agency in India. Buy services at direct server wholesale rates on LikeX and resell with high profit margins!
           </p>
 
           <div class="earn-hero-stats-row">
@@ -2882,21 +2882,25 @@ const CustomerApp = {
               <div class="earn-stat-val">0–60s</div>
               <div class="earn-stat-lbl">Auto Instant Delivery</div>
             </div>
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">₹30k–₹1L+</div>
+              <div class="earn-stat-lbl">Monthly Potential</div>
+            </div>
           </div>
         </div>
 
         <!-- Dedicated Video Tutorial Section (YouTube Unlisted / Public Player) -->
-        <div class="wallet-video-tutorial-card" style="border-color: rgba(99, 102, 241, 0.3); text-align: center;">
+        <div class="wallet-video-tutorial-card earn-video-card" style="border-color: rgba(99, 102, 241, 0.3); text-align: center;">
           <div class="wallet-video-header" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
             <div class="wallet-video-badge" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), rgba(168, 85, 247, 0.1)); border-color: rgba(99, 102, 241, 0.3); color: #4F46E5; margin: 0 auto;">
               <span>VIDEO MASTERCLASS</span>
             </div>
-            <h3 class="wallet-video-title" style="text-align: center;">${earnConfig.title || 'How to Earn Money: Full Step-by-Step Video Tutorial'}</h3>
-            <p class="wallet-video-subtitle" style="text-align: center; margin: 4px auto 0;">${earnConfig.description || 'Watch this 2-minute video blueprint to learn how to acquire your first 10 clients and start earning instant profits directly to your UPI.'}</p>
+            <h3 class="wallet-video-title" style="text-align: center; font-size: 19px;">${earnConfig.title || 'How to Earn Money: Full Step-by-Step Video Tutorial'}</h3>
+            <p class="wallet-video-subtitle" style="text-align: center; margin: 4px auto 0; max-width: 520px;">${earnConfig.description || 'Watch this step-by-step video blueprint to learn how to acquire your first 10 clients and start earning instant profits directly to your UPI.'}</p>
           </div>
 
           ${embedUrl ? `
-            <div class="wallet-video-embed-container">
+            <div class="wallet-video-embed-container earn-video-embed">
               <iframe 
                 src="${embedUrl}" 
                 title="LikeX How to Earn Money Reseller Video Tutorial" 
@@ -2907,14 +2911,14 @@ const CustomerApp = {
               ></iframe>
             </div>
           ` : `
-            <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Video tutorial will be uploaded soon by admin! Follow the interactive blueprint below.', 'info')">
-              <div class="wallet-video-play-btn" style="background: linear-gradient(135deg, #4F46E5, #7C3AED);">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            <div class="wallet-video-placeholder earn-video-placeholder" onclick="window.store.showToast('💡 Video tutorial will be uploaded soon by admin! Follow the interactive blueprint below.', 'info')">
+              <div class="wallet-video-play-btn earn-play-btn" style="background: linear-gradient(135deg, #4F46E5, #7C3AED);">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               </div>
-              <div style="font-weight: 800; font-size: 15px; color: var(--text-main); margin-top: 10px;">
+              <div style="font-weight: 900; font-size: 17px; color: var(--text-main); margin-top: 14px; letter-spacing: -0.01em;">
                 Reseller Video Masterclass
               </div>
-              <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px; max-width: 440px;">
+              <div style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; max-width: 480px; line-height: 1.45;">
                 Learn how thousands of creators & students in India earn daily by providing social media growth services.
               </div>
             </div>
