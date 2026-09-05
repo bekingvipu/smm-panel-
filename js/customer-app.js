@@ -669,6 +669,7 @@ const CustomerApp = {
 
     // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
     const JAP_AVERAGE_TIMES = {
+      '10323': '⏱️ 6 - 8 Hours',
       '10147': '⏱️ 22h 52m',
       '10349': '⏱️ 8 - 20 Hours',
       '1810': '⏱️ 8 - 20 Hours',
@@ -703,6 +704,10 @@ const CustomerApp = {
 
     if (JAP_AVERAGE_TIMES[rawId]) {
       return JAP_AVERAGE_TIMES[rawId];
+    }
+
+    if (rawId === '10323' || idStr.includes('10323') || name.includes('10323') || name.includes('likex special')) {
+      return '⏱️ 6 - 8 Hours';
     }
 
     // 2. Extract Duration & Speed Tags from Provider Service Title (WorldOfSMM & JAP)
@@ -783,6 +788,7 @@ const CustomerApp = {
       const aLower = a.toLowerCase();
       const bLower = b.toLowerCase();
       const getPriority = (str) => {
+        if (str.includes('likex special') || str.includes('special very good') || str.includes('special')) return -2;
         if (str.includes('cheapest') && str.includes('selling')) return 0;
         if (str.includes('newly arrived')) return 1;
         if (str.includes('indian followers')) return 2;

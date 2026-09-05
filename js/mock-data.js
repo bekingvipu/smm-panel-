@@ -95,6 +95,29 @@ window.SMM_MOCK = {
   // 2-Level Structured Services (Sub-Category -> Packages with tiered rates)
   customerServices: [
     // -------------------------------------------------------------
+    // LIKEX SPECIAL VERY GOOD - INSTAGRAM GUARANTEED FOLLOWERS (JAP 10323)
+    // -------------------------------------------------------------
+    {
+      id: 'jap-10323',
+      rawId: '10323',
+      platform: 'instagram',
+      subcategory: '🌟 LikeX Special Very Good [Guaranteed 30D Refill]',
+      customerName: '10323 - LikeX Special Very Good Instagram Followers [Max 50K] [Refill: 30D] [Speed: 6-8 Hours]',
+      pricePer1k: 0.705, // ₹67.28
+      min: 10,
+      max: 50000,
+      deliverySpeed: '⏱️ 6 - 8 Hours (Up to 100K/D)',
+      startTime: '0 - 1 Hour',
+      refillSupported: true,
+      refillPeriod: '30 Days',
+      description: '🌟 LikeX Special Very Good Quality Followers connected directly via JustAnotherPanel (JAP). 30-Day auto-refill guarantee.',
+      japId: '10323',
+      wholesaleCost: 0.705, // ₹67.28 wholesale
+      markupPercent: 0,
+      provider: 'jap'
+    },
+
+    // -------------------------------------------------------------
     // INSTAGRAM - GUARANTEED FOLLOWERS (WITH REFILL)
     // -------------------------------------------------------------
     {

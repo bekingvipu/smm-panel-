@@ -952,16 +952,20 @@ class SmmStateStore {
     if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
       rawServiceId = String(serviceId).replace('wos-', '');
+    } else if (String(serviceId).startsWith('jap-')) {
+      targetProvider = 'jap';
+      rawServiceId = String(serviceId).replace('jap-', '');
     } else {
-      // Check if service is listed under worldofsmm
-      const foundSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(serviceId));
+      // Check if service is listed under catalog
+      const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+      const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
       if (foundSvc) {
-        targetProvider = foundSvc.provider || 'worldofsmm';
-        rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '');
+        targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm');
+        rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '').replace('jap-', '');
       }
     }
 
-    const providerDisplayName = targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Backup Provider';
+    const providerDisplayName = targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API');
 
     // Sanitize target URL to prevent bot issues (strips ?igsi=..., handles @handle)
     const cleanedTarget = this.cleanTargetUrl(target);
