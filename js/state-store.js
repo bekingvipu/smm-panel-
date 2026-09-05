@@ -33,7 +33,7 @@ class SmmStateStore {
     if (savedMarkup !== null) {
       this.data.adminStats.globalMarkupPercent = Number(savedMarkup);
     } else {
-      this.data.adminStats.globalMarkupPercent = 100; // Default 100% (2X) until changed by admin
+      this.data.adminStats.globalMarkupPercent = 50; // Default 50% (+50% profit) across all devices
     }
 
     // Restore saved customer avatar
@@ -680,7 +680,7 @@ class SmmStateStore {
     this.data.adminStats.revenue = revenueUsd;
     this.data.adminStats.totalCustomers = totalCustomers;
 
-    const markupPercent = Number(this.data.adminStats.globalMarkupPercent) || 80;
+    const markupPercent = Number(this.data.adminStats.globalMarkupPercent) || 50;
     this.data.adminStats.profit = revenueUsd * (markupPercent / (100 + markupPercent));
 
     return this.data.adminStats;

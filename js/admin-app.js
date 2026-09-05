@@ -1204,7 +1204,7 @@ const AdminApp = {
   // CUSTOMER SERVICES & PROFIT % TOOL
   renderCustomerServices(store) {
     const services = store.data.customerServices;
-    const currentMarkup = store.data.adminStats.globalMarkupPercent || 120;
+    const currentMarkup = store.data.adminStats.globalMarkupPercent || 50;
 
     return `
       <!-- GLOBAL PROFIT PERCENTAGE TOOL -->

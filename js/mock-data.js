@@ -62,7 +62,7 @@ window.SMM_MOCK = {
     profitTrend: 0.0,
     providerBalance: 0.00,
     providerBalanceStatus: 'Live Connected',
-    globalMarkupPercent: 100
+    globalMarkupPercent: 50
   },
 
   providers: [
