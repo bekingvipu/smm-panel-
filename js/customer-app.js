@@ -1000,7 +1000,7 @@ const CustomerApp = {
                   <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackageItem(event, '${s.id}')">
                     <div class="service-row-top">
                       <span class="service-row-id">${cleanId}</span>
-                      <span class="service-row-title">- ${s.name}</span>
+                      <span class="service-row-title">${s.name}</span>
                     </div>
                     <div class="service-row-bottom">
                       <div class="service-tag-badges">

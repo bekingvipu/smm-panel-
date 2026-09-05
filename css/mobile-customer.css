@@ -1994,15 +1994,21 @@
 }
 
 .service-id-pill {
-  background: #E11D48;
-  color: #FFFFFF;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4F46E5;
+  border: 1px solid rgba(99, 102, 241, 0.25);
   font-size: 11px;
   font-weight: 900;
-  padding: 3px 8px;
-  border-radius: 999px;
+  padding: 2px 7px;
+  border-radius: 6px;
   flex-shrink: 0;
   letter-spacing: 0.3px;
-  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.25);
+}
+
+[data-theme="dark"] .service-id-pill {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818CF8;
+  border-color: rgba(99, 102, 241, 0.4);
 }
 
 .trigger-service-text {
@@ -2023,10 +2029,20 @@
 }
 
 .trigger-service-rate {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
-  color: var(--primary);
+  color: #059669;
+  background: rgba(16, 185, 129, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(16, 185, 129, 0.25);
   white-space: nowrap;
+}
+
+[data-theme="dark"] .trigger-service-rate {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34D399;
+  border-color: rgba(16, 185, 129, 0.35);
 }
 
 /* ==========================================================================
@@ -2100,12 +2116,12 @@
 }
 
 .service-id-badge {
-  background: #E11D48;
-  color: #FFFFFF;
+  background: rgba(99, 102, 241, 0.12);
+  color: #4F46E5;
   font-size: 10.5px;
   font-weight: 900;
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: 6px;
   letter-spacing: 0.3px;
   flex-shrink: 0;
 }
@@ -2177,17 +2193,17 @@
 }
 
 .custom-dropdown-item.selected {
-  background: #E11D48 !important;
-  color: #FFFFFF !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.06)) !important;
+  color: var(--primary) !important;
   font-weight: 800;
-  border-color: #BE123C !important;
-  box-shadow: 0 2px 8px rgba(225, 29, 72, 0.3) !important;
+  border-color: rgba(99, 102, 241, 0.3) !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.1) !important;
 }
 
 .cat-check-icon {
   font-weight: 900;
   font-size: 14px;
-  color: #FFFFFF;
+  color: var(--primary);
 }
 
 .service-package-options-list {
@@ -2198,7 +2214,7 @@
   gap: 8px;
 }
 
-/* Individual Service Package Row (Matching Image 1) */
+/* Individual Service Package Row */
 .service-option-row {
   display: flex;
   flex-direction: column;
@@ -2222,17 +2238,22 @@
   transform: scale(0.985);
 }
 
-/* Selected Active Row - Red/Crimson Banner Highlight like Image 1 */
+/* Selected Active Row - Luxury Indigo Frosted Highlight */
 .service-option-row.selected {
-  background: #E11D48 !important;
-  color: #FFFFFF !important;
-  border-color: #BE123C !important;
-  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.35) !important;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.05)) !important;
+  color: var(--text-main) !important;
+  border: 1.5px solid var(--primary) !important;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.14) !important;
 }
 
-.service-option-row.selected .service-row-title,
+.service-option-row.selected .service-row-title {
+  color: var(--text-main) !important;
+  font-weight: 800;
+}
+
 .service-option-row.selected .service-row-price {
-  color: #FFFFFF !important;
+  color: #059669 !important;
+  font-weight: 900;
 }
 
 .service-row-top {
@@ -2243,19 +2264,27 @@
 }
 
 .service-row-id {
-  background: #E11D48;
-  color: #FFFFFF;
+  background: rgba(99, 102, 241, 0.1);
+  color: #4F46E5;
+  border: 1px solid rgba(99, 102, 241, 0.25);
   font-size: 11px;
   font-weight: 900;
   padding: 2px 7px;
-  border-radius: 999px;
+  border-radius: 6px;
   flex-shrink: 0;
   display: inline-block;
 }
 
+[data-theme="dark"] .service-row-id {
+  background: rgba(99, 102, 241, 0.2);
+  color: #818CF8;
+  border-color: rgba(99, 102, 241, 0.4);
+}
+
 .service-option-row.selected .service-row-id {
-  background: #FFFFFF !important;
-  color: #E11D48 !important;
+  background: var(--primary) !important;
+  color: #FFFFFF !important;
+  border-color: var(--primary) !important;
 }
 
 .service-row-title {
@@ -2291,9 +2320,9 @@
 }
 
 .service-tag-pill.cheapest {
-  background: rgba(225, 29, 72, 0.12);
-  color: #E11D48;
-  border: 1px solid rgba(225, 29, 72, 0.3);
+  background: rgba(239, 68, 68, 0.1);
+  color: #EF4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .service-tag-pill.fast {
@@ -2308,16 +2337,10 @@
   border: 1px solid rgba(59, 130, 246, 0.3);
 }
 
-.service-option-row.selected .service-tag-pill {
-  background: rgba(255, 255, 255, 0.25) !important;
-  color: #FFFFFF !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
-}
-
 .service-row-price {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 800;
-  color: var(--text-main);
+  color: #059669;
   margin-left: auto;
   white-space: nowrap;
 }
