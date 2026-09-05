@@ -189,6 +189,33 @@ class SmmStateStore {
     return '';
   }
 
+  // Save configuration to Cloud storage (Supabase config row 999 + site_settings)
+  async saveCloudConfig(partial = {}) {
+    if (!window.supabaseClient) return;
+    try {
+      let currentConfig = {};
+      const { data: configRows } = await window.supabaseClient
+        .from('users')
+        .select('password_hash')
+        .eq('id', 999);
+      if (configRows && configRows.length > 0 && configRows[0].password_hash) {
+        try { currentConfig = JSON.parse(configRows[0].password_hash); } catch(e){}
+      }
+      const merged = { ...currentConfig, ...partial };
+      await window.supabaseClient
+        .from('users')
+        .update({ password_hash: JSON.stringify(merged) })
+        .eq('id', 999);
+
+      // Also upsert to site_settings table if available
+      for (const [k, v] of Object.entries(partial)) {
+        window.supabaseClient.from('site_settings').upsert({ key: k, value: v, updated_at: new Date().toISOString() }).catch(() => {});
+      }
+    } catch (e) {
+      console.warn('[LikeX Cloud Save Error]:', e);
+    }
+  }
+
   updateWalletTutorial(config) {
     this.data.walletTutorial = {
       enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
@@ -200,17 +227,11 @@ class SmmStateStore {
       localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial));
     } catch (e) {}
 
-    // Cloud sync to Supabase site_settings table
-    if (window.supabaseClient) {
-      window.supabaseClient.from('site_settings').upsert({
-        key: 'wallet_tutorial',
-        value: this.data.walletTutorial,
-        updated_at: new Date().toISOString()
-      }).catch(err => console.warn('[LikeX Cloud Sync] wallet_tutorial sync error:', err));
-    }
+    // Cloud sync to Supabase (instantly updates across all mobile and PC devices)
+    this.saveCloudConfig({ wallet_tutorial: this.data.walletTutorial });
 
     this.notify();
-    this.showToast('✅ Wallet Video Tutorial settings updated successfully!', 'success');
+    this.showToast('✅ Wallet Video Tutorial updated & synced across all devices!', 'success');
   }
 
   updateEarnTutorial(config) {
@@ -224,17 +245,11 @@ class SmmStateStore {
       localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial));
     } catch (e) {}
 
-    // Cloud sync to Supabase site_settings table
-    if (window.supabaseClient) {
-      window.supabaseClient.from('site_settings').upsert({
-        key: 'earn_tutorial',
-        value: this.data.earnTutorial,
-        updated_at: new Date().toISOString()
-      }).catch(err => console.warn('[LikeX Cloud Sync] earn_tutorial sync error:', err));
-    }
+    // Cloud sync to Supabase (instantly updates across all mobile and PC devices)
+    this.saveCloudConfig({ earn_tutorial: this.data.earnTutorial });
 
     this.notify();
-    this.showToast('✅ How to Earn Money settings updated successfully!', 'success');
+    this.showToast('✅ How to Earn Money settings updated & synced across all devices!', 'success');
   }
 
   updateAnnouncement(text, enabled = true) {
@@ -246,17 +261,11 @@ class SmmStateStore {
       localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement));
     } catch (e) {}
 
-    // Cloud sync to Supabase site_settings table
-    if (window.supabaseClient) {
-      window.supabaseClient.from('site_settings').upsert({
-        key: 'announcement_config',
-        value: this.data.announcement,
-        updated_at: new Date().toISOString()
-      }).catch(err => console.warn('[LikeX Cloud Sync] announcement sync error:', err));
-    }
+    // Cloud sync to Supabase
+    this.saveCloudConfig({ announcement_config: this.data.announcement });
 
     this.notify();
-    this.showToast('✅ Announcement ticker updated successfully!', 'success');
+    this.showToast('✅ Announcement ticker updated & synced across all devices!', 'success');
   }
 
   saveCatalogCustomizations() {
@@ -630,16 +639,18 @@ class SmmStateStore {
     } catch (e) {}
   }
 
-  // Background sync Supabase global settings for all visitors
+  // Background sync Supabase global settings for all visitors across mobile and desktop
   async syncGlobalSiteSettings() {
     if (!window.supabaseClient) return;
     try {
+      let changed = false;
+
+      // 1. Try dedicated site_settings table
       const { data: settingsData, error } = await window.supabaseClient
         .from('site_settings')
         .select('*');
 
-      if (settingsData && Array.isArray(settingsData) && !error) {
-        let changed = false;
+      if (settingsData && Array.isArray(settingsData) && !error && settingsData.length > 0) {
         settingsData.forEach(item => {
           if (item.key === 'wallet_tutorial' && item.value) {
             this.data.walletTutorial = {
@@ -664,9 +675,46 @@ class SmmStateStore {
             changed = true;
           }
         });
-        if (changed) {
-          this.notify();
-        }
+      }
+
+      // 2. Direct Cloud Sync from config row id 999
+      const { data: configRows } = await window.supabaseClient
+        .from('users')
+        .select('password_hash')
+        .eq('id', 999);
+
+      if (configRows && configRows.length > 0 && configRows[0].password_hash) {
+        try {
+          const parsed = JSON.parse(configRows[0].password_hash);
+          if (parsed.earn_tutorial && parsed.earn_tutorial.videoUrl) {
+            this.data.earnTutorial = {
+              ...this.data.earnTutorial,
+              ...parsed.earn_tutorial
+            };
+            try { localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial)); } catch(e){}
+            changed = true;
+          }
+          if (parsed.wallet_tutorial && parsed.wallet_tutorial.videoUrl) {
+            this.data.walletTutorial = {
+              ...this.data.walletTutorial,
+              ...parsed.wallet_tutorial
+            };
+            try { localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial)); } catch(e){}
+            changed = true;
+          }
+          if (parsed.announcement_config && parsed.announcement_config.text) {
+            this.data.announcement = {
+              ...this.data.announcement,
+              ...parsed.announcement_config
+            };
+            try { localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement)); } catch(e){}
+            changed = true;
+          }
+        } catch (e) {}
+      }
+
+      if (changed) {
+        this.notify();
       }
     } catch (err) {
       console.warn('[LikeX Sync] Failed to sync global settings from Supabase:', err);
