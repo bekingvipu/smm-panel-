@@ -138,8 +138,26 @@ window.SMM_MOCK = {
   // 2-Level Structured Services (Sub-Category -> Packages with tiered rates)
   customerServices: [
     // -------------------------------------------------------------
-    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (JAP 5994 & WOS 6149)
+    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (WOS 2868, JAP 5994 & WOS 6149)
     // -------------------------------------------------------------
+    {
+      id: 'wos-2868-likex',
+      rawId: '2868',
+      platform: 'instagram',
+      subcategory: '🌟 LikeX Special Very Good [Followers, Likes, Views & Comments]',
+      customerName: '🔔 ⭐ Instagram HQ Followers R365 | 100k/Day [Best Seller Since 2021] Low Drop',
+      pricePer1k: 1.7228,
+      min: 10,
+      max: 100000,
+      deliverySpeed: '⚡ 100K/Day [Low Drop]',
+      startTime: '0 - 1 Hour',
+      refillSupported: true,
+      refillPeriod: '365 Days',
+      description: '🌟 LikeX Special VIP High-Quality Non-Drop Followers with 365-Day Refill Guarantee via WorldOfSMM (2868).',
+      wholesaleCost: 1.7228,
+      markupPercent: 50,
+      provider: 'worldofsmm'
+    },
     {
       id: 'jap-5994',
       rawId: '5994',

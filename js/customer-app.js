@@ -673,6 +673,7 @@ const CustomerApp = {
 
     // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
     const JAP_AVERAGE_TIMES = {
+      '2868': '⏱️ 8 - 20 Hours',
       '6149': '⚡ Instant (0 - 15m)',
       '5994': '⚡ Instant (0 - 15m)',
       '10147': '⏱️ 22h 52m',
@@ -836,13 +837,14 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special') || (this.currentCategory || '').toLowerCase().includes('special very good');
 
     if (isLikeXSpecial) {
-      // User-defined Flagship Order: 1. Views (5994), 2. Custom Comments (6149)
+      // User-defined Flagship Order: 1. Followers (2868), 2. Views (5994), 3. Custom Comments (6149)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
         const name = (s.name || '').toLowerCase();
-        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 1;
-        if (id === '6149' || name.includes('comment')) return 2;
-        return 3;
+        if (id === '2868' || (name.includes('follower') && (id.includes('2868') || name.includes('likex special') || name.includes('instagram hq')))) return 1;
+        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 2;
+        if (id === '6149' || name.includes('comment')) return 3;
+        return 4;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
     } else {
@@ -1015,7 +1017,7 @@ const CustomerApp = {
           <div class="custom-dropdown-card" id="custom-service-trigger-card" onclick="CustomerApp.toggleServiceDropdown(event)">
             <div class="custom-dropdown-trigger">
               <div class="trigger-service-info">
-                <span class="service-id-pill" id="trigger-service-id-badge">${String(activeService.rawId || activeService.id || '6808').replace(/^wos-/, '')}</span>
+                <span class="service-id-pill" id="trigger-service-id-badge">${String(activeService.rawId || activeService.id || '6808').replace(/^wos-/, '').replace(/^jap-/, '').replace(/-likex$/, '')}</span>
                 <span class="trigger-service-text" id="trigger-service-name-text">${activeService.name || 'Select Service Package'}</span>
               </div>
               <div class="trigger-right-badge">
@@ -1032,7 +1034,7 @@ const CustomerApp = {
                 const isSelected = String(s.id) === String(activeService.id);
                 const p = store.getSellingPrice(s.cost || 0.1);
                 const tags = this.getServiceTags(s);
-                const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '');
+                const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
                 return `
                   <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackageItem(event, '${s.id}')">
                     <div class="service-row-top">

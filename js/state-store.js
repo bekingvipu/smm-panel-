@@ -1361,20 +1361,17 @@ class SmmStateStore {
     // Determine provider & raw service id
     let targetProvider = 'worldofsmm';
     let rawServiceId = serviceId;
-    if (String(serviceId).startsWith('wos-')) {
+    const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+    const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
+    if (foundSvc) {
+      targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm');
+      rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '').replace('jap-', '').replace(/-likex$/, '');
+    } else if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
-      rawServiceId = String(serviceId).replace('wos-', '');
+      rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
     } else if (String(serviceId).startsWith('jap-')) {
       targetProvider = 'jap';
-      rawServiceId = String(serviceId).replace('jap-', '');
-    } else {
-      // Check if service is listed under catalog
-      const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
-      const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
-      if (foundSvc) {
-        targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm');
-        rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '').replace('jap-', '');
-      }
+      rawServiceId = String(serviceId).replace('jap-', '').replace(/-likex$/, '');
     }
 
     const providerDisplayName = targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API');
