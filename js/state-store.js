@@ -882,6 +882,13 @@ class SmmStateStore {
             try { localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial)); } catch(e){}
             changed = true;
           }
+          if (parsed.claimed_utrs && typeof parsed.claimed_utrs === 'object') {
+            this.data.claimedUtrs = {
+              ...this.data.claimedUtrs,
+              ...parsed.claimed_utrs
+            };
+            try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
+          }
           if (parsed.announcement_config && parsed.announcement_config.text) {
             this.data.announcement = {
               ...this.data.announcement,
@@ -1765,7 +1772,7 @@ class SmmStateStore {
     this.notify();
   }
 
-  // Anti-Fraud: Check if a UTR / Transaction ID was already claimed
+  // Anti-Fraud: Check if a UTR / Transaction ID was already claimed across any device
   async checkUtrStatus(rawUtr) {
     if (!rawUtr) return { claimed: false };
     const cleanUtr = String(rawUtr).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1795,70 +1802,67 @@ class SmmStateStore {
       }
     }
 
-    // 4. Scan all stored user transaction histories in localStorage
+    // 4. Try Serverless UTR API (/api/utr)
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('smm_user_') && key.endsWith('_txns')) {
-          const userTxns = JSON.parse(localStorage.getItem(key) || '[]');
-          if (Array.isArray(userTxns)) {
-            const found = userTxns.find(t => t.description && t.description.toUpperCase().includes(cleanUtr));
-            if (found) {
-              return { claimed: true, record: found, reason: 'Already credited in transaction records' };
-            }
-          }
+      const apiRes = await fetch('/api/utr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'check', utr: cleanUtr })
+      });
+      if (apiRes.ok) {
+        const apiData = await apiRes.json();
+        if (apiData && apiData.claimed) {
+          if (!this.data.claimedUtrs) this.data.claimedUtrs = {};
+          this.data.claimedUtrs[cleanUtr] = apiData.record || { utr: cleanUtr, claimedAt: new Date().toISOString() };
+          try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
+          return { claimed: true, record: apiData.record, reason: 'Redeemed on another device' };
         }
       }
     } catch (e) {}
 
-    // 5. Check Supabase Cloud database in real-time
+    // 5. Check Supabase Cloud database directly (wallet_transactions & users config row 999)
     if (window.supabaseClient) {
       try {
-        // 5a. Check site_settings for dedicated UTR key
-        const { data: utrRow } = await window.supabaseClient
-          .from('site_settings')
-          .select('key, value')
-          .eq('key', `utr_${cleanUtr}`)
-          .maybeSingle();
-
-        if (utrRow && utrRow.value) {
-          this.data.claimedUtrs[cleanUtr] = utrRow.value;
-          try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
-          return { claimed: true, record: utrRow.value, reason: 'Already redeemed across LikeX network' };
-        }
-
-        // 5b. Check site_settings claimed_utrs map
-        const { data: mapRow } = await window.supabaseClient
-          .from('site_settings')
-          .select('value')
-          .eq('key', 'claimed_utrs')
-          .maybeSingle();
-
-        if (mapRow && mapRow.value && mapRow.value[cleanUtr]) {
-          this.data.claimedUtrs[cleanUtr] = mapRow.value[cleanUtr];
-          try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
-          return { claimed: true, record: mapRow.value[cleanUtr], reason: 'Already redeemed across LikeX network' };
-        }
-
-        // 5c. Check wallet_transactions table if present
+        const utrPrimaryId = `UTR-${cleanUtr}`;
         const { data: txnRows } = await window.supabaseClient
           .from('wallet_transactions')
           .select('id, description, amount, created_at')
-          .ilike('description', `%${cleanUtr}%`)
+          .or(`id.eq.${utrPrimaryId},description.ilike.%${cleanUtr}%`)
           .limit(1);
 
         if (txnRows && txnRows.length > 0) {
-          return { claimed: true, record: txnRows[0], reason: 'Recorded in verified transaction ledger' };
+          if (!this.data.claimedUtrs) this.data.claimedUtrs = {};
+          this.data.claimedUtrs[cleanUtr] = txnRows[0];
+          try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
+          return { claimed: true, record: txnRows[0], reason: 'Recorded in verified cloud transaction ledger' };
+        }
+
+        // Also check users config row 999
+        const { data: configRows } = await window.supabaseClient
+          .from('users')
+          .select('password_hash')
+          .eq('id', 999);
+
+        if (configRows && configRows.length > 0 && configRows[0].password_hash) {
+          try {
+            const parsed = JSON.parse(configRows[0].password_hash);
+            if (parsed.claimed_utrs && parsed.claimed_utrs[cleanUtr]) {
+              if (!this.data.claimedUtrs) this.data.claimedUtrs = {};
+              this.data.claimedUtrs[cleanUtr] = parsed.claimed_utrs[cleanUtr];
+              try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
+              return { claimed: true, record: parsed.claimed_utrs[cleanUtr], reason: 'Redeemed in cloud network' };
+            }
+          } catch(e) {}
         }
       } catch (err) {
-        console.warn('[LikeX Anti-Fraud] Supabase UTR check warning:', err);
+        console.warn('[LikeX Anti-Fraud] Supabase direct check:', err);
       }
     }
 
     return { claimed: false };
   }
 
-  // Anti-Fraud: Register and lock a claimed UTR permanently
+  // Anti-Fraud: Register and lock a claimed UTR permanently across all devices
   async registerClaimedUtr(rawUtr, amountInInr, method = 'Razorpay UPI') {
     if (!rawUtr) return;
     const cleanUtr = String(rawUtr).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -1884,50 +1888,54 @@ class SmmStateStore {
       localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs));
     } catch (e) {}
 
-    // 3. Supabase Cloud Sync
+    // 3. Centralized Serverless API Lock
+    try {
+      fetch('/api/utr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'claim',
+          utr: cleanUtr,
+          amount: amountInInr,
+          email: this.data.customer.email || 'anonymous'
+        })
+      }).catch(() => {});
+    } catch (e) {}
+
+    // 4. Supabase Direct Atomic Insert to wallet_transactions (Primary Key Unique Lock)
     if (window.supabaseClient) {
       try {
-        // Individual UTR row for fast exact-key lookups
-        window.supabaseClient
-          .from('site_settings')
-          .upsert({
-            key: `utr_${cleanUtr}`,
-            value: record,
-            updated_at: new Date().toISOString()
-          })
-          .catch(() => {});
-
-        // Also update master claimed_utrs map
-        const { data: mapRow } = await window.supabaseClient
-          .from('site_settings')
-          .select('value')
-          .eq('key', 'claimed_utrs')
-          .maybeSingle();
-
-        const currentMap = (mapRow && mapRow.value && typeof mapRow.value === 'object') ? mapRow.value : {};
-        currentMap[cleanUtr] = record;
-
-        window.supabaseClient
-          .from('site_settings')
-          .upsert({
-            key: 'claimed_utrs',
-            value: currentMap,
-            updated_at: new Date().toISOString()
-          })
-          .catch(() => {});
-
-        // Also insert into wallet_transactions ledger if table exists
-        window.supabaseClient
+        const utrPrimaryId = `UTR-${cleanUtr}`;
+        await window.supabaseClient
           .from('wallet_transactions')
           .insert({
-            id: `TXN-UPI-${cleanUtr}-${Date.now()}`,
+            id: utrPrimaryId,
+            user_id: 999,
             type: 'Deposit',
-            description: `UPI QR Deposit (UTR: ${cleanUtr})`,
+            description: `Razorpay UPI Deposit (UTR: ${cleanUtr}) [${this.data.customer.email || 'user'}]`,
             amount: record.amountUsd,
             balance_after: this.data.customer.balance,
             status: 'Success'
           })
           .catch(() => {});
+
+        // 5. Also update master registry in users row 999
+        const { data: configRows } = await window.supabaseClient
+          .from('users')
+          .select('password_hash')
+          .eq('id', 999);
+
+        if (configRows && configRows.length > 0 && configRows[0].password_hash) {
+          const parsed = JSON.parse(configRows[0].password_hash || '{}');
+          if (!parsed.claimed_utrs) parsed.claimed_utrs = {};
+          parsed.claimed_utrs[cleanUtr] = record;
+
+          await window.supabaseClient
+            .from('users')
+            .update({ password_hash: JSON.stringify(parsed) })
+            .eq('id', 999)
+            .catch(() => {});
+        }
       } catch (err) {
         console.warn('[LikeX Anti-Fraud] Supabase UTR registration warning:', err);
       }
