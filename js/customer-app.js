@@ -3006,54 +3006,71 @@ const CustomerApp = {
 
         </div>
 
-        <!-- Sleek Micro Contact Channels Strip -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 4px;">
-          <!-- Telegram Card -->
+        <!-- Sleek Micro Contact Channels Strip (Premium 2x2 Grid) -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px;">
+          <!-- 1. Telegram Card -->
           <a 
             href="https://t.me/Likex_support" 
             target="_blank" 
             rel="noopener noreferrer" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(42, 171, 238, 0.25); background: var(--bg-surface); text-decoration: none; box-shadow: var(--shadow-xs); transition: transform 0.2s;"
+            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(42, 171, 238, 0.25); background: linear-gradient(135deg, rgba(42, 171, 238, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
           >
-            <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(42, 171, 238, 0.15); color: #2AABEE; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(42, 171, 238, 0.15); color: #2AABEE; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(42, 171, 238, 0.18);">
               ✈️
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Telegram</div>
-              <div style="font-size: 12px; font-weight: 800; color: #2AABEE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">@Likex_support</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Telegram</div>
+              <div style="font-size: 12.5px; font-weight: 800; color: #2AABEE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
             </div>
           </a>
 
-          <!-- WhatsApp Card -->
+          <!-- 2. WhatsApp Card -->
           <a 
             href="https://wa.me/919837371137" 
             target="_blank" 
             rel="noopener noreferrer" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(37, 211, 102, 0.25); background: var(--bg-surface); text-decoration: none; box-shadow: var(--shadow-xs); transition: transform 0.2s;"
+            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(37, 211, 102, 0.25); background: linear-gradient(135deg, rgba(37, 211, 102, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
           >
-            <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(37, 211, 102, 0.15); color: #128C7E; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(37, 211, 102, 0.15); color: #128C7E; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.18);">
               💬
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">WhatsApp</div>
-              <div style="font-size: 12px; font-weight: 800; color: #128C7E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">+91 9837371137</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">WhatsApp</div>
+              <div style="font-size: 12.5px; font-weight: 800; color: #128C7E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">+91 9837371137</div>
             </div>
           </a>
 
-          <!-- Email Card -->
+          <!-- 3. Instagram Card -->
+          <a 
+            href="https://www.instagram.com/likexofficial/" 
+            target="_blank" 
+            rel="noopener noreferrer" 
+            class="card" 
+            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(225, 48, 108, 0.25); background: linear-gradient(135deg, rgba(225, 48, 108, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
+          >
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(225, 48, 108, 0.15); color: #E1306C; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(225, 48, 108, 0.18);">
+              📸
+            </div>
+            <div style="flex: 1; min-width: 0; text-align: left;">
+              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Instagram</div>
+              <div style="font-size: 12.5px; font-weight: 800; color: #E1306C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@likexofficial</div>
+            </div>
+          </a>
+
+          <!-- 4. Official Email Card -->
           <a 
             href="mailto:supporthubindia@gmail.com" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; border: 1px solid rgba(234, 67, 53, 0.25); background: var(--bg-surface); text-decoration: none; box-shadow: var(--shadow-xs); transition: transform 0.2s;"
+            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(234, 67, 53, 0.25); background: linear-gradient(135deg, rgba(234, 67, 53, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
           >
-            <div style="width: 32px; height: 32px; border-radius: 10px; background: rgba(234, 67, 53, 0.15); color: #EA4335; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(234, 67, 53, 0.15); color: #EA4335; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(234, 67, 53, 0.18);">
               📧
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Official Mail</div>
-              <div style="font-size: 11.5px; font-weight: 800; color: #EA4335; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Email Us</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Official Mail</div>
+              <div style="font-size: 12px; font-weight: 800; color: #EA4335; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">supporthubindia...</div>
             </div>
           </a>
         </div>
