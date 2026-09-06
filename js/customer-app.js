@@ -675,7 +675,6 @@ const CustomerApp = {
     const JAP_AVERAGE_TIMES = {
       '6149': '⚡ Instant (0 - 15m)',
       '5994': '⚡ Instant (0 - 15m)',
-      '1837': '⚡ Instant (0 - 15m)',
       '10323': '⏱️ 6 - 8 Hours',
       '10147': '⏱️ 22h 52m',
       '10349': '⏱️ 8 - 20 Hours',
@@ -718,10 +717,6 @@ const CustomerApp = {
     }
 
     if (rawId === '5994' || idStr.includes('5994')) {
-      return '⚡ Instant (0 - 15m)';
-    }
-
-    if (rawId === '1837' || idStr.includes('1837')) {
       return '⚡ Instant (0 - 15m)';
     }
 
@@ -842,15 +837,14 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special') || (this.currentCategory || '').toLowerCase().includes('special very good');
 
     if (isLikeXSpecial) {
-      // User-defined Flagship Order: 1. Followers (10323), 2. Likes (1837), 3. Views (5994), 4. Custom Comments (6149)
+      // User-defined Flagship Order: 1. Followers (10323), 2. Views (5994), 3. Custom Comments (6149)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
         const name = (s.name || '').toLowerCase();
         if (id === '10323' || (name.includes('likex special') && name.includes('follower'))) return 1;
-        if (id === '1837' || (name.includes('likex special') && name.includes('like'))) return 2;
-        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 3;
-        if (id === '6149' || name.includes('comment')) return 4;
-        return 5;
+        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 2;
+        if (id === '6149' || name.includes('comment')) return 3;
+        return 4;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
     } else {
