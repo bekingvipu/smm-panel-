@@ -2085,7 +2085,10 @@ const CustomerApp = {
           </div>
         </div>
 
-        <!-- 2. 10+ Years Trust Metrics Counter Grid -->
+        <!-- 2. Horizontal YouTube Reels & Proofs Showcase -->
+        ${this.renderAboutReelsSection(store)}
+
+        <!-- 3. 10+ Years Trust Metrics Counter Grid -->
         <div class="trust-metrics-grid">
           <div class="metric-card">
             <div class="metric-icon">🏆</div>
@@ -2191,6 +2194,166 @@ const CustomerApp = {
 
       </div>
     `;
+  },
+
+  renderAboutReelsSection(store) {
+    const reels = (store.getAboutReels ? store.getAboutReels() : (store.data.aboutReels || [])).filter(r => r && r.active !== false);
+    if (!reels || reels.length === 0) return '';
+
+    return `
+      <!-- Horizontal YouTube Reels & Shorts Showcase Section -->
+      <div class="about-reels-section">
+        <div class="about-reels-header">
+          <div class="about-reels-header-left">
+            <div class="about-reels-badge">
+              <span>🔥</span>
+              <span>WATCH IN ACTION</span>
+            </div>
+            <h3 class="about-reels-title">Trending Reels & Live Proofs</h3>
+            <p class="about-reels-subtitle">Real video proofs, order speeds & creator guides</p>
+          </div>
+          <div class="about-reels-nav-buttons">
+            <button type="button" class="reel-nav-btn" onclick="CustomerApp.scrollReels('left')" aria-label="Scroll left" title="Scroll Left">‹</button>
+            <button type="button" class="reel-nav-btn" onclick="CustomerApp.scrollReels('right')" aria-label="Scroll right" title="Scroll Right">›</button>
+          </div>
+        </div>
+
+        <!-- Horizontal Scrollable Reels Track -->
+        <div class="about-reels-scroll-track" id="about-reels-track">
+          ${reels.map((reel) => {
+            const thumbUrl = (store.getYouTubeThumbnailUrl ? store.getYouTubeThumbnailUrl(reel.videoUrl) : '') || 
+              'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80';
+            return `
+              <div class="about-reel-card" onclick="CustomerApp.openReelModal('${reel.id}')" role="button" tabindex="0" title="${reel.title}">
+                <div class="about-reel-thumb-wrap">
+                  <img src="${thumbUrl}" alt="${reel.title}" class="about-reel-thumb" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80'" />
+                  <div class="about-reel-overlay-gradient"></div>
+                  
+                  <!-- Top Badges -->
+                  <div class="about-reel-top-tags">
+                    <span class="reel-pill-badge">${reel.badge || '🔥 Live Proof'}</span>
+                    ${reel.duration ? `<span class="reel-duration-badge">⏱️ ${reel.duration}</span>` : ''}
+                  </div>
+
+                  <!-- Play Pulse Icon -->
+                  <div class="about-reel-play-circle">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                  </div>
+
+                  <!-- Bottom Caption & Stats -->
+                  <div class="about-reel-caption-wrap">
+                    <h4 class="about-reel-card-title">${reel.title}</h4>
+                    <div class="about-reel-stats-bar">
+                      <span>👁️ ${reel.views || '45K views'}</span>
+                      <span class="reel-watch-text">Watch ▶</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  scrollReels(direction) {
+    const track = document.getElementById('about-reels-track');
+    if (!track) return;
+    const scrollAmount = direction === 'left' ? -260 : 260;
+    track.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+  },
+
+  openReelModal(reelId) {
+    const store = window.store;
+    const reels = (store.getAboutReels ? store.getAboutReels() : (store.data.aboutReels || [])).filter(r => r && r.active !== false);
+    const currentIndex = reels.findIndex(r => r.id === reelId);
+    if (currentIndex === -1) return;
+    const reel = reels[currentIndex];
+    const prevReel = currentIndex > 0 ? reels[currentIndex - 1] : null;
+    const nextReel = currentIndex < reels.length - 1 ? reels[currentIndex + 1] : null;
+
+    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(reel.videoUrl) : '';
+    const cleanEmbed = embedUrl ? `${embedUrl}${embedUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0&rel=0&modestbranding=1` : '';
+
+    // Remove any existing reel modal
+    this.closeReelModal();
+
+    const modalWrap = document.createElement('div');
+    modalWrap.id = 'likex-reel-modal-root';
+    modalWrap.className = 'likex-reel-modal-backdrop active';
+    modalWrap.onclick = (e) => {
+      if (e.target === modalWrap) CustomerApp.closeReelModal();
+    };
+
+    modalWrap.innerHTML = `
+      <div class="likex-reel-modal-box">
+        <!-- Close Button -->
+        <button type="button" class="reel-modal-close-btn" onclick="CustomerApp.closeReelModal()" title="Close Player">&times;</button>
+        
+        <!-- Header Info -->
+        <div class="reel-modal-header">
+          <div class="reel-modal-header-pill">
+            <span>${reel.badge || '🔥 Live Proof'}</span>
+            <span>•</span>
+            <span>${reel.views || 'Verified Reel'}</span>
+          </div>
+          <h3 class="reel-modal-title">${reel.title}</h3>
+        </div>
+
+        <!-- Video Player Frame (9:16 vertical ratio) -->
+        <div class="reel-modal-player-frame">
+          ${cleanEmbed ? `
+            <iframe 
+              src="${cleanEmbed}" 
+              title="${reel.title}"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              allowfullscreen
+            ></iframe>
+          ` : `
+            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#fff; text-align:center; padding:20px;">
+              <p style="font-weight:700; margin-bottom:8px;">Reel Video</p>
+              <a href="${reel.videoUrl}" target="_blank" class="btn btn-primary btn-sm">Watch on YouTube ↗</a>
+            </div>
+          `}
+        </div>
+
+        <!-- Bottom Controls & YouTube External Link -->
+        <div class="reel-modal-footer">
+          <div class="reel-modal-nav-links">
+            ${prevReel ? `
+              <button type="button" class="reel-modal-nav-btn" onclick="CustomerApp.openReelModal('${prevReel.id}')" title="Previous Reel">
+                ‹ Prev
+              </button>
+            ` : `<span style="width: 60px;"></span>`}
+
+            <a href="${reel.videoUrl}" target="_blank" rel="noopener noreferrer" class="reel-modal-yt-btn">
+              <span>YouTube</span>
+              <span>↗</span>
+            </a>
+
+            ${nextReel ? `
+              <button type="button" class="reel-modal-nav-btn" onclick="CustomerApp.openReelModal('${nextReel.id}')" title="Next Reel">
+                Next ›
+              </button>
+            ` : `<span style="width: 60px;"></span>`}
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modalWrap);
+    document.body.style.overflow = 'hidden';
+  },
+
+  closeReelModal() {
+    const existing = document.getElementById('likex-reel-modal-root');
+    if (existing) {
+      existing.remove();
+    }
+    document.body.style.overflow = '';
   },
 
   // 3. ORDERS HISTORY TAB

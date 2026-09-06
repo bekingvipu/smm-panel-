@@ -37,6 +37,49 @@ window.SMM_CARTOON_AVATARS = [
   }
 ];
 
+window.SMM_DEFAULT_REELS = [
+  {
+    id: 'reel-1',
+    title: '10K Instagram Followers in 60 Secs — Live Proof! ⚡',
+    videoUrl: 'https://youtube.com/shorts/5v4pP277K-k',
+    badge: '🔥 Live Proof',
+    views: '48.5K views',
+    duration: '0:45',
+    active: true,
+    createdAt: '2026-03-01'
+  },
+  {
+    id: 'reel-2',
+    title: 'How LikeX Wholesale SMM Works (Step-by-Step) 👑',
+    videoUrl: 'https://youtube.com/shorts/3i_b7B2l8Y0',
+    badge: '👑 Official Guide',
+    views: '92.1K views',
+    duration: '0:58',
+    active: true,
+    createdAt: '2026-03-02'
+  },
+  {
+    id: 'reel-3',
+    title: 'Instant ₹100 UPI Add Funds & QR Verification 💰',
+    videoUrl: 'https://youtube.com/shorts/kJQP7kiw5Fk',
+    badge: '⚡ Instant Add Funds',
+    views: '35.4K views',
+    duration: '0:30',
+    active: true,
+    createdAt: '2026-03-03'
+  },
+  {
+    id: 'reel-4',
+    title: 'Real Creator Results & 365-Day Refill Guarantee 🛡️',
+    videoUrl: 'https://youtube.com/shorts/fJ9rUzIMcZQ',
+    badge: '✨ Client Review',
+    views: '64.8K views',
+    duration: '0:50',
+    active: true,
+    createdAt: '2026-03-04'
+  }
+];
+
 window.SMM_MOCK = {
   currency: 'INR',
   exchangeRate: 95.385,

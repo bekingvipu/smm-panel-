@@ -208,6 +208,7 @@ const AdminApp = {
 
     let contentHtml = '';
     if (tab === 'dashboard') contentHtml = this.renderDashboard(store);
+    else if (tab === 'about_reels') contentHtml = this.renderAboutReelsManager(store);
     else if (tab === 'wallet_settings') contentHtml = this.renderWalletSettings(store);
     else if (tab === 'alerts') contentHtml = this.renderAlertsManager(store);
     else if (tab === 'providers') contentHtml = this.renderProviders(store);
@@ -234,6 +235,10 @@ const AdminApp = {
             <li class="admin-nav-item ${tab === 'dashboard' ? 'active' : ''}" onclick="store.setAdminTab('dashboard')">
               <span class="nav-icon">📊</span>
               <span>Dashboard</span>
+            </li>
+            <li class="admin-nav-item ${tab === 'about_reels' ? 'active' : ''}" onclick="store.setAdminTab('about_reels')">
+              <span class="nav-icon">🎬</span>
+              <span>About LikeX Reels</span>
             </li>
             <li class="admin-nav-item ${tab === 'wallet_settings' ? 'active' : ''}" onclick="store.setAdminTab('wallet_settings')">
               <span class="nav-icon">🎥</span>
@@ -318,6 +323,7 @@ const AdminApp = {
 
   getTabTitle(tab) {
     if (tab === 'dashboard') return 'Dashboard';
+    if (tab === 'about_reels') return 'About LikeX YouTube Reels & Proofs Manager';
     if (tab === 'wallet_settings') return 'Wallet Video Tutorial & Payment Settings';
     if (tab === 'alerts') return 'Low Balance Alerts & Multi-Channel Gateway';
     if (tab === 'providers') return 'Provider Management';
@@ -327,6 +333,243 @@ const AdminApp = {
     if (tab === 'orders') return 'All Orders Master Table';
     if (tab === 'support') return 'Support Ticket Queue';
     return 'Admin Console';
+  },
+
+  // ABOUT LIKEX YOUTUBE REELS & SHORTS SHOWCASE MANAGER
+  renderAboutReelsManager(store) {
+    const reels = store.getAboutReels ? store.getAboutReels() : (store.data.aboutReels || []);
+    const activeCount = reels.filter(r => r && r.active !== false).length;
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1050px;">
+        
+        <!-- Header Banner -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(139, 92, 246, 0.12), rgba(99, 102, 241, 0.08)); border: 1.5px solid rgba(139, 92, 246, 0.3); padding: 24px; border-radius: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(139, 92, 246, 0.15); color: #7C3AED; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; text-transform: uppercase;">
+                <span>🎬</span>
+                <span>Customer Storefront Media</span>
+              </div>
+              <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin-top: 8px; margin-bottom: 4px;">
+                About LikeX YouTube Reels & Proofs Manager
+              </h2>
+              <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
+                Add, manage, and reorder YouTube Shorts & Video links. These will instantly appear in the <strong>About LikeX</strong> tab between <em>24/7 WhatsApp VIP Support</em> and <em>10+ Years Trust Metrics</em>.
+              </p>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span class="badge" style="background: #7C3AED; color: white; font-size: 13px; font-weight: 800; padding: 6px 14px; border-radius: 999px;">
+                ${activeCount} Active Live Reels
+              </span>
+              <button class="btn btn-secondary btn-sm" onclick="AdminApp.resetDefaultReels()" title="Reset to official LikeX demo reels">
+                🔄 Restore Defaults
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Content Grid: Add Form (Left) & Active Catalog (Right) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px;">
+          
+          <!-- 1. Add New Reel Card -->
+          <div class="card" style="padding: 24px; border-radius: 20px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <span style="font-size: 22px;">➕</span>
+              <div>
+                <h3 style="font-size: 17px; font-weight: 800; margin: 0; color: var(--text-main);">Add New Reel / Short</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Supports YouTube Shorts, youtu.be, and regular URLs</p>
+              </div>
+            </div>
+
+            <form onsubmit="AdminApp.addNewReel(event)" style="display: flex; flex-direction: column; gap: 14px;">
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 12.5px;">YouTube Video / Shorts Link: *</label>
+                <input 
+                  type="url" 
+                  id="admin-new-reel-url" 
+                  class="form-input" 
+                  placeholder="https://youtube.com/shorts/... or youtu.be/..." 
+                  required 
+                  style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                  oninput="AdminApp.handleReelUrlPreview(this.value)"
+                />
+              </div>
+
+              <!-- Live Instant Preview Box -->
+              <div id="admin-new-reel-preview-box" style="border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border-color); background: #0F172A; min-height: 140px; display: flex; align-items: center; justify-content: center; position: relative;">
+                <div style="text-align: center; color: #94A3B8; padding: 16px;">
+                  <div style="font-size: 26px; margin-bottom: 4px;">🎬</div>
+                  <div style="font-size: 12.5px; font-weight: 700;">Live Preview Container</div>
+                  <div style="font-size: 11px; margin-top: 2px;">Paste YouTube link above to preview thumbnail</div>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Reel Title / Caption: *</label>
+                <input 
+                  type="text" 
+                  id="admin-new-reel-title" 
+                  class="form-input" 
+                  placeholder="e.g. 10K Followers in 60s Live Proof! ⚡" 
+                  required 
+                  style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                />
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Badge / Tag:</label>
+                  <select id="admin-new-reel-badge" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px; font-weight: 700;">
+                    <option value="🔥 Live Proof">🔥 Live Proof</option>
+                    <option value="👑 Official Guide">👑 Official Guide</option>
+                    <option value="⚡ Instant Speed">⚡ Instant Speed</option>
+                    <option value="✨ Client Review">✨ Client Review</option>
+                    <option value="🚀 Viral Boost">🚀 Viral Boost</option>
+                    <option value="💰 Lowest Rate">💰 Lowest Rate</option>
+                    <option value="🛡️ 365D Refill">🛡️ 365D Refill</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Views Tag:</label>
+                  <input 
+                    type="text" 
+                    id="admin-new-reel-views" 
+                    class="form-input" 
+                    placeholder="e.g. 52.4K views" 
+                    value="48.5K views"
+                    style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                  />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Duration:</label>
+                  <input 
+                    type="text" 
+                    id="admin-new-reel-duration" 
+                    class="form-input" 
+                    placeholder="e.g. 0:45" 
+                    value="0:45"
+                    style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                  />
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Status:</label>
+                  <select id="admin-new-reel-active" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px; font-weight: 700;">
+                    <option value="true">✅ Visible (Active)</option>
+                    <option value="false">❌ Hidden (Draft)</option>
+                  </select>
+                </div>
+              </div>
+
+              <button 
+                type="submit" 
+                class="btn btn-primary btn-block btn-lg" 
+                style="margin-top: 6px; font-weight: 800; border-radius: 12px; height: 48px; background: linear-gradient(135deg, #7C3AED, #4F46E5);"
+              >
+                <span>Publish Reel to Storefront 🚀</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- 2. Existing Reels Showcase Management -->
+          <div class="card" style="padding: 24px; border-radius: 20px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 22px;">📱</span>
+                <div>
+                  <h3 style="font-size: 17px; font-weight: 800; margin: 0; color: var(--text-main);">Current Reels Catalog</h3>
+                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Total ${reels.length} Reels configured</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; max-height: 600px; overflow-y: auto; padding-right: 4px;">
+              ${reels.length === 0 ? `
+                <div style="text-align: center; padding: 40px 20px; color: var(--text-muted);">
+                  <div style="font-size: 36px; margin-bottom: 8px;">🎬</div>
+                  <p style="font-weight: 700;">No Reels in Showcase</p>
+                  <p style="font-size: 12px;">Add a YouTube reel above to display it on the customer storefront.</p>
+                </div>
+              ` : reels.map((r, idx) => {
+                const thumb = (store.getYouTubeThumbnailUrl ? store.getYouTubeThumbnailUrl(r.videoUrl) : '') || 
+                  'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80';
+                return `
+                  <div style="display: flex; align-items: center; gap: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 12px; transition: border-color 0.2s;">
+                    <!-- Thumbnail -->
+                    <div style="position: relative; width: 60px; height: 80px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #000;">
+                      <img src="${thumb}" alt="${r.title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80'" />
+                      <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">
+                        ${r.duration || '0:45'}
+                      </div>
+                    </div>
+
+                    <!-- Details -->
+                    <div style="flex: 1; min-width: 0;">
+                      <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <span style="background: rgba(124, 58, 237, 0.12); color: #7C3AED; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                          ${r.badge || '🔥 Live Proof'}
+                        </span>
+                        <span style="font-size: 11px; color: var(--text-muted);">
+                          ${r.views || ''}
+                        </span>
+                        <span style="font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 6px; ${r.active !== false ? 'background: #DCFCE7; color: #166534;' : 'background: #FEE2E2; color: #991B1B;'}">
+                          ${r.active !== false ? '✅ Active' : '❌ Hidden'}
+                        </span>
+                      </div>
+
+                      <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin: 4px 0 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        ${r.title}
+                      </h4>
+
+                      <a href="${r.videoUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: var(--primary); text-decoration: underline; overflow: hidden; text-overflow: ellipsis; display: block; white-space: nowrap;">
+                        ${r.videoUrl} ↗
+                      </a>
+                    </div>
+
+                    <!-- Actions -->
+                    <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-outline" 
+                        style="padding: 4px 8px; font-size: 11px; font-weight: 700;" 
+                        onclick="AdminApp.testPlayReel('${r.videoUrl}', '${r.title.replace(/'/g, "\\'")}')" 
+                        title="Test Play Video"
+                      >
+                        ▶ Play
+                      </button>
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-secondary" 
+                        style="padding: 4px 8px; font-size: 11px;" 
+                        onclick="AdminApp.toggleReel('${r.id}')" 
+                        title="${r.active !== false ? 'Hide Reel' : 'Show Reel'}"
+                      >
+                        ${r.active !== false ? '👁️ Hide' : '👁️ Show'}
+                      </button>
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-outline" 
+                        style="padding: 4px 8px; font-size: 11px; color: var(--error); border-color: var(--error);" 
+                        onclick="AdminApp.deleteReel('${r.id}')" 
+                        title="Delete Reel"
+                      >
+                        🗑️ Del
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   },
 
   // WALLET & EARN MONEY VIDEO TUTORIALS SETTINGS MANAGER
@@ -2208,6 +2451,116 @@ const AdminApp = {
         </div>
       </div>
     `;
+  },
+
+  handleReelUrlPreview(url) {
+    const box = document.getElementById('admin-new-reel-preview-box');
+    if (!box) return;
+    const store = window.store;
+    const thumb = store.getYouTubeThumbnailUrl ? store.getYouTubeThumbnailUrl(url) : '';
+    if (thumb) {
+      box.innerHTML = `
+        <div style="position: relative; width: 100%; height: 160px; background: #000;">
+          <img src="${thumb}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'" />
+          <div style="position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); display: flex; align-items: flex-end; padding: 10px;">
+            <span style="color: #fff; font-size: 11px; font-weight: 700; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px;">
+              ✅ Valid YouTube Link Detected
+            </span>
+          </div>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="text-align: center; color: #94A3B8; padding: 16px;">
+          <div style="font-size: 26px; margin-bottom: 4px;">🎬</div>
+          <div style="font-size: 12.5px; font-weight: 700;">Live Preview Container</div>
+          <div style="font-size: 11px; margin-top: 2px;">Paste YouTube link above to preview thumbnail</div>
+        </div>
+      `;
+    }
+  },
+
+  addNewReel(e) {
+    e.preventDefault();
+    const urlInput = document.getElementById('admin-new-reel-url');
+    const titleInput = document.getElementById('admin-new-reel-title');
+    const badgeInput = document.getElementById('admin-new-reel-badge');
+    const viewsInput = document.getElementById('admin-new-reel-views');
+    const durationInput = document.getElementById('admin-new-reel-duration');
+    const activeInput = document.getElementById('admin-new-reel-active');
+
+    const videoUrl = urlInput ? urlInput.value.trim() : '';
+    const title = titleInput ? titleInput.value.trim() : '';
+    const badge = badgeInput ? badgeInput.value.trim() : '🔥 Live Proof';
+    const views = viewsInput ? viewsInput.value.trim() : '45K views';
+    const duration = durationInput ? durationInput.value.trim() : '0:45';
+    const active = activeInput ? activeInput.value === 'true' : true;
+
+    if (!videoUrl || !title) {
+      window.store.showToast('Please enter both Video Link and Title.', 'error');
+      return;
+    }
+
+    window.store.addAboutReel({
+      videoUrl,
+      title,
+      badge,
+      views,
+      duration,
+      active
+    });
+
+    // Re-render admin view
+    this.render(document.getElementById('screen-container'));
+  },
+
+  deleteReel(id) {
+    if (confirm('Are you sure you want to remove this reel from About LikeX?')) {
+      window.store.deleteAboutReel(id);
+      this.render(document.getElementById('screen-container'));
+    }
+  },
+
+  toggleReel(id) {
+    window.store.toggleAboutReel(id);
+    this.render(document.getElementById('screen-container'));
+  },
+
+  testPlayReel(url, title) {
+    const store = window.store;
+    const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(url) : '';
+    if (!embedUrl) {
+      window.open(url, '_blank');
+      return;
+    }
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title">▶ ${title || 'Reel Preview'}</h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+      <div style="position: relative; padding-bottom: 140%; height: 0; max-width: 340px; margin: 0 auto; border-radius: 14px; overflow: hidden; background: #000; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+        <iframe 
+          src="${embedUrl}${embedUrl.includes('?') ? '&' : '?'}autoplay=1&mute=0&rel=0" 
+          style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          allowfullscreen
+        ></iframe>
+      </div>
+      <div style="text-align: center; margin-top: 14px;">
+        <a href="${url}" target="_blank" class="btn btn-outline btn-sm">Open on YouTube ↗</a>
+      </div>
+    `;
+    modal.classList.add('active');
+  },
+
+  resetDefaultReels() {
+    if (confirm('Restore default official LikeX YouTube reels in showcase?')) {
+      window.store.updateAboutReels(Array.isArray(window.SMM_DEFAULT_REELS) ? [...window.SMM_DEFAULT_REELS] : []);
+      this.render(document.getElementById('screen-container'));
+    }
   }
 };
 

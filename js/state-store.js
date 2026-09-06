@@ -144,6 +144,18 @@ class SmmStateStore {
       };
     }
 
+    // Initialize About LikeX YouTube Reels Showcase Config
+    try {
+      const savedReels = localStorage.getItem('likex_about_reels_config');
+      if (savedReels) {
+        this.data.aboutReels = JSON.parse(savedReels);
+      } else {
+        this.data.aboutReels = Array.isArray(window.SMM_DEFAULT_REELS) ? [...window.SMM_DEFAULT_REELS] : [];
+      }
+    } catch (e) {
+      this.data.aboutReels = Array.isArray(window.SMM_DEFAULT_REELS) ? [...window.SMM_DEFAULT_REELS] : [];
+    }
+
     // Initialize Live Provider Rates Auto-Sync Engine
     try {
       const savedRates = localStorage.getItem('likex_live_rates_cache');
@@ -187,6 +199,86 @@ class SmmStateStore {
     }
 
     return '';
+  }
+
+  extractYouTubeVideoId(url) {
+    if (!url) return '';
+    const cleanUrl = String(url).trim();
+    if (!cleanUrl) return '';
+
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/;
+    const match = cleanUrl.match(regExp);
+
+    if (match && match[2] && match[2].length === 11) {
+      return match[2];
+    }
+
+    if (/^[a-zA-Z0-9_-]{11}$/.test(cleanUrl)) {
+      return cleanUrl;
+    }
+
+    return '';
+  }
+
+  getYouTubeThumbnailUrl(url) {
+    const id = this.extractYouTubeVideoId(url);
+    if (id) {
+      return `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+    }
+    return '';
+  }
+
+  getAboutReels() {
+    if (!this.data.aboutReels || !Array.isArray(this.data.aboutReels)) {
+      this.data.aboutReels = Array.isArray(window.SMM_DEFAULT_REELS) ? [...window.SMM_DEFAULT_REELS] : [];
+    }
+    return this.data.aboutReels;
+  }
+
+  updateAboutReels(reels) {
+    this.data.aboutReels = Array.isArray(reels) ? reels : [];
+    try {
+      localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels));
+    } catch (e) {}
+
+    // Sync to Supabase Cloud for instant live broadcast
+    this.saveCloudConfig({ about_reels: this.data.aboutReels });
+
+    this.notify();
+    this.showToast('✅ About LikeX Reels updated & synced across all devices!', 'success');
+  }
+
+  addAboutReel(reelData) {
+    const reels = [...this.getAboutReels()];
+    const newReel = {
+      id: 'reel_' + Date.now(),
+      title: String(reelData.title || 'LikeX Official Reel').trim(),
+      videoUrl: String(reelData.videoUrl || '').trim(),
+      badge: String(reelData.badge || '🔥 Live Proof').trim(),
+      views: String(reelData.views || '45K views').trim(),
+      duration: String(reelData.duration || '0:45').trim(),
+      active: reelData.active !== undefined ? Boolean(reelData.active) : true,
+      createdAt: new Date().toISOString()
+    };
+    reels.unshift(newReel);
+    this.updateAboutReels(reels);
+    return newReel;
+  }
+
+  deleteAboutReel(id) {
+    let reels = this.getAboutReels();
+    reels = reels.filter(r => r.id !== id);
+    this.updateAboutReels(reels);
+  }
+
+  toggleAboutReel(id) {
+    const reels = this.getAboutReels().map(r => {
+      if (r.id === id) {
+        return { ...r, active: !r.active };
+      }
+      return r;
+    });
+    this.updateAboutReels(reels);
   }
 
   // Save configuration to Cloud storage (Supabase config row 999 + site_settings)
@@ -673,6 +765,10 @@ class SmmStateStore {
             };
             try { localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement)); } catch(e){}
             changed = true;
+          } else if (item.key === 'about_reels' && Array.isArray(item.value)) {
+            this.data.aboutReels = item.value;
+            try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
+            changed = true;
           }
         });
       }
@@ -686,6 +782,11 @@ class SmmStateStore {
       if (configRows && configRows.length > 0 && configRows[0].password_hash) {
         try {
           const parsed = JSON.parse(configRows[0].password_hash);
+          if (parsed.about_reels && Array.isArray(parsed.about_reels)) {
+            this.data.aboutReels = parsed.about_reels;
+            try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
+            changed = true;
+          }
           if (parsed.earn_tutorial && parsed.earn_tutorial.videoUrl) {
             this.data.earnTutorial = {
               ...this.data.earnTutorial,
