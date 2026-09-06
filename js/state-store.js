@@ -1499,7 +1499,10 @@ class SmmStateStore {
           if (res.ok) {
             const data = await res.json();
             if (data.status) {
-              const liveStatus = data.status === 'In progress' ? 'In Progress' : data.status;
+              const rawStat = String(data.status).trim();
+              const liveStatus = rawStat.toLowerCase() === 'in progress' 
+                ? 'In Progress' 
+                : (rawStat.toLowerCase() === 'partial' ? 'Partial' : rawStat);
               order.status = liveStatus;
               if (data.start_count !== undefined && data.start_count !== null) {
                 order.startCount = Number(data.start_count);

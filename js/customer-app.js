@@ -2414,6 +2414,7 @@ const CustomerApp = {
           <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('completed')">Completed</button>
           <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('processing')">Processing</button>
           <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('in_progress')">In Progress</button>
+          <button class="orders-filter-pill ${filter === 'partial' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('partial')">⚡ Partial / Queue</button>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -2443,6 +2444,8 @@ const CustomerApp = {
     let badgeColor = '#0369A1';
     let badgeText = order.status;
 
+    const isPartial = order.status === 'Partial' || String(order.status).toLowerCase() === 'partial';
+
     if (order.status === 'Completed') {
       badgeBg = '#DCFCE7';
       badgeColor = '#15803D';
@@ -2452,6 +2455,10 @@ const CustomerApp = {
     } else if (order.status === 'In Progress') {
       badgeBg = '#FEF3C7';
       badgeColor = '#B45309';
+    } else if (isPartial) {
+      badgeBg = '#FFFBEB';
+      badgeColor = '#D97706';
+      badgeText = '⚡ High Traffic Queue';
     } else if (order.status === 'Refunded') {
       badgeBg = '#F3E8FF';
       badgeColor = '#7E22CE';
@@ -2464,14 +2471,14 @@ const CustomerApp = {
     const currentCount = Number(order.currentCount || 0).toLocaleString();
     const remains = Number(order.remains || 0).toLocaleString();
     const canRefill = order.status === 'Completed';
-    const isFailedOrLow = (order.isLowBalance || order.status.includes('Low Provider Balance') || (order.status === 'Processing' && String(order.id).startsWith('48') && !order.providerOrderId)) && order.status !== 'Refunded';
+    const isFailedOrLow = (order.isLowBalance || order.status.includes('Low Provider Balance') || (order.status === 'Processing' && String(order.id).startsWith('48') && !order.providerOrderId)) && order.status !== 'Refunded' && !isPartial;
 
     return `
       <div class="order-history-card">
         <div class="order-history-top">
           <div class="order-history-id-group">
             <span class="order-history-id">#${order.id}</span>
-            <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 5px;">
+            <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid ${isPartial ? '#F59E0B' : 'transparent'};">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor};"></span>
               ${badgeText}
             </span>
@@ -2501,7 +2508,30 @@ const CustomerApp = {
           </div>
         </div>
 
-        ${canRefill ? `
+        ${isPartial ? `
+          <div style="background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%); border: 1.5px solid #F59E0B; border-radius: 14px; padding: 14px; margin-top: 12px; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.08);">
+            <div style="display: flex; align-items: flex-start; gap: 10px;">
+              <span style="font-size: 22px; line-height: 1;">⚡</span>
+              <div style="flex: 1;">
+                <div style="font-size: 13.5px; font-weight: 800; color: #92400E; margin-bottom: 3px;">
+                  High Instagram Server Traffic Alert
+                </div>
+                <div style="font-size: 12px; color: #78350F; line-height: 1.5;">
+                  Heavy server traffic & Instagram algorithm queue ki wajah se aapka order (${(order.quantity - (order.remains || 0)).toLocaleString()} delivered, ${(order.remains || 0).toLocaleString()} remaining) hold par hai. Instantly complete karwane ke liye Customer Support se connect karein.
+                </div>
+              </div>
+            </div>
+            <a 
+              href="https://wa.me/919837371137?text=${encodeURIComponent('Hello LikeX Support, my Order #' + order.id + ' (' + (order.serviceName || 'Instagram Service') + ') is held in High Traffic queue with ' + (order.remains || 0) + ' remaining likes. Please priority complete my order.')}" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              style="display: flex; align-items: center; justify-content: center; gap: 8px; background: #25D366; color: #FFFFFF; font-weight: 800; font-size: 13px; padding: 10px 16px; border-radius: 999px; text-decoration: none; margin-top: 10px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease;"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86.173.086.275.072.376-.043.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.203c.043.072.043.419-.101.824z"/></svg>
+              <span>💬 Contact Support to Complete</span>
+            </a>
+          </div>
+        ` : canRefill ? `
           <button class="btn-refill-full" onclick="CustomerApp.promptRefill('${order.id}')">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>

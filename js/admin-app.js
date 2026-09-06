@@ -2267,6 +2267,10 @@ const AdminApp = {
               <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
                 ⚠️ Low Balance (Needs Fund)
               </span>
+            ` : (String(o.status).toLowerCase() === 'partial') ? `
+              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800;">
+                ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
+              </span>
             ` : `
               <span class="badge badge-primary">${o.status}</span>
             `}
@@ -2363,6 +2367,7 @@ const AdminApp = {
           <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" onclick="AdminApp.setAdminOrdersFilter('in_progress')">In Progress</button>
           <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" data-filter="processing" onclick="AdminApp.setAdminOrdersFilter('processing')">Processing</button>
           <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" data-filter="completed" onclick="AdminApp.setAdminOrdersFilter('completed')">Completed</button>
+          <button class="orders-filter-pill ${filter === 'partial' ? 'active' : ''}" data-filter="partial" onclick="AdminApp.setAdminOrdersFilter('partial')">⚡ Partial / Queued</button>
           <button class="orders-filter-pill ${filter === 'refunded' ? 'active' : ''}" data-filter="refunded" onclick="AdminApp.setAdminOrdersFilter('refunded')">Refunded / Canceled</button>
         </div>
 
