@@ -731,13 +731,13 @@ class SmmStateStore {
                 balance: (parseFloat(balData.jap.balance) * 85).toFixed(2),
                 threshold: thresholdINR.toFixed(2)
               });
-            } else if (balData.worldofsmm && balData.worldofsmm.balance !== undefined && parseFloat(balData.worldofsmm.balance) < thresholdINR) {
+            } else if (balData.worldofsmm && balData.worldofsmm.balance !== undefined && parseFloat(balData.worldofsmm.balance) < thresholdUSD) {
               localStorage.setItem('likex_last_low_bal_alert', String(now));
               this.triggerAlert({
                 type: 'low_balance',
                 providerName: 'WorldOfSMM',
                 providerKey: 'worldofsmm',
-                balance: parseFloat(balData.worldofsmm.balance).toFixed(2),
+                balance: (parseFloat(balData.worldofsmm.balance) * 85).toFixed(2),
                 threshold: thresholdINR.toFixed(2)
               });
             }

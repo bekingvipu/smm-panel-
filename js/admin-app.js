@@ -863,15 +863,15 @@ const AdminApp = {
           <div class="card" style="padding: 20px; border: 1.5px solid var(--border-color); border-radius: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">🇮🇳 WorldOfSMM (India)</span>
-              <span class="badge ${wosBal > Number(alertConfig.threshold || 100) ? 'badge-success' : 'badge-danger'}">
-                ${wosBal > Number(alertConfig.threshold || 100) ? '✓ Funded' : '⚠️ Low Balance'}
+              <span class="badge ${wosBal > (Number(alertConfig.threshold || 100) / 85) ? 'badge-success' : 'badge-danger'}">
+                ${wosBal > (Number(alertConfig.threshold || 100) / 85) ? '✓ Funded' : '⚠️ Low Balance'}
               </span>
             </div>
             <div style="font-size: 28px; font-weight: 900; color: #10B981; font-family: monospace;">
-              ₹${wosBal.toFixed(2)} INR
+              $${wosBal.toFixed(2)} USD
             </div>
             <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
-              Direct Indian Gateway • Threshold: ₹${alertConfig.threshold || 100}
+              Approx: <strong>₹${(wosBal * 85).toFixed(2)} INR</strong> • Threshold: ₹${alertConfig.threshold || 100}
             </div>
           </div>
         </div>
