@@ -2898,10 +2898,10 @@ const CustomerApp = {
                   href="https://t.me/Likex_support" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  class="btn btn-outline"
-                  style="border-color: #2AABEE; color: #2AABEE; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12.5px; width: 100%;"
+                  class="btn"
+                  style="background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12.5px; width: 100%; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); border: none;"
                 >
-                  Open Telegram (@Likex_support) →
+                  <span>Open Telegram (@Likex_support) →</span>
                 </a>
               </div>
             </div>
@@ -2926,8 +2926,8 @@ const CustomerApp = {
                     href="https://t.me/Likex_support" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    class="btn btn-outline"
-                    style="border-color: #2AABEE; color: #2AABEE; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px;"
+                    class="btn"
+                    style="background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); border: none;"
                   >
                     Refill on Telegram →
                   </a>
@@ -2935,8 +2935,8 @@ const CustomerApp = {
                     href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    class="btn btn-outline"
-                    style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px;"
+                    class="btn"
+                    style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); border: none;"
                   >
                     Refill on WhatsApp →
                   </a>
@@ -2964,8 +2964,8 @@ const CustomerApp = {
                     href="https://t.me/Likex_support" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    class="btn btn-outline"
-                    style="border-color: #2AABEE; color: #2AABEE; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px;"
+                    class="btn"
+                    style="background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); border: none;"
                   >
                     Send on Telegram →
                   </a>
@@ -2973,8 +2973,8 @@ const CustomerApp = {
                     href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    class="btn btn-outline"
-                    style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px;"
+                    class="btn"
+                    style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); border: none;"
                   >
                     Send on WhatsApp →
                   </a>
@@ -3002,8 +3002,8 @@ const CustomerApp = {
                     href="https://t.me/Likex_support" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    class="btn btn-outline"
-                    style="border-color: #2AABEE; color: #2AABEE; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px;"
+                    class="btn"
+                    style="background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); border: none;"
                   >
                     Inquire on Telegram →
                   </a>
@@ -3011,8 +3011,8 @@ const CustomerApp = {
                     href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    class="btn btn-outline"
-                    style="border-color: rgba(37, 211, 102, 0.6); color: #128C7E; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px;"
+                    class="btn"
+                    style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); border: none;"
                   >
                     Inquire on WhatsApp →
                   </a>
@@ -3037,8 +3037,8 @@ const CustomerApp = {
                 </p>
                 <a 
                   href="mailto:supporthubindia@gmail.com?subject=${encodeURIComponent('LikeX Support Query' + (userEmail ? ' - ' + userEmail : ''))}" 
-                  class="btn btn-outline"
-                  style="border-color: rgba(234, 67, 53, 0.6); color: #EA4335; font-weight: 700; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12.5px; width: 100%;"
+                  class="btn"
+                  style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12.5px; width: 100%; box-shadow: 0 3px 10px rgba(234, 67, 53, 0.3); border: none;"
                 >
                   Write to supporthubindia@gmail.com →
                 </a>
@@ -3056,14 +3056,14 @@ const CustomerApp = {
             target="_blank" 
             rel="noopener noreferrer" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(42, 171, 238, 0.25); background: linear-gradient(135deg, rgba(42, 171, 238, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
+            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #2AABEE 0%, #1D88C2 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.32); color: #ffffff; transition: transform 0.15s ease;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(42, 171, 238, 0.15); color: #2AABEE; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(42, 171, 238, 0.18);">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
               ✈️
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Telegram</div>
-              <div style="font-size: 12.5px; font-weight: 800; color: #2AABEE; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">Telegram</div>
+              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
             </div>
           </a>
 
@@ -3073,14 +3073,14 @@ const CustomerApp = {
             target="_blank" 
             rel="noopener noreferrer" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(37, 211, 102, 0.25); background: linear-gradient(135deg, rgba(37, 211, 102, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
+            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.32); color: #ffffff; transition: transform 0.15s ease;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(37, 211, 102, 0.15); color: #128C7E; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.18);">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
               💬
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">WhatsApp</div>
-              <div style="font-size: 12.5px; font-weight: 800; color: #128C7E; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">+91 9837371137</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">WhatsApp</div>
+              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">+91 9837371137</div>
             </div>
           </a>
 
@@ -3090,14 +3090,14 @@ const CustomerApp = {
             target="_blank" 
             rel="noopener noreferrer" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(225, 48, 108, 0.25); background: linear-gradient(135deg, rgba(225, 48, 108, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
+            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #833AB4 0%, #E1306C 50%, #FD1D1D 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(225, 48, 108, 0.32); color: #ffffff; transition: transform 0.15s ease;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(225, 48, 108, 0.15); color: #E1306C; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(225, 48, 108, 0.18);">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
               📸
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Instagram</div>
-              <div style="font-size: 12.5px; font-weight: 800; color: #E1306C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@likexofficial</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">Instagram</div>
+              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@likexofficial</div>
             </div>
           </a>
 
@@ -3105,14 +3105,14 @@ const CustomerApp = {
           <a 
             href="mailto:supporthubindia@gmail.com" 
             class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1.5px solid rgba(234, 67, 53, 0.25); background: linear-gradient(135deg, rgba(234, 67, 53, 0.06), var(--bg-surface)); text-decoration: none; box-shadow: var(--shadow-xs); transition: all 0.2s ease;"
+            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.32); color: #ffffff; transition: transform 0.15s ease;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(234, 67, 53, 0.15); color: #EA4335; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(234, 67, 53, 0.18);">
+            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
               📧
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px;">Official Mail</div>
-              <div style="font-size: 12px; font-weight: 800; color: #EA4335; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">supporthubindia...</div>
+              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">Email Desk</div>
+              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">Send Email ✉️</div>
             </div>
           </a>
         </div>
