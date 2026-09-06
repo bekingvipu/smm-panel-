@@ -2414,7 +2414,7 @@ const CustomerApp = {
           <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('completed')">Completed</button>
           <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('processing')">Processing</button>
           <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('in_progress')">In Progress</button>
-          <button class="orders-filter-pill ${filter === 'partial' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('partial')">⚡ Partial / Queue</button>
+          <button class="orders-filter-pill ${filter === 'partial' ? 'active' : ''}" onclick="CustomerApp.setOrdersFilter('partial')">⚡ Partial</button>
         </div>
 
         <div style="display: flex; flex-direction: column; gap: 4px;">
@@ -2435,6 +2435,25 @@ const CustomerApp = {
             </div>
           ` : filtered.map(order => this.renderHistoryCard(order, store)).join('')}
         </div>
+      </div>
+    `;
+  },
+
+  formatOrderTitleHtml(serviceName) {
+    if (!serviceName) return '<div class="order-history-title-text">Social Media Service</div>';
+    const raw = String(serviceName).trim();
+    const tagMatches = raw.match(/\[(.*?)\]/g) || [];
+    const tags = tagMatches.map(t => t.replace(/[\[\]]/g, '').trim()).filter(Boolean);
+    const cleanTitle = raw.replace(/\[(.*?)\]/g, '').replace(/\s+/g, ' ').trim() || raw;
+
+    return `
+      <div>
+        <div class="order-history-title-text">${cleanTitle}</div>
+        ${tags.length > 0 ? `
+          <div class="order-history-tags-row">
+            ${tags.map(tag => `<span class="order-tag-chip">${tag}</span>`).join('')}
+          </div>
+        ` : ''}
       </div>
     `;
   },
@@ -2486,7 +2505,7 @@ const CustomerApp = {
           <span class="order-history-date">${store.formatOrderDisplayDate ? store.formatOrderDisplayDate(order) : (order.date || 'Today')}</span>
         </div>
 
-        <div class="order-history-title-text">${order.serviceName}</div>
+        ${this.formatOrderTitleHtml(order.serviceName)}
 
         <div class="order-history-pricing-row">
           <span class="order-history-qty">Qty: <strong>${Number(order.quantity).toLocaleString()}</strong></span>
