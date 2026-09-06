@@ -2832,7 +2832,7 @@ const CustomerApp = {
     const recentOrders = store.data.orders || [];
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 680px; margin: 0 auto; width: 100%; padding-bottom: 24px;">
+      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 680px; margin: 0 auto; width: 100%; padding-bottom: 90px; box-sizing: border-box;">
         
         <!-- Sleek Compact Hero Header -->
         <div class="card" style="background: linear-gradient(135deg, rgba(42, 171, 238, 0.08), rgba(37, 211, 102, 0.08)); border: 1px solid rgba(42, 171, 238, 0.22); border-radius: 18px; padding: 16px 16px 14px; box-shadow: var(--shadow-sm); position: relative;">
@@ -3048,71 +3048,67 @@ const CustomerApp = {
 
         </div>
 
-        <!-- Sleek Micro Contact Channels Strip (Premium 2x2 Grid) -->
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px;">
-          <!-- 1. Telegram Card -->
+        <!-- Sleek Micro Contact Channels Strip (Frosted Matte Glass 2x2 Grid) -->
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 4px; width: 100%; box-sizing: border-box;">
+          <!-- 1. Telegram Matte Glass Card -->
           <a 
             href="https://t.me/Likex_support" 
             target="_blank" 
             rel="noopener noreferrer" 
-            class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #2AABEE 0%, #1D88C2 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.32); color: #ffffff; transition: transform 0.15s ease;"
+            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(42, 171, 238, 0.32); background: rgba(42, 171, 238, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(42, 171, 238, 0.18); border: 1px solid rgba(42, 171, 238, 0.3); color: #0284C7; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
               ✈️
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">Telegram</div>
-              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
+              <div style="font-size: 9px; font-weight: 800; color: #0284C7; text-transform: uppercase; letter-spacing: 0.5px;">Telegram</div>
+              <div style="font-size: 12px; font-weight: 800; color: #0369A1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
             </div>
           </a>
 
-          <!-- 2. WhatsApp Card -->
+          <!-- 2. WhatsApp Matte Glass Card -->
           <a 
             href="https://wa.me/919837371137" 
             target="_blank" 
             rel="noopener noreferrer" 
-            class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.32); color: #ffffff; transition: transform 0.15s ease;"
+            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(37, 211, 102, 0.32); background: rgba(37, 211, 102, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(37, 211, 102, 0.18); border: 1px solid rgba(37, 211, 102, 0.3); color: #047857; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
               💬
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">WhatsApp</div>
-              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">+91 9837371137</div>
+              <div style="font-size: 9px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">WhatsApp</div>
+              <div style="font-size: 12px; font-weight: 800; color: #065F46; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">+91 9837371137</div>
             </div>
           </a>
 
-          <!-- 3. Instagram Card -->
+          <!-- 3. Instagram Matte Glass Card -->
           <a 
             href="https://www.instagram.com/likexofficial/" 
             target="_blank" 
             rel="noopener noreferrer" 
-            class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #833AB4 0%, #E1306C 50%, #FD1D1D 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(225, 48, 108, 0.32); color: #ffffff; transition: transform 0.15s ease;"
+            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(225, 48, 108, 0.32); background: rgba(225, 48, 108, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(225, 48, 108, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(225, 48, 108, 0.18); border: 1px solid rgba(225, 48, 108, 0.3); color: #BE185D; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
               📸
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">Instagram</div>
-              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@likexofficial</div>
+              <div style="font-size: 9px; font-weight: 800; color: #BE185D; text-transform: uppercase; letter-spacing: 0.5px;">Instagram</div>
+              <div style="font-size: 12px; font-weight: 800; color: #9D174D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@likexofficial</div>
             </div>
           </a>
 
-          <!-- 4. Official Email Card -->
+          <!-- 4. Official Email Matte Glass Card -->
           <a 
             href="mailto:supporthubindia@gmail.com" 
-            class="card" 
-            style="display: flex; align-items: center; gap: 10px; padding: 13px 14px; border-radius: 16px; border: none; background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.32); color: #ffffff; transition: transform 0.15s ease;"
+            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(234, 67, 53, 0.32); background: rgba(234, 67, 53, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
-            <div style="width: 36px; height: 36px; border-radius: 11px; background: rgba(255, 255, 255, 0.22); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; backdrop-filter: blur(4px);">
+            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(234, 67, 53, 0.18); border: 1px solid rgba(234, 67, 53, 0.3); color: #C5221F; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
               📧
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9.5px; font-weight: 800; color: rgba(255, 255, 255, 0.85); text-transform: uppercase; letter-spacing: 0.5px;">Email Desk</div>
-              <div style="font-size: 13px; font-weight: 900; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">Send Email ✉️</div>
+              <div style="font-size: 9px; font-weight: 800; color: #C5221F; text-transform: uppercase; letter-spacing: 0.5px;">Email Desk</div>
+              <div style="font-size: 12px; font-weight: 800; color: #991B1B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">Send Email ✉️</div>
             </div>
           </a>
         </div>
