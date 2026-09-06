@@ -27,10 +27,11 @@ export default async function handler(req, res) {
   const amount = Number(body.amount || 0);
   const email = String(body.email || 'guest@likex.in').trim().toLowerCase();
 
-  const cleanUtr = String(rawUtr).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // Strict 12-Digit Numeric UTR
+  const cleanUtr = String(rawUtr).trim().replace(/[^0-9]/g, '');
 
-  if (!cleanUtr || cleanUtr.length < 8) {
-    return res.status(400).json({ error: 'Invalid UTR format. Minimum 8 characters required.' });
+  if (!/^\d{12}$/.test(cleanUtr)) {
+    return res.status(400).json({ error: 'Invalid UTR format. Exactly 12 numeric digits required.' });
   }
 
   const utrPrimaryId = `UTR-${cleanUtr}`;

@@ -1739,12 +1739,15 @@ const CustomerApp = {
       return;
     }
 
-    // Clean and normalize UTR (strip spaces, symbols)
-    const cleanUtr = rawUtr.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    // Strict 12-Digit Numeric UPI UTR Validation
+    const cleanUtr = rawUtr.replace(/\s+/g, '');
 
-    if (cleanUtr.length < 8 || cleanUtr.length > 25) {
-      window.store.showToast('Please enter a valid 12-digit UPI UTR / Transaction ID', 'error');
-      if (utrInput) utrInput.focus();
+    if (!/^\d{12}$/.test(cleanUtr)) {
+      window.store.showToast('❌ Please enter the exact 12-digit numeric Bank UTR / UPI Ref No (e.g. 423981029381), NOT the app Transaction ID!', 'error');
+      if (utrInput) {
+        utrInput.focus();
+        utrInput.select();
+      }
       return;
     }
 
@@ -2751,17 +2754,20 @@ const CustomerApp = {
               <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="10" max="50000" style="font-size: 16px; font-weight: 700; min-height: 48px; border-radius: 12px;" placeholder="Enter amount in ₹ (e.g. 100)" />
             </div>
 
-            <!-- 12-Digit UTR Input -->
+            <!-- 12-Digit Numeric Bank UTR Input -->
             <label class="form-label" style="font-weight: 800; font-size: 13px;">
-              <span>2. Enter 12-Digit UPI UTR / Transaction ID</span>
-              <span class="form-label-hint">Found in PhonePe / GPay / Paytm receipt</span>
+              <span>2. Enter 12-Digit Bank UTR / UPI Ref No</span>
+              <span class="form-label-hint">12-digit numeric only</span>
             </label>
             <div style="position: relative; margin-bottom: 6px;">
-              <input type="text" class="form-input" id="add-funds-utr-input" placeholder="e.g. 423981029381 (12 digits)" maxlength="22" style="font-family: var(--font-mono); font-size: 15px; font-weight: 700; min-height: 48px; border-radius: 12px; letter-spacing: 0.04em;" />
+              <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-input" id="add-funds-utr-input" placeholder="e.g. 423981029381 (12 digits only)" maxlength="12" style="font-family: var(--font-mono); font-size: 16px; font-weight: 800; min-height: 48px; border-radius: 12px; letter-spacing: 0.08em;" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)" />
             </div>
-            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 5px;">
-              <span style="color: #10B981;">🔒</span>
-              <span>1-Time Verification: Each Transaction ID / UTR can be credited only once.</span>
+            <div style="background: rgba(108, 92, 231, 0.06); border: 1px solid rgba(108, 92, 231, 0.18); border-radius: 10px; padding: 10px 14px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 16px; text-align: left; line-height: 1.5;">
+              <div style="font-weight: 800; color: var(--primary); margin-bottom: 3px;">📌 Where to find 12-digit UTR in your payment receipt:</div>
+              <div>• <strong>PhonePe:</strong> Look for <em>"UTR"</em> (e.g. 423981029381)</div>
+              <div>• <strong>Google Pay:</strong> Look for <em>"UPI transaction ID"</em> (12 numeric digits)</div>
+              <div>• <strong>Paytm:</strong> Look for <em>"UPI Ref No"</em> (12 numeric digits)</div>
+              <div style="color: #ef4444; font-weight: 700; margin-top: 3px;">⚠️ Note: Do NOT enter app Order/Transaction IDs (e.g. T240907...). Only enter the 12-digit Bank UTR.</div>
             </div>
 
             <!-- Refraction Action Button -->
