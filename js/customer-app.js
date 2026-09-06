@@ -1719,19 +1719,13 @@ const CustomerApp = {
     }
   },
 
-  pasteSampleUtr() {
-    const utrInput = document.getElementById('add-funds-utr-input');
-    if (utrInput) {
-      utrInput.value = '42' + Math.floor(1000000000 + Math.random() * 9000000000);
-      window.store.showToast('Sample 12-digit UTR pasted for instant testing!', 'info');
-    }
-  },
+  async handleDeposit() {
+    if (this._isDepositing) return;
 
-  handleDeposit() {
     const amountInput = document.getElementById('add-funds-amount-input');
     const utrInput = document.getElementById('add-funds-utr-input');
     const amount = Number(amountInput ? amountInput.value : 0);
-    const utr = utrInput ? utrInput.value.trim() : '';
+    const rawUtr = utrInput ? utrInput.value.trim() : '';
 
     if (!amount || amount < 10) {
       window.store.showToast('Minimum deposit amount is ₹10', 'error');
@@ -1739,54 +1733,85 @@ const CustomerApp = {
       return;
     }
 
-    if (!utr) {
+    if (!rawUtr) {
       window.store.showToast('Please enter the 12-digit UPI UTR / Transaction ID', 'error');
       if (utrInput) utrInput.focus();
       return;
     }
 
-    if (utr.length < 8) {
-      window.store.showToast('Please enter a valid 12-digit UTR number', 'error');
+    // Clean and normalize UTR (strip spaces, symbols)
+    const cleanUtr = rawUtr.toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+    if (cleanUtr.length < 8 || cleanUtr.length > 25) {
+      window.store.showToast('Please enter a valid 12-digit UPI UTR / Transaction ID', 'error');
       if (utrInput) utrInput.focus();
       return;
     }
 
-    if (window.PixelTracker) {
-      window.PixelTracker.trackAddPaymentInfo({
-        amount: amount,
-        method: 'Razorpay_UPI_QR'
-      });
+    if (!window.store.data.isLoggedIn) {
+      window.store.showToast('Please sign in first to add funds to your wallet', 'error');
+      CustomerApp.openAuthModal();
+      return;
     }
 
     const btn = document.getElementById('btn-verify-deposit');
+    this._isDepositing = true;
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>⚡ Verifying Transaction...</span>';
+      btn.innerHTML = '<span>⚡ Verifying Transaction ID & UTR...</span>';
     }
 
-    setTimeout(() => {
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
+    try {
+      // 1. Anti-Duplicate Fraud Check (Local, Transaction history & Cloud database)
+      const checkResult = await window.store.checkUtrStatus(cleanUtr);
+      if (checkResult && checkResult.claimed) {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
+        }
+        this._isDepositing = false;
+        window.store.showToast(`❌ UTR ${cleanUtr} has already been claimed! Each payment can only be credited once.`, 'error');
+        return;
       }
 
-      const usdAmount = amount / window.store.data.exchangeRate;
-      window.store.addFunds(usdAmount, `Razorpay UPI (UTR: ${utr})`);
+      // 2. Lock & Register Claimed UTR immediately
+      await window.store.registerClaimedUtr(cleanUtr, amount, 'Razorpay UPI');
+
+      // 3. Credit wallet balance
+      const usdAmount = amount / (window.store.data.exchangeRate || 83);
+      window.store.addFunds(usdAmount, `Razorpay UPI (UTR: ${cleanUtr})`);
 
       if (window.PixelTracker) {
         window.PixelTracker.trackPurchase({
-          orderId: utr || ('DEP_' + Date.now()),
+          orderId: cleanUtr || ('DEP_' + Date.now()),
           amount: amount,
           serviceName: 'LikeX Wallet Funds Top-Up (UPI)'
         });
       }
 
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
+      }
+      this._isDepositing = false;
+
+      // Clear the UTR input box
+      if (utrInput) utrInput.value = '';
+
       CustomerApp.showDepositCelebrationModal({
         amount,
-        utr,
+        utr: cleanUtr,
         newBalance: window.store.data.customer.balance
       });
-    }, 1000);
+    } catch (err) {
+      console.error('[Deposit Error]', err);
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
+      }
+      this._isDepositing = false;
+      window.store.showToast('Verification error. Please check your UTR and try again.', 'error');
+    }
   },
 
   showDepositCelebrationModal({ amount, utr, newBalance }) {
@@ -2729,13 +2754,14 @@ const CustomerApp = {
             <!-- 12-Digit UTR Input -->
             <label class="form-label" style="font-weight: 800; font-size: 13px;">
               <span>2. Enter 12-Digit UPI UTR / Transaction ID</span>
-              <span class="form-label-hint">Found in Paytm / PhonePe / GPay receipt</span>
+              <span class="form-label-hint">Found in PhonePe / GPay / Paytm receipt</span>
             </label>
-            <div style="position: relative; margin-bottom: 18px;">
-              <input type="text" class="form-input" id="add-funds-utr-input" placeholder="e.g. 423981029381 (12 digits)" maxlength="16" style="padding-right: 120px; font-family: var(--font-mono); font-size: 14.5px; min-height: 48px; border-radius: 12px;" />
-              <button type="button" class="btn btn-sm btn-secondary" style="position: absolute; right: 7px; top: 7px; height: 34px; padding: 0 12px; font-size: 11.5px; font-weight: 700; border-radius: 8px;" onclick="CustomerApp.pasteSampleUtr()">
-                Paste Sample
-              </button>
+            <div style="position: relative; margin-bottom: 6px;">
+              <input type="text" class="form-input" id="add-funds-utr-input" placeholder="e.g. 423981029381 (12 digits)" maxlength="22" style="font-family: var(--font-mono); font-size: 15px; font-weight: 700; min-height: 48px; border-radius: 12px; letter-spacing: 0.04em;" />
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-bottom: 16px; display: flex; align-items: center; gap: 5px;">
+              <span style="color: #10B981;">🔒</span>
+              <span>1-Time Verification: Each Transaction ID / UTR can be credited only once.</span>
             </div>
 
             <!-- Refraction Action Button -->
