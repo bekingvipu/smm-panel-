@@ -1707,10 +1707,10 @@ const CustomerApp = {
   },
 
   copyUpiId() {
-    const upiId = 'paytm.s1fd86i@pty';
+    const upiId = 'bazara245283.rzp@rxairtel';
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(upiId).then(() => {
-        window.store.showToast('Paytm UPI ID copied: ' + upiId + ' 📋', 'success');
+        window.store.showToast('Razorpay UPI ID copied: ' + upiId + ' 📋', 'success');
       }).catch(() => {
         window.store.showToast('UPI ID: ' + upiId, 'info');
       });
@@ -1754,14 +1754,14 @@ const CustomerApp = {
     if (window.PixelTracker) {
       window.PixelTracker.trackAddPaymentInfo({
         amount: amount,
-        method: 'Paytm_UPI_QR'
+        method: 'Razorpay_UPI_QR'
       });
     }
 
     const btn = document.getElementById('btn-verify-deposit');
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>⚡ Verifying Paytm Transaction...</span>';
+      btn.innerHTML = '<span>⚡ Verifying Transaction...</span>';
     }
 
     setTimeout(() => {
@@ -1771,7 +1771,7 @@ const CustomerApp = {
       }
 
       const usdAmount = amount / window.store.data.exchangeRate;
-      window.store.addFunds(usdAmount, `Paytm UPI (UTR: ${utr})`);
+      window.store.addFunds(usdAmount, `Razorpay UPI (UTR: ${utr})`);
 
       if (window.PixelTracker) {
         window.PixelTracker.trackPurchase({
@@ -2682,30 +2682,30 @@ const CustomerApp = {
           </p>
         </div>
 
-        <!-- Paytm Business QR Deposit Box -->
+        <!-- Razorpay Business QR Deposit Box -->
         <div class="paytm-qr-box">
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
             <span style="font-size: 22px;">⚡</span>
             <h3 style="font-size: 21px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">
-              Paytm / All UPI Instant QR Deposit
+              Razorpay / All UPI Instant QR Deposit
             </h3>
           </div>
           <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; max-width: 520px;">
-            Scan QR with Paytm, PhonePe, Google Pay, BHIM, or any UPI app for instant automated wallet credit.
+            Scan QR with PhonePe, Google Pay, Paytm, BHIM, or any UPI app for instant automated wallet credit.
           </p>
 
           <!-- QR Code Image -->
           <div style="margin: 18px 0 10px; position: relative;">
-            <img src="assets/paytm-qr.png" alt="Paytm All-In-One QR Code" class="paytm-qr-img" />
+            <img src="assets/razorpay-qr.png" alt="Razorpay All-In-One QR Code - Bazara" class="paytm-qr-img" />
           </div>
 
           <!-- Merchant Info & Copyable UPI ID -->
           <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-top: 4px;">
-            VIPLAV KUMAR <span style="font-weight: 600; color: #10B981; font-size: 12px; background: rgba(16, 185, 129, 0.12); padding: 2px 8px; border-radius: 999px;">✓ Verified Merchant</span>
+            Bazara <span style="font-weight: 600; color: #10B981; font-size: 12px; background: rgba(16, 185, 129, 0.12); padding: 2px 8px; border-radius: 999px;">✓ Verified Merchant</span>
           </div>
 
           <div class="upi-id-badge" onclick="CustomerApp.copyUpiId()" title="Click to copy UPI ID">
-            <span>paytm.s1fd86i@pty</span>
+            <span>bazara245283.rzp@rxairtel</span>
             <span style="font-size: 11.5px; background: var(--primary); color: white; padding: 2px 8px; border-radius: 999px; font-weight: 800;">Copy</span>
           </div>
 
@@ -2752,7 +2752,7 @@ const CustomerApp = {
             </div>
             <div class="trust-badge-item">
               <span style="color: #10B981;">🛡️</span>
-              <span>100% Safe Paytm Verified Merchant</span>
+              <span>100% Safe Razorpay Verified Merchant</span>
             </div>
             <div class="trust-badge-item">
               <span style="color: #6C5CE7;">⚡</span>
@@ -2824,7 +2824,7 @@ const CustomerApp = {
               <div class="wallet-quick-steps-grid">
                 <div class="wallet-step-item">
                   <div class="wallet-step-num">1</div>
-                  <div class="wallet-step-text">Scan Paytm / UPI QR above with any UPI app</div>
+                  <div class="wallet-step-text">Scan Razorpay / UPI QR above with any UPI app</div>
                 </div>
                 <div class="wallet-step-item">
                   <div class="wallet-step-num">2</div>

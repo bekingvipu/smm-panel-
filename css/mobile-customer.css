@@ -1659,13 +1659,15 @@
 }
 
 .paytm-qr-img {
-  width: 220px;
+  width: 250px;
   max-width: 100%;
   border-radius: 16px;
   border: 2px solid var(--border-color);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
   background: #ffffff;
   transition: transform 0.2s ease;
+  display: block;
+  margin: 0 auto;
 }
 
 .paytm-qr-img:hover {
