@@ -1258,6 +1258,12 @@ const CustomerApp = {
     if (select) {
       select.value = cat;
     }
+    if (window.PixelTracker) {
+      window.PixelTracker.trackViewContent({
+        contentName: cat,
+        contentCategory: this.currentPlatform || 'SMM Category'
+      });
+    }
     this.closeAllCustomDropdowns();
     const screenContainer = document.getElementById('screen-container');
     this.render(screenContainer);
@@ -1298,6 +1304,15 @@ const CustomerApp = {
       if (text) text.textContent = s.name;
       const rate = document.getElementById('trigger-service-rate-text');
       if (rate) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1)) + '/1K';
+
+      if (window.PixelTracker) {
+        window.PixelTracker.trackViewContent({
+          contentName: s.name,
+          contentCategory: this.currentCategory || 'SMM Service',
+          serviceId: cleanId,
+          price: store.getSellingPrice(s.cost || 0.1)
+        });
+      }
 
       const menu = document.getElementById('custom-service-dropdown-menu');
       if (menu) {
@@ -1549,6 +1564,18 @@ const CustomerApp = {
       return;
     }
 
+    // Track InitiateCheckout
+    if (window.PixelTracker) {
+      window.PixelTracker.trackInitiateCheckout({
+        serviceName,
+        categoryName: CustomerApp.currentCategory,
+        amount: totalCost,
+        quantity,
+        serviceId,
+        targetLink: target
+      });
+    }
+
     const submitBtn = document.getElementById('btn-submit-order');
     if (submitBtn) {
       submitBtn.disabled = true;
@@ -1559,6 +1586,16 @@ const CustomerApp = {
       const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity, comments }, { silent: true });
 
       if (res && res.success) {
+        // Track Purchase
+        if (window.PixelTracker) {
+          window.PixelTracker.trackPurchase({
+            orderId: res.orderId,
+            amount: res.totalCost || totalCost,
+            serviceName,
+            quantity
+          });
+        }
+
         CustomerApp.showOrderCelebrationModal({
           orderId: res.orderId,
           serviceName,
@@ -1714,6 +1751,13 @@ const CustomerApp = {
       return;
     }
 
+    if (window.PixelTracker) {
+      window.PixelTracker.trackAddPaymentInfo({
+        amount: amount,
+        method: 'Paytm_UPI_QR'
+      });
+    }
+
     const btn = document.getElementById('btn-verify-deposit');
     if (btn) {
       btn.disabled = true;
@@ -1728,6 +1772,14 @@ const CustomerApp = {
 
       const usdAmount = amount / window.store.data.exchangeRate;
       window.store.addFunds(usdAmount, `Paytm UPI (UTR: ${utr})`);
+
+      if (window.PixelTracker) {
+        window.PixelTracker.trackPurchase({
+          orderId: utr || ('DEP_' + Date.now()),
+          amount: amount,
+          serviceName: 'LikeX Wallet Funds Top-Up (UPI)'
+        });
+      }
 
       CustomerApp.showDepositCelebrationModal({
         amount,
@@ -2177,10 +2229,10 @@ const CustomerApp = {
             <button class="btn btn-lg" style="background: #FFFFFF; color: var(--primary); font-weight: 800; border-radius: 999px; box-shadow: 0 4px 14px rgba(0,0,0,0.15);" onclick="store.setCustomerTab('new_order')">
               🛒 Place Your Order
             </button>
-            <a href="https://t.me/Likex_support" target="_blank" class="btn btn-secondary btn-lg" style="background: rgba(42,171,238,0.3); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
+            <a href="https://t.me/Likex_support" target="_blank" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('telegram')" class="btn btn-secondary btn-lg" style="background: rgba(42,171,238,0.3); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
               ✈️ Telegram VIP
             </a>
-            <a href="https://wa.me/919837371137" target="_blank" class="btn btn-secondary btn-lg" style="background: rgba(255,255,255,0.2); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
+            <a href="https://wa.me/919837371137" target="_blank" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('whatsapp')" class="btn btn-secondary btn-lg" style="background: rgba(255,255,255,0.2); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
               💬 WhatsApp Support
             </a>
           </div>

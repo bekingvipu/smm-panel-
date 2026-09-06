@@ -156,6 +156,22 @@ class SmmStateStore {
       this.data.aboutReels = Array.isArray(window.SMM_DEFAULT_REELS) ? [...window.SMM_DEFAULT_REELS] : [];
     }
 
+    // Initialize Meta Pixel & Conversion Tracking Config
+    try {
+      const savedPixel = localStorage.getItem('likex_meta_pixel_id');
+      const savedConfig = localStorage.getItem('likex_pixel_config');
+      if (savedConfig) {
+        this.data.pixelSettings = JSON.parse(savedConfig);
+      } else {
+        this.data.pixelSettings = {
+          enabled: true,
+          pixelId: savedPixel || '1107755188608830'
+        };
+      }
+    } catch (e) {
+      this.data.pixelSettings = { enabled: true, pixelId: '1107755188608830' };
+    }
+
     // Initialize Live Provider Rates Auto-Sync Engine
     try {
       const savedRates = localStorage.getItem('likex_live_rates_cache');
@@ -358,6 +374,28 @@ class SmmStateStore {
 
     this.notify();
     this.showToast('✅ Announcement ticker updated & synced across all devices!', 'success');
+  }
+
+  updatePixelSettings(pixelId, enabled = true) {
+    const cleanId = String(pixelId || '').trim();
+    this.data.pixelSettings = {
+      enabled: Boolean(enabled),
+      pixelId: cleanId || '1107755188608830'
+    };
+    try {
+      localStorage.setItem('likex_meta_pixel_id', this.data.pixelSettings.pixelId);
+      localStorage.setItem('likex_pixel_config', JSON.stringify(this.data.pixelSettings));
+    } catch (e) {}
+
+    if (window.PixelTracker) {
+      window.PixelTracker.init(this.data.pixelSettings.pixelId);
+    }
+
+    // Cloud sync to Supabase
+    this.saveCloudConfig({ pixel_config: this.data.pixelSettings });
+
+    this.notify();
+    this.showToast(`✅ Meta Pixel ID (${this.data.pixelSettings.pixelId}) updated & synced!`, 'success');
   }
 
   saveCatalogCustomizations() {
@@ -769,6 +807,19 @@ class SmmStateStore {
             this.data.aboutReels = item.value;
             try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
             changed = true;
+          } else if (item.key === 'pixel_config' && item.value) {
+            this.data.pixelSettings = {
+              ...this.data.pixelSettings,
+              ...item.value
+            };
+            try {
+              localStorage.setItem('likex_meta_pixel_id', this.data.pixelSettings.pixelId);
+              localStorage.setItem('likex_pixel_config', JSON.stringify(this.data.pixelSettings));
+            } catch(e){}
+            if (window.PixelTracker && this.data.pixelSettings.pixelId) {
+              window.PixelTracker.init(this.data.pixelSettings.pixelId);
+            }
+            changed = true;
           }
         });
       }
@@ -785,6 +836,20 @@ class SmmStateStore {
           if (parsed.about_reels && Array.isArray(parsed.about_reels)) {
             this.data.aboutReels = parsed.about_reels;
             try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
+            changed = true;
+          }
+          if (parsed.pixel_config && parsed.pixel_config.pixelId) {
+            this.data.pixelSettings = {
+              ...this.data.pixelSettings,
+              ...parsed.pixel_config
+            };
+            try {
+              localStorage.setItem('likex_meta_pixel_id', this.data.pixelSettings.pixelId);
+              localStorage.setItem('likex_pixel_config', JSON.stringify(this.data.pixelSettings));
+            } catch(e){}
+            if (window.PixelTracker && this.data.pixelSettings.pixelId) {
+              window.PixelTracker.init(this.data.pixelSettings.pixelId);
+            }
             changed = true;
           }
           if (parsed.earn_tutorial && parsed.earn_tutorial.videoUrl) {
@@ -1090,6 +1155,13 @@ class SmmStateStore {
 
     this.recalculateAdminStats();
 
+    if (window.PixelTracker) {
+      window.PixelTracker.trackLead({
+        method: 'login_or_register',
+        userId: email
+      });
+    }
+
     if (showToast) {
       this.showToast(`Welcome back, ${this.data.customer.name}! You are now signed in. 🚀`, 'success');
     }
@@ -1116,17 +1188,15 @@ class SmmStateStore {
     localStorage.removeItem('smm_user_logged_in');
     localStorage.removeItem('smm_user_name');
     localStorage.removeItem('smm_user_email');
+    localStorage.removeItem('smm_customer_avatar');
 
     if (triggerSupabaseSignOut && window.supabaseClient) {
       window.supabaseClient.auth.signOut().catch(() => {});
     }
 
-    this.showToast('You have signed out. Browsing in guest mode.', 'info');
+    this._isLoggingOut = false;
     this.notify();
-
-    setTimeout(() => {
-      this._isLoggingOut = false;
-    }, 150);
+    this.showToast('You have been securely signed out.', 'info');
   }
 
   setDeviceMode(mode) {
@@ -1148,6 +1218,12 @@ class SmmStateStore {
       url.searchParams.set('tab', tab);
       window.history.replaceState(null, '', url);
     } catch (e) {}
+
+    // Track SPA Tab Navigation Event
+    if (window.PixelTracker) {
+      window.PixelTracker.trackPageView('Tab: ' + tab);
+    }
+
     this.notify();
     if (tab === 'orders') {
       this.syncOrdersStatus(true);

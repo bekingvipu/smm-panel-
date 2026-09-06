@@ -931,6 +931,89 @@ const AdminApp = {
           </div>
         </div>
 
+        <!-- 4. META (FACEBOOK) PIXEL & ADS CONVERSION TRACKING CARD -->
+        <div class="card" style="padding: 26px; border: 1.5px solid rgba(59, 130, 246, 0.4); border-radius: 20px; background: linear-gradient(145deg, rgba(59, 130, 246, 0.04), var(--bg-surface));">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; flex-wrap: wrap; gap: 8px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 38px; height: 38px; border-radius: 12px; background: #1877F2; display: flex; align-items: center; justify-content: center; color: white; font-weight: 900; font-size: 22px;">
+                f
+              </div>
+              <div>
+                <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0;">
+                  Meta (Facebook) Pixel & Ads Conversion Tracking
+                </h3>
+                <p style="font-size: 13px; color: var(--text-secondary); margin: 2px 0 0;">
+                  Track PageViews, ViewContent, InitiateCheckout, UPI QR payments, and Purchase conversions.
+                </p>
+              </div>
+            </div>
+            <span class="badge badge-success" style="font-size: 12px; font-weight: 800; padding: 6px 14px;">
+              🟢 ACTIVE & TRACKING
+            </span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" style="font-weight: 800; font-size: 13.5px;">
+                <span>Meta Pixel ID:</span>
+                <span class="form-label-hint">15-16 digit Meta Dataset / Pixel ID</span>
+              </label>
+              <input 
+                type="text" 
+                id="admin-meta-pixel-id" 
+                class="form-input" 
+                value="${(store.data.pixelSettings && store.data.pixelSettings.pixelId) || '1107755188608830'}" 
+                placeholder="1107755188608830" 
+                style="font-size: 15px; font-weight: 800; min-height: 48px; border-radius: 12px; letter-spacing: 0.5px;" 
+              />
+            </div>
+
+            <div style="display: flex; flex-direction: column; justify-content: flex-end; gap: 8px;">
+              <label class="form-label" style="font-weight: 800; font-size: 13.5px;">
+                <span>Tracking Status & Controls:</span>
+              </label>
+              <div style="display: flex; gap: 10px;">
+                <button type="button" class="btn btn-primary" onclick="AdminApp.savePixelSettings()" style="flex: 1; font-weight: 800; min-height: 48px; border-radius: 12px;">
+                  💾 Save & Sync Pixel ID
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="AdminApp.testMetaPixel()" style="font-weight: 700; min-height: 48px; border-radius: 12px; padding: 0 16px;" title="Send test event">
+                  ⚡ Test Event
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Events Grid -->
+          <div style="margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+            <div style="font-size: 12.5px; font-weight: 800; color: var(--text-secondary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">
+              ⚡ Configured Live Standard Events:
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+              <span class="badge" style="background: rgba(59, 130, 246, 0.12); color: #2563EB; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ PageView (All SPA Tabs)
+              </span>
+              <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ ViewContent (Services & Categories)
+              </span>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.12); color: #D97706; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ InitiateCheckout (Order Placement)
+              </span>
+              <span class="badge" style="background: rgba(139, 92, 246, 0.12); color: #7C3AED; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ AddPaymentInfo (UPI QR Deposit)
+              </span>
+              <span class="badge" style="background: rgba(236, 72, 153, 0.12); color: #DB2777; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ Purchase (Completed Orders & Topups)
+              </span>
+              <span class="badge" style="background: rgba(6, 182, 212, 0.12); color: #0891B2; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ CompleteRegistration / Lead
+              </span>
+              <span class="badge" style="background: rgba(34, 197, 94, 0.12); color: #16A34A; font-weight: 700; font-size: 12px; padding: 5px 12px; border-radius: 8px;">
+                ✓ Contact (WhatsApp & Telegram)
+              </span>
+            </div>
+          </div>
+        </div>
+
         <!-- Queued Orders Awaiting Top-Up Table -->
         <div class="card" style="padding: 24px; border: 1px solid var(--border-color); border-radius: 18px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
@@ -1422,6 +1505,29 @@ const AdminApp = {
     };
 
     window.store.saveAlertConfig(config);
+  },
+
+  savePixelSettings() {
+    const input = document.getElementById('admin-meta-pixel-id');
+    const pixelId = input ? input.value.trim() : '1107755188608830';
+    if (!pixelId) {
+      window.store.showToast('Please enter a valid Meta Pixel ID', 'error');
+      return;
+    }
+    window.store.updatePixelSettings(pixelId, true);
+  },
+
+  testMetaPixel() {
+    if (window.PixelTracker) {
+      window.PixelTracker.trackCustom('AdminTestEvent', {
+        test_source: 'Admin Console',
+        time: new Date().toLocaleTimeString(),
+        pixel_id: (window.store.data.pixelSettings && window.store.data.pixelSettings.pixelId) || '1107755188608830'
+      });
+      window.store.showToast('🎯 Test event sent to Meta Pixel! Check Meta Events Manager Test Events tab.', 'success');
+    } else {
+      window.store.showToast('PixelTracker not active in current window', 'info');
+    }
   },
 
   async dispatchAllQueuedOrders() {
