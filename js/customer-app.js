@@ -2832,7 +2832,7 @@ const CustomerApp = {
     const recentOrders = store.data.orders || [];
 
     return `
-      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 680px; margin: 0 auto; width: 100%; padding-bottom: 90px; box-sizing: border-box;">
+      <div style="display: flex; flex-direction: column; gap: 12px; max-width: 680px; margin: 0 auto; width: 100%; padding-bottom: 16px; box-sizing: border-box;">
         
         <!-- Sleek Compact Hero Header -->
         <div class="card" style="background: linear-gradient(135deg, rgba(42, 171, 238, 0.08), rgba(37, 211, 102, 0.08)); border: 1px solid rgba(42, 171, 238, 0.22); border-radius: 18px; padding: 16px 16px 14px; box-shadow: var(--shadow-sm); position: relative;">
