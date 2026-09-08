@@ -284,3 +284,44 @@ CREATE POLICY "Public access support messages" ON public.support_messages FOR AL
 -- 10. Site Settings (Cloud Sync for Admin Configs)
 DROP POLICY IF EXISTS "Public access site settings" ON public.site_settings;
 CREATE POLICY "Public access site settings" ON public.site_settings FOR ALL USING (true) WITH CHECK (true);
+
+-- =========================================================
+-- 11. AUTOMATIC SYNC FROM SUPABASE AUTH TO PUBLIC USERS TABLE
+-- (Instantly populates all 28+ Google/Email OTP users into Admin Dashboard)
+-- =========================================================
+
+-- 1. Sync all existing Supabase Auth users to public.users table immediately
+INSERT INTO public.users (email, username, password_hash, role)
+SELECT 
+    email, 
+    COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)), 
+    'auth_synced', 
+    'customer'
+FROM auth.users
+WHERE email IS NOT NULL
+ON CONFLICT (email) DO UPDATE SET
+    username = EXCLUDED.username;
+
+-- 2. Automatic trigger function to sync every future signup to public.users table
+CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO public.users (email, username, password_hash, role)
+    VALUES (
+        NEW.email,
+        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
+        'auth_synced',
+        'customer'
+    )
+    ON CONFLICT (email) DO UPDATE SET
+        username = EXCLUDED.username;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 3. Bind trigger to auth.users table
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+    AFTER INSERT OR UPDATE ON auth.users
+    FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+

@@ -125,6 +125,18 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!window.store.data.isLoggedIn || (window.store.data.customer.email && window.store.data.customer.email.toLowerCase() !== u.email.toLowerCase())) {
         window.store.login(name, u.email, avatar, false); // silent login without duplicate toast
       }
+      // Ensure user is registered in public.users table for Admin Console
+      if (u.email) {
+        window.supabaseClient
+          .from('users')
+          .upsert({
+            email: u.email.toLowerCase(),
+            username: name,
+            password_hash: 'auth_user_session',
+            role: 'customer'
+          }, { onConflict: 'email' })
+          .catch(() => {});
+      }
     }
 
     // Subscribe to auth state updates
@@ -135,6 +147,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
         if (!window.store.data.isLoggedIn || (window.store.data.customer.email && window.store.data.customer.email.toLowerCase() !== u.email.toLowerCase())) {
           window.store.login(name, u.email, avatar, event === 'SIGNED_IN');
+        }
+        // Ensure user is registered in public.users table for Admin Console
+        if (u.email) {
+          window.supabaseClient
+            .from('users')
+            .upsert({
+              email: u.email.toLowerCase(),
+              username: name,
+              password_hash: 'auth_user_session',
+              role: 'customer'
+            }, { onConflict: 'email' })
+            .catch(() => {});
         }
       } else if (event === 'SIGNED_OUT' && window.store) {
         if (window.store.data.isLoggedIn) {

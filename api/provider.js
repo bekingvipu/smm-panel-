@@ -1,3 +1,6 @@
+const SUPABASE_PROJECT_URL = 'https://gxbrchcfpjbewnyeijnp.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_Sx-TMQ94jDZpfXB8lR-FXw_3l6cIWnE';
+
 // Vercel Serverless Function to proxy JustAnotherPanel (JAP) and WorldOfSMM APIs with CORS
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -79,6 +82,35 @@ export default async function handler(req, res) {
     const providerConfig = PROVIDERS[providerKey];
 
     const data = await callProvider(providerConfig);
+
+    // If order was placed, automatically log to Supabase PostgreSQL orders table
+    if (action === 'add' && data && (data.order || !data.error)) {
+      try {
+        const orderIdNum = data.order ? parseInt(data.order, 10) : Math.floor(10000 + Math.random() * 90000);
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=representation'
+          },
+          body: JSON.stringify({
+            id: orderIdNum,
+            target_url: paramsObj.link || '',
+            quantity: Number(paramsObj.quantity) || 1000,
+            charge: Number(paramsObj.charge) || 0,
+            provider_order_id: data.order ? String(data.order) : null,
+            assigned_provider_id: providerKey === 'worldofsmm' ? 2 : 1,
+            status: data.order ? 'Processing' : 'Pending',
+            remains: Number(paramsObj.quantity) || 1000,
+            created_at: new Date().toISOString()
+          })
+        });
+      } catch (dbErr) {
+        console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message);
+      }
+    }
 
     // If upstream returns an array (e.g. action: 'services'), return array directly
     if (Array.isArray(data)) {
