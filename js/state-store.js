@@ -1070,8 +1070,11 @@ class SmmStateStore {
 
   // Background sync Supabase users & orders for admin with rich name & email resolution
   async syncSupabaseDataForAdmin() {
-    if (!window.supabaseClient) return;
+    if (!window.supabaseClient || this._isSyncingSupabaseAdmin) return;
+    this._isSyncingSupabaseAdmin = true;
     try {
+      let dataChanged = false;
+
       // 1. Fetch users from Supabase first
       const { data: supaUsers } = await window.supabaseClient
         .from('users')
@@ -1079,7 +1082,12 @@ class SmmStateStore {
 
       const userMap = new Map();
       if (supaUsers && supaUsers.length > 0) {
-        localStorage.setItem('likex_supabase_users', JSON.stringify(supaUsers));
+        const prevUsers = localStorage.getItem('likex_supabase_users');
+        const newUsersStr = JSON.stringify(supaUsers);
+        if (prevUsers !== newUsersStr) {
+          localStorage.setItem('likex_supabase_users', newUsersStr);
+          dataChanged = true;
+        }
         supaUsers.forEach(u => userMap.set(String(u.id), u));
       }
 
@@ -1123,13 +1131,23 @@ class SmmStateStore {
             date: this.formatRealDate(orderCreatedAt)
           };
         });
-        localStorage.setItem('likex_supabase_orders', JSON.stringify(mapped));
+
+        const prevOrders = localStorage.getItem('likex_supabase_orders');
+        const newOrdersStr = JSON.stringify(mapped);
+        if (prevOrders !== newOrdersStr) {
+          localStorage.setItem('likex_supabase_orders', newOrdersStr);
+          dataChanged = true;
+        }
       }
 
       this.recalculateAdminStats();
-      this.notify();
+      if (dataChanged) {
+        this.notify();
+      }
     } catch (err) {
       console.warn('[LikeX Admin] Supabase admin sync error:', err);
+    } finally {
+      this._isSyncingSupabaseAdmin = false;
     }
   }
 

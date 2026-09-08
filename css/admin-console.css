@@ -66,8 +66,9 @@
   font-size: 13.5px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
+  contain: paint;
 }
 
 .admin-nav-item:hover {

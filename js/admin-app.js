@@ -1085,9 +1085,6 @@ const AdminApp = {
 
   renderDashboard(store) {
     const stats = store.recalculateAdminStats ? store.recalculateAdminStats() : store.data.adminStats;
-    if (store.syncSupabaseDataForAdmin) {
-      store.syncSupabaseDataForAdmin();
-    }
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const recentOrders = allOrders.slice(0, 5);
     const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
