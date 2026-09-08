@@ -908,24 +908,64 @@ class SmmStateStore {
     }
   }
 
-  // Get all master orders across the entire system
+  // Get all master orders across the entire system with full metadata preservation
   getAllAdminOrders() {
     const orderMap = new Map();
 
+    // Helper to merge into orderMap, prioritizing richer and newer data
+    const mergeOrder = (o) => {
+      if (!o || !o.id) return;
+      const idKey = String(o.id);
+      const existing = orderMap.get(idKey);
+      if (!existing) {
+        orderMap.set(idKey, {
+          ...o,
+          id: idKey,
+          amount: Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : 0)),
+          quantity: Number(o.quantity || 1000),
+          createdAt: Number(o.createdAt) || (o.date ? new Date(o.date).getTime() : Date.now()),
+          date: o.date || this.formatRealDate(Number(o.createdAt) || Date.now())
+        });
+      } else {
+        const bestName = (o.serviceName && !o.serviceName.startsWith('Service #') && o.serviceName !== 'Social Growth Package') 
+          ? o.serviceName 
+          : existing.serviceName;
+        const bestEmail = o.userEmail || o.customerEmail || existing.userEmail || existing.customerEmail || '';
+        const bestCustName = o.customerName || existing.customerName || (bestEmail ? bestEmail.split('@')[0] : 'Customer');
+        const bestCreatedAt = Math.min(
+          Number(existing.createdAt) || Date.now(), 
+          Number(o.createdAt) || Date.now()
+        );
+
+        orderMap.set(idKey, {
+          ...existing,
+          ...o,
+          id: idKey,
+          serviceName: bestName,
+          userEmail: bestEmail,
+          customerName: bestCustName,
+          target: o.target || existing.target || '',
+          comments: o.comments || existing.comments || '',
+          provider: o.provider || existing.provider || 'jap',
+          providerDisplayName: o.providerDisplayName || existing.providerDisplayName || 'Provider API',
+          providerOrderId: o.providerOrderId || existing.providerOrderId || null,
+          createdAt: bestCreatedAt,
+          date: o.date || existing.date || this.formatRealDate(bestCreatedAt),
+          amount: Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : (existing.amount || 0))),
+          quantity: Number(o.quantity || existing.quantity || 1000),
+          status: o.status || existing.status || 'Processing'
+        });
+      }
+    };
+
     // 1. Current store orders
-    (this.data.orders || []).forEach(o => {
-      if (o && o.id) orderMap.set(String(o.id), o);
-    });
+    (this.data.orders || []).forEach(mergeOrder);
 
     // 2. Global master orders from localStorage
     try {
       const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
       if (Array.isArray(master)) {
-        master.forEach(o => {
-          if (o && o.id && !orderMap.has(String(o.id))) {
-            orderMap.set(String(o.id), o);
-          }
-        });
+        master.forEach(mergeOrder);
       }
     } catch (e) {}
 
@@ -936,11 +976,7 @@ class SmmStateStore {
         if (key && key.startsWith('smm_user_') && key.endsWith('_orders')) {
           const uOrders = JSON.parse(localStorage.getItem(key) || '[]');
           if (Array.isArray(uOrders)) {
-            uOrders.forEach(o => {
-              if (o && o.id && !orderMap.has(String(o.id))) {
-                orderMap.set(String(o.id), o);
-              }
-            });
+            uOrders.forEach(mergeOrder);
           }
         }
       }
@@ -950,11 +986,7 @@ class SmmStateStore {
     try {
       const supaOrders = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
       if (Array.isArray(supaOrders)) {
-        supaOrders.forEach(o => {
-          if (o && o.id && !orderMap.has(String(o.id))) {
-            orderMap.set(String(o.id), o);
-          }
-        });
+        supaOrders.forEach(mergeOrder);
       }
     } catch (e) {}
 
@@ -963,7 +995,7 @@ class SmmStateStore {
     return all;
   }
 
-  // Get count of registered customers
+  // Get accurate count of registered customers
   getRegisteredCustomersCount() {
     const customerEmails = new Set();
 
@@ -975,7 +1007,7 @@ class SmmStateStore {
           const parts = key.split('_');
           const userKey = parts.slice(2, -1).join('_');
           if (userKey && userKey !== 'logged' && userKey !== 'name' && userKey !== 'email') {
-            customerEmails.add(userKey);
+            customerEmails.add(userKey.toLowerCase());
           }
         }
       }
@@ -1019,7 +1051,7 @@ class SmmStateStore {
     return Math.max(1, customerEmails.size);
   }
 
-  // Recalculate Admin Stats dynamically from actual data
+  // Recalculate Admin Stats dynamically from actual live orders & customers
   recalculateAdminStats() {
     const allOrders = this.getAllAdminOrders();
     const totalOrders = allOrders.length;
@@ -1036,41 +1068,62 @@ class SmmStateStore {
     return this.data.adminStats;
   }
 
-  // Background sync Supabase users & orders for admin
+  // Background sync Supabase users & orders for admin with rich name & email resolution
   async syncSupabaseDataForAdmin() {
     if (!window.supabaseClient) return;
     try {
-      // 1. Fetch orders from Supabase
+      // 1. Fetch users from Supabase first
+      const { data: supaUsers } = await window.supabaseClient
+        .from('users')
+        .select('id, email, username, role');
+
+      const userMap = new Map();
+      if (supaUsers && supaUsers.length > 0) {
+        localStorage.setItem('likex_supabase_users', JSON.stringify(supaUsers));
+        supaUsers.forEach(u => userMap.set(String(u.id), u));
+      }
+
+      // 2. Fetch orders from Supabase
       const { data: supaOrders } = await window.supabaseClient
         .from('orders')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (supaOrders && supaOrders.length > 0) {
-        const mapped = supaOrders.map(so => ({
-          id: String(so.id),
-          serviceId: so.service_id,
-          rawServiceId: so.service_id,
-          serviceName: so.target_url ? `Service #${so.service_id}` : 'Social Growth Package',
-          provider: 'jap',
-          providerOrderId: so.provider_order_id,
-          target: so.target_url || '',
-          quantity: so.quantity || 1000,
-          amount: Number(so.charge) || 0,
-          status: so.status || 'Completed',
-          createdAt: so.created_at ? new Date(so.created_at).getTime() : Date.now(),
-          date: so.created_at ? new Date(so.created_at).toLocaleDateString() : this.formatRealDate(Date.now())
-        }));
+        const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+        const mapped = supaOrders.map(so => {
+          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : null;
+          const matchedSvc = activeServices.find(s => 
+            String(s.id) === String(so.service_id) || 
+            String(s.rawId) === String(so.service_id) || 
+            String(s.japId) === String(so.service_id)
+          );
+
+          const svcTitle = matchedSvc 
+            ? (matchedSvc.customerName || matchedSvc.name) 
+            : (so.target_url ? `Service #${so.service_id}` : 'Social Growth Package');
+
+          const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
+
+          return {
+            id: String(so.id),
+            serviceId: so.service_id,
+            rawServiceId: matchedSvc?.rawId || so.service_id,
+            serviceName: svcTitle,
+            provider: so.assigned_provider_id === 2 ? 'worldofsmm' : 'jap',
+            providerDisplayName: so.assigned_provider_id === 2 ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
+            providerOrderId: so.provider_order_id,
+            target: so.target_url || '',
+            quantity: Number(so.quantity) || 1000,
+            amount: Number(so.charge) || 0,
+            status: so.status || 'Completed',
+            userEmail: matchedUser?.email || '',
+            customerName: matchedUser?.username || (matchedUser?.email ? matchedUser.email.split('@')[0] : 'Customer'),
+            createdAt: orderCreatedAt,
+            date: this.formatRealDate(orderCreatedAt)
+          };
+        });
         localStorage.setItem('likex_supabase_orders', JSON.stringify(mapped));
-      }
-
-      // 2. Fetch users from Supabase
-      const { data: supaUsers } = await window.supabaseClient
-        .from('users')
-        .select('id, email, username, role');
-
-      if (supaUsers && supaUsers.length > 0) {
-        localStorage.setItem('likex_supabase_users', JSON.stringify(supaUsers));
       }
 
       this.recalculateAdminStats();
@@ -1519,6 +1572,29 @@ class SmmStateStore {
       master.unshift(newOrder);
       localStorage.setItem('likex_master_orders', JSON.stringify(master));
     } catch (e) {}
+
+    // Persist order to Supabase PostgreSQL database
+    if (window.supabaseClient) {
+      try {
+        const orderNum = parseInt(assignedOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
+        window.supabaseClient
+          .from('orders')
+          .insert([{
+            id: orderNum,
+            target_url: cleanedTarget,
+            quantity: Number(quantity),
+            charge: totalCost,
+            provider_order_id: liveOrderId || null,
+            status: isQueued ? 'Pending' : 'Processing',
+            remains: Number(quantity),
+            created_at: new Date(now).toISOString()
+          }])
+          .then(({ error }) => {
+            if (error) console.warn('[LikeX Supabase] Order insert note:', error.message);
+          })
+          .catch(err => console.warn('[LikeX Supabase] Order insert error:', err));
+      } catch (e) {}
+    }
 
     // Track customer registration
     try {

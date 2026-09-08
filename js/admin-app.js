@@ -1245,25 +1245,84 @@ const AdminApp = {
             <table class="sync-data-table" style="font-size: 13px;">
               <thead>
                 <tr>
-                  <th>Order ID</th>
-                  <th>Service ID</th>
-                  <th>Customer Service</th>
-                  <th>Charge</th>
-                  <th>Status</th>
+                  <th style="min-width: 140px;">ORDER ID & TIME</th>
+                  <th style="min-width: 150px;">CUSTOMER</th>
+                  <th style="min-width: 200px;">CUSTOMER SERVICE</th>
+                  <th style="min-width: 160px;">TARGET URL</th>
+                  <th style="min-width: 80px;">QTY</th>
+                  <th style="min-width: 90px;">CHARGE</th>
+                  <th style="min-width: 110px;">STATUS</th>
                 </tr>
               </thead>
               <tbody>
                 ${recentOrders.map(ro => {
                   const sId = this.getOrderServiceId(ro);
+                  const custEmail = ro.userEmail || ro.customerEmail || '';
+                  const custName = ro.customerName || (custEmail ? custEmail.split('@')[0] : 'Guest Customer');
+                  const avatarLetter = (custName || 'U').charAt(0).toUpperCase();
+                  const dateStr = ro.date || (ro.createdAt ? store.formatRealDate(ro.createdAt) : 'Recently');
+                  const relativeBadge = store.formatOrderDisplayDate ? store.formatOrderDisplayDate(ro) : '';
+
+                  let platformIcon = '⚡';
+                  const lowSvc = (ro.serviceName || '').toLowerCase();
+                  if (lowSvc.includes('instagram') || ro.platform === 'instagram') platformIcon = '📸';
+                  else if (lowSvc.includes('youtube') || ro.platform === 'youtube') platformIcon = '▶️';
+                  else if (lowSvc.includes('tiktok') || ro.platform === 'tiktok') platformIcon = '🎵';
+                  else if (lowSvc.includes('twitter') || lowSvc.includes(' x ') || ro.platform === 'twitter') platformIcon = '🐦';
+                  else if (lowSvc.includes('telegram') || ro.platform === 'telegram') platformIcon = '✈️';
+                  else if (lowSvc.includes('facebook') || ro.platform === 'facebook') platformIcon = '📘';
+                  else if (lowSvc.includes('spotify') || ro.platform === 'spotify') platformIcon = '🎧';
+
                   return `
                     <tr>
-                      <td style="font-family: var(--font-mono); font-weight: 800;">#${ro.id}</td>
                       <td>
-                        <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4F46E5; font-weight: 800; font-family: var(--font-mono); padding: 2px 7px; border-radius: 6px;">#${sId}</span>
+                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                          <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span style="font-family: var(--font-mono); font-weight: 800; color: var(--primary);">#${ro.id}</span>
+                            <button type="button" title="Copy Order ID" onclick="navigator.clipboard.writeText('${ro.id}'); window.store.showToast('Order ID #${ro.id} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 11px; opacity: 0.6;">📋</button>
+                          </div>
+                          <span style="font-size: 10.5px; color: var(--text-muted);">${dateStr}</span>
+                          ${relativeBadge && relativeBadge !== dateStr ? `<span style="font-size: 9.5px; font-weight: 700; color: #10B981;">• ${relativeBadge}</span>` : ''}
+                        </div>
                       </td>
-                      <td style="max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"><strong>${ro.serviceName}</strong></td>
-                      <td><strong style="color: var(--primary);">${store.formatMoney(ro.amount)}</strong></td>
-                      <td><span class="badge badge-primary">${ro.status || 'Processing'}</span></td>
+                      <td>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                          <div style="width: 28px; height: 28px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #8B5CF6); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; flex-shrink: 0;">
+                            ${avatarLetter}
+                          </div>
+                          <div style="min-width: 0;">
+                            <div style="font-weight: 700; font-size: 12.5px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                              ${custName}
+                            </div>
+                            <div style="font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;" title="${custEmail || 'Guest'}">
+                              ${custEmail || 'Guest'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style="max-width: 220px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                          <span style="font-size: 14px;">${platformIcon}</span>
+                          <span style="font-weight: 700; font-size: 12.5px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            ${ro.serviceName}
+                          </span>
+                        </div>
+                        <div style="font-size: 10.5px; font-family: var(--font-mono); color: var(--primary); margin-top: 2px;">
+                          SVC #${sId}
+                        </div>
+                      </td>
+                      <td style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-family: var(--font-mono);">
+                        <a href="${ro.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;" title="${ro.target}">
+                          ${ro.target || '—'}
+                        </a>
+                      </td>
+                      <td><strong>${Number(ro.quantity || 1000).toLocaleString()}</strong></td>
+                      <td><strong style="color: var(--primary); font-size: 13.5px;">${store.formatMoney(ro.amount)}</strong></td>
+                      <td>
+                        <span class="badge ${String(ro.status).toLowerCase() === 'completed' ? 'badge-success' : (String(ro.status).toLowerCase() === 'partial' ? 'badge-warning' : 'badge-primary')}" style="font-size: 11px; padding: 3px 8px;">
+                          ${ro.status || 'Processing'}
+                        </span>
+                      </td>
                     </tr>
                   `;
                 }).join('')}
@@ -2256,6 +2315,10 @@ const AdminApp = {
         const targetStr = String(o.target || '').toLowerCase();
         const statusStr = String(o.status || '').toLowerCase();
         const provStr = String(o.provider || '').toLowerCase();
+        const emailStr = String(o.userEmail || o.customerEmail || '').toLowerCase();
+        const custNameStr = String(o.customerName || '').toLowerCase();
+        const commentsStr = String(o.comments || '').toLowerCase();
+        const dateStr = String(o.date || '').toLowerCase();
 
         return idStr.includes(query) ||
                idStr.includes(cleanQuery) ||
@@ -2268,7 +2331,11 @@ const AdminApp = {
                nameStr.includes(query) ||
                targetStr.includes(query) ||
                statusStr.includes(query) ||
-               provStr.includes(query);
+               provStr.includes(query) ||
+               emailStr.includes(query) ||
+               custNameStr.includes(query) ||
+               commentsStr.includes(query) ||
+               dateStr.includes(query);
       });
     }
 
@@ -2284,7 +2351,7 @@ const AdminApp = {
           <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
             <div style="font-size: 38px; margin-bottom: 10px;">🔍</div>
             <strong style="font-size: 15px; color: var(--text-main);">No orders found matching "${q || f}"</strong>
-            <p style="font-size: 13px; margin-top: 6px; color: var(--text-secondary);">Directly search by Order ID (#42078) or Service ID (#10131), or reset search filters.</p>
+            <p style="font-size: 13px; margin-top: 6px; color: var(--text-secondary);">Directly search by Order ID (#42078), Customer Email, or Service ID (#10131), or reset search filters.</p>
             ${(q || f !== 'all') ? `
               <button type="button" class="btn btn-sm btn-secondary" onclick="AdminApp.handleAdminOrdersSearch(''); AdminApp.setAdminOrdersFilter('all');" style="margin-top: 14px; border-radius: 999px; font-weight: 700; padding: 6px 16px;">
                 Reset Search Filters
@@ -2300,85 +2367,149 @@ const AdminApp = {
       const isWos = o.provider === 'worldofsmm' || (o.serviceId && String(o.serviceId).startsWith('wos-'));
       const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
 
+      const custEmail = o.userEmail || o.customerEmail || '';
+      const custName = o.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
+      const avatarLetter = (custName || 'C').charAt(0).toUpperCase();
+      const dateStr = o.date || (o.createdAt ? store.formatRealDate(o.createdAt) : 'Recently');
+      const relativeBadge = store.formatOrderDisplayDate ? store.formatOrderDisplayDate(o) : '';
+
+      let platformIcon = '⚡';
+      const lowSvc = (o.serviceName || '').toLowerCase();
+      if (lowSvc.includes('instagram') || o.platform === 'instagram') platformIcon = '📸';
+      else if (lowSvc.includes('youtube') || o.platform === 'youtube') platformIcon = '▶️';
+      else if (lowSvc.includes('tiktok') || o.platform === 'tiktok') platformIcon = '🎵';
+      else if (lowSvc.includes('twitter') || lowSvc.includes(' x ') || o.platform === 'twitter') platformIcon = '🐦';
+      else if (lowSvc.includes('telegram') || o.platform === 'telegram') platformIcon = '✈️';
+      else if (lowSvc.includes('facebook') || o.platform === 'facebook') platformIcon = '📘';
+      else if (lowSvc.includes('spotify') || o.platform === 'spotify') platformIcon = '🎧';
+
       return `
         <tr>
-          <!-- ORDER ID -->
+          <!-- 1. ORDER ID & DATE / TIME -->
           <td>
-            <div style="display: inline-flex; align-items: center; gap: 6px;">
-              <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: var(--text-main); cursor: pointer;" title="Click to copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');">
-                #${o.id}
-              </span>
-              <button type="button" class="btn-copy-id" title="Copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 12px;">📋</button>
-            </div>
-          </td>
-
-          <!-- SERVICE ID -->
-          <td>
-            <div style="display: inline-flex; align-items: center; gap: 6px;">
-              <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4338CA; font-weight: 800; font-family: var(--font-mono); font-size: 12.5px; padding: 4px 9px; border-radius: 7px; border: 1px solid rgba(99, 102, 241, 0.28); letter-spacing: 0.3px; cursor: pointer;" title="Click to copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');">
-                #${svcId}
-              </span>
-              ${svcId !== 'N/A' ? `
-                <button type="button" class="btn-copy-id" title="Copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px;">📋</button>
+            <div style="display: flex; flex-direction: column; gap: 3px;">
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <span style="font-family: var(--font-mono); font-weight: 800; font-size: 14px; color: var(--primary); cursor: pointer;" title="Click to copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');">
+                  #${o.id}
+                </span>
+                <button type="button" class="btn-copy-id" title="Copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px;">📋</button>
+              </div>
+              <div style="font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
+                <span>📅 ${dateStr}</span>
+              </div>
+              ${relativeBadge && relativeBadge !== dateStr ? `
+                <div>
+                  <span style="font-size: 10px; font-weight: 700; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 4px;">
+                    ${relativeBadge}
+                  </span>
+                </div>
               ` : ''}
             </div>
           </td>
 
-          <!-- CUSTOMER SERVICE -->
+          <!-- 2. CUSTOMER -->
           <td>
-            <div style="font-weight: 700; color: var(--text-main); font-size: 13.5px; line-height: 1.4;">
-              ${o.serviceName}
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px; margin-top: 3px; font-size: 11px; color: var(--text-muted);">
-              <span style="font-family: var(--font-mono); font-weight: 600; color: #4F46E5;">SVC #${svcId}</span>
-              ${o.comments ? `<span style="color: var(--primary); font-weight: 600;">💬 Custom Comments Included</span>` : ''}
+            <div style="display: flex; align-items: center; gap: 9px;">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #9333EA); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);">
+                ${avatarLetter}
+              </div>
+              <div style="min-width: 0;">
+                <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
+                  ${custName}
+                </div>
+                <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                  <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 115px;" title="${custEmail || 'Guest Customer'}">
+                    ${custEmail || 'Guest Customer'}
+                  </span>
+                  ${custEmail ? `
+                    <button type="button" title="Copy Email" onclick="navigator.clipboard.writeText('${custEmail}'); window.store.showToast('Customer email copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 10px; opacity: 0.7;">📋</button>
+                  ` : ''}
+                </div>
+              </div>
             </div>
           </td>
 
-          <!-- PROVIDER ORIGIN -->
+          <!-- 3. CUSTOMER SERVICE / ORDER DETAILS -->
+          <td>
+            <div style="display: flex; align-items: flex-start; gap: 7px;">
+              <span style="font-size: 16px; line-height: 1.2; flex-shrink: 0; margin-top: 1px;">${platformIcon}</span>
+              <div style="min-width: 0;">
+                <div style="font-weight: 700; color: var(--text-main); font-size: 13.5px; line-height: 1.4;">
+                  ${o.serviceName}
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; flex-wrap: wrap;">
+                  <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4338CA; font-weight: 800; font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.25); cursor: pointer;" title="Click to copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');">
+                    SVC #${svcId}
+                  </span>
+                  ${o.comments ? `
+                    <span style="color: #7C3AED; font-weight: 700; background: rgba(124, 58, 237, 0.1); padding: 2px 7px; border-radius: 6px;" title="${o.comments}">
+                      💬 Custom Comments Included
+                    </span>
+                  ` : ''}
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- 4. PROVIDER ORIGIN -->
           <td>
             ${isWos ? `
-              <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+              <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
                 🇮🇳 WorldOfSMM
               </span>
             ` : `
-              <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #1D4ED8; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px;">
+              <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #1D4ED8; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
                 🌐 JAP
               </span>
             `}
-            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 4px;">
-              <span>${o.providerOrderId || 'Prov Order #'+o.id}</span>
+            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+              <span>${o.providerOrderId || 'Prov #' + o.id}</span>
               ${o.providerOrderId ? `
                 <button type="button" title="Copy Provider Order ID" onclick="navigator.clipboard.writeText('${o.providerOrderId}'); window.store.showToast('Provider Order ID copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 10px; opacity: 0.6;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">📋</button>
               ` : ''}
             </div>
           </td>
 
-          <!-- TARGET URL -->
-          <td style="font-family: var(--font-mono); font-size: 12px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            <a href="${o.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 500;" title="${o.target}">
-              ${o.target}
-            </a>
+          <!-- 5. TARGET URL -->
+          <td style="font-family: var(--font-mono); font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+            <div style="display: flex; align-items: center; gap: 4px;">
+              <a href="${o.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.target}">
+                ${o.target || '—'}
+              </a>
+              ${o.target ? `
+                <button type="button" title="Copy Link" onclick="navigator.clipboard.writeText('${o.target}'); window.store.showToast('Target URL copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: 0.7; flex-shrink: 0;">📋</button>
+              ` : ''}
+            </div>
           </td>
 
-          <!-- QUANTITY -->
-          <td style="font-weight: 700; font-size: 13px;">${Number(o.quantity).toLocaleString()}</td>
+          <!-- 6. QUANTITY -->
+          <td style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">${Number(o.quantity || 1000).toLocaleString()}</td>
 
-          <!-- CHARGE -->
-          <td><strong style="color: var(--primary); font-size: 13.5px;">${store.formatMoney(o.amount)}</strong></td>
+          <!-- 7. CHARGE -->
+          <td><strong style="color: var(--primary); font-size: 14px;">${store.formatMoney(o.amount)}</strong></td>
 
-          <!-- STATUS -->
+          <!-- 8. STATUS -->
           <td>
             ${isLow ? `
               <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
-                ⚠️ Low Balance (Needs Fund)
+                ⚠️ Low Balance (Needs Top-up)
               </span>
             ` : (String(o.status).toLowerCase() === 'partial') ? `
               <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800;">
                 ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
               </span>
+            ` : (String(o.status).toLowerCase() === 'completed') ? `
+              <span class="badge badge-success" style="font-weight: 800;">Completed</span>
+            ` : (String(o.status).toLowerCase() === 'in_progress' || String(o.status).toLowerCase() === 'in progress') ? `
+              <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #7C3AED; font-weight: 800; border: 1px solid rgba(139, 92, 246, 0.3);">
+                In Progress
+              </span>
+            ` : (String(o.status).toLowerCase() === 'refunded' || String(o.status).toLowerCase() === 'canceled') ? `
+              <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800;">
+                ${o.status}
+              </span>
             ` : `
-              <span class="badge badge-primary">${o.status}</span>
+              <span class="badge badge-primary" style="font-weight: 800;">${o.status || 'Processing'}</span>
             `}
           </td>
         </tr>
@@ -2442,7 +2573,7 @@ const AdminApp = {
               id="admin-orders-search-input"
               type="text" 
               class="form-control" 
-              placeholder="Search directly by Order ID (#42078), Service ID (#10131), Link, or Status..." 
+              placeholder="Search by Order ID (#42078), Customer Email, Service ID (#10131), Link..." 
               value="${this.adminOrdersSearch || ''}" 
               oninput="AdminApp.handleAdminOrdersSearch(this.value)"
               style="padding-left: 42px; padding-right: 36px; border-radius: 999px; height: 42px; font-size: 13.5px; width: 100%; border: 1.5px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);"
@@ -2483,12 +2614,12 @@ const AdminApp = {
             <table class="sync-data-table">
               <thead>
                 <tr>
-                  <th style="min-width: 120px;">ORDER ID</th>
-                  <th style="min-width: 120px;">SERVICE ID</th>
+                  <th style="min-width: 140px;">ORDER ID & DATE</th>
+                  <th style="min-width: 160px;">CUSTOMER</th>
                   <th style="min-width: 250px;">CUSTOMER SERVICE</th>
-                  <th style="min-width: 150px;">PROVIDER ORIGIN</th>
-                  <th style="min-width: 180px;">TARGET URL</th>
-                  <th style="min-width: 90px;">QUANTITY</th>
+                  <th style="min-width: 140px;">PROVIDER ORIGIN</th>
+                  <th style="min-width: 170px;">TARGET URL</th>
+                  <th style="min-width: 80px;">QTY</th>
                   <th style="min-width: 100px;">CHARGE</th>
                   <th style="min-width: 130px;">STATUS</th>
                 </tr>
