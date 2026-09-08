@@ -86,9 +86,9 @@ export default async function handler(req, res) {
     // If order was placed, automatically log to Supabase PostgreSQL orders table
     if (action === 'add' && data && (data.order || !data.error)) {
       try {
-        const orderIdNum = paramsObj.likeXOrderId 
-          ? parseInt(paramsObj.likeXOrderId, 10) 
-          : (data.order ? parseInt(data.order, 10) : Math.floor(10000 + Math.random() * 90000));
+        const orderIdNum = data.order 
+          ? parseInt(data.order, 10) 
+          : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
 
         await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
           method: 'POST',

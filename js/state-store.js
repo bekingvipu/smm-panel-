@@ -934,10 +934,11 @@ class SmmStateStore {
       const createdTs = Number(o.createdAt) || (o.date ? new Date(o.date).getTime() : Date.now());
 
       if (existingIdx === -1) {
+        const displayId = oProvId || oId;
         ordersList.push({
           ...o,
-          id: oId,
-          providerOrderId: oProvId,
+          id: displayId,
+          providerOrderId: oProvId || displayId,
           amount: amountVal,
           quantity: qtyVal,
           createdAt: createdTs,
@@ -945,12 +946,9 @@ class SmmStateStore {
         });
       } else {
         const existing = ordersList[existingIdx];
-        // Prefer shorter 5-digit ID as primary likeX ID (e.g. 59184 instead of 58662283)
-        const bestId = (String(existing.id).length <= 5 && !isNaN(existing.id)) 
-          ? String(existing.id) 
-          : ((String(oId).length <= 5 && !isNaN(oId)) ? oId : (existing.id || oId));
-
+        // Prefer Provider Order ID (e.g. 58662283) as primary ID so admin can search directly in provider dashboard
         const bestProvId = oProvId || existing.providerOrderId || (String(oId).length > 5 ? oId : (String(existing.id).length > 5 ? String(existing.id) : null));
+        const bestId = bestProvId || existing.id || oId;
 
         const bestName = (o.serviceName && !o.serviceName.startsWith('Service #') && o.serviceName !== 'Social Growth Package') 
           ? o.serviceName 
@@ -969,7 +967,7 @@ class SmmStateStore {
           ...existing,
           ...o,
           id: bestId,
-          providerOrderId: bestProvId,
+          providerOrderId: bestProvId || bestId,
           serviceName: bestName,
           userEmail: bestEmail,
           customerName: bestCustName,
@@ -1219,10 +1217,11 @@ class SmmStateStore {
     const savedOrders = localStorage.getItem(ordersKey);
     const parsedOrders = savedOrders ? JSON.parse(savedOrders) : [];
     this.data.orders = parsedOrders.map(o => {
-      // Ensure clean 5-digit LikeX Order ID
-      if (String(o.id).length > 5) {
-        if (!o.providerOrderId) o.providerOrderId = String(o.id);
-        o.id = String(o.id).slice(-5);
+      // Use Provider Order ID as primary ID when available
+      if (o.providerOrderId) {
+        o.id = String(o.providerOrderId);
+      } else if (String(o.id).length > 5) {
+        o.providerOrderId = String(o.id);
       }
       // White-label provider display name for customer privacy
       if (o.providerName && (o.providerName.includes('JustAnotherPanel') || o.providerName.includes('WorldOfSMM') || o.providerName.includes('JAP'))) {
@@ -1518,7 +1517,8 @@ class SmmStateStore {
     const cleanedTarget = this.cleanTargetUrl(target);
 
     // Generate unique 5-Digit LikeX Order ID (e.g. #58392)
-    const assignedOrderId = this.generateLikeXOrderId();
+    // Fallback 5-Digit LikeX Order ID (used if provider gateway is offline or queues order)
+    const fallbackOrderId = this.generateLikeXOrderId();
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
@@ -1538,7 +1538,7 @@ class SmmStateStore {
           link: cleanedTarget,
           quantity: quantity,
           comments: comments || undefined,
-          likeXOrderId: assignedOrderId,
+          likeXOrderId: fallbackOrderId,
           serviceName: serviceName || `Service #${serviceId}`,
           charge: totalCost,
           customerEmail: this.data.customer?.email || '',
@@ -1565,18 +1565,21 @@ class SmmStateStore {
       isQueued = true;
     }
 
+    // Exact Provider Order ID (e.g. 58662283) is primary so customer and admin see identical IDs for direct provider lookup
+    const finalOrderId = liveOrderId || fallbackOrderId;
+
     // Deduct user wallet (profit locked in LikeX!)
     this.data.customer.balance -= totalCost;
 
     const newOrder = {
-      id: assignedOrderId,
+      id: finalOrderId,
       serviceId: serviceId,
       rawServiceId: rawServiceId,
       serviceName: serviceName || `Service #${serviceId}`,
       provider: targetProvider,
       providerName: 'LikeX Cloud Engine',
       providerDisplayName: providerDisplayName,
-      providerOrderId: liveOrderId || null,
+      providerOrderId: liveOrderId || finalOrderId,
       isQueued: isQueued,
       needsTopup: isQueued,
       upstreamError: upstreamError || null,
@@ -1602,7 +1605,7 @@ class SmmStateStore {
     if (isQueued) {
       this.triggerAlert({
         type: 'queued_order',
-        orderId: assignedOrderId,
+        orderId: finalOrderId,
         providerName: providerDisplayName,
         providerKey: targetProvider,
         serviceName: serviceName || `Service #${serviceId}`,
@@ -1625,7 +1628,7 @@ class SmmStateStore {
     // Persist order to Supabase PostgreSQL database
     if (window.supabaseClient) {
       try {
-        const orderNum = parseInt(assignedOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
+        const orderNum = parseInt(finalOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
         window.supabaseClient
           .from('orders')
           .insert([{
@@ -1633,7 +1636,7 @@ class SmmStateStore {
             target_url: cleanedTarget,
             quantity: Number(quantity),
             charge: totalCost,
-            provider_order_id: liveOrderId || null,
+            provider_order_id: liveOrderId || finalOrderId,
             status: isQueued ? 'Pending' : 'Processing',
             remains: Number(quantity),
             created_at: new Date(now).toISOString()
@@ -1659,7 +1662,7 @@ class SmmStateStore {
     this.data.transactions.unshift({
       id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
       type: 'Order Deduction',
-      description: `Payment for Order #${assignedOrderId}`,
+      description: `Payment for Order #${finalOrderId}`,
       amount: -totalCost,
       balanceAfter: this.data.customer.balance,
       status: 'Success',
@@ -1672,7 +1675,7 @@ class SmmStateStore {
     this.data.recentActivity.unshift({
       id: `act-${now}`,
       type: 'order',
-      title: `New Order #${assignedOrderId}`,
+      title: `New Order #${finalOrderId}`,
       sub: `${serviceName} • LikeX Express Server`,
       amount: this.formatMoney(totalCost),
       time: formattedDate,
@@ -1682,11 +1685,11 @@ class SmmStateStore {
     this.recalculateAdminStats();
 
     if (!options.silent) {
-      this.showToast(`🎉 Order #${assignedOrderId} placed successfully! Queued on high-speed server.`, 'success');
+      this.showToast(`🎉 Order #${finalOrderId} placed successfully! Queued on high-speed server.`, 'success');
       this.setCustomerTab('orders');
     }
     this.notify();
-    return { success: true, orderId: assignedOrderId, totalCost };
+    return { success: true, orderId: finalOrderId, totalCost };
   }
 
   // Live Status Synchronization from Upstream Provider
