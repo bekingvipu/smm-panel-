@@ -287,41 +287,53 @@ CREATE POLICY "Public access site settings" ON public.site_settings FOR ALL USIN
 
 -- =========================================================
 -- 11. AUTOMATIC SYNC FROM SUPABASE AUTH TO PUBLIC USERS TABLE
--- (Instantly populates all 28+ Google/Email OTP users into Admin Dashboard)
+-- (Resolves sequence id conflicts and syncs all 28+ Auth users)
 -- =========================================================
 
--- 1. Sync all existing Supabase Auth users to public.users table immediately
+-- 1. Fix PostgreSQL sequence counter for users table (resolves duplicate key id=2 error)
+SELECT setval(pg_get_serial_sequence('public.users', 'id'), COALESCE((SELECT MAX(id) FROM public.users), 1) + 1, false);
+
+-- 2. Sync existing auth users cleanly without primary key or username collisions
 INSERT INTO public.users (email, username, password_hash, role)
 SELECT 
-    email, 
-    COALESCE(raw_user_meta_data->>'full_name', raw_user_meta_data->>'name', split_part(email, '@', 1)), 
+    au.email, 
+    COALESCE(
+        NULLIF(au.raw_user_meta_data->>'full_name', ''),
+        NULLIF(au.raw_user_meta_data->>'name', ''),
+        split_part(au.email, '@', 1)
+    ) || '_' || SUBSTRING(au.id::text, 1, 5) AS username,
     'auth_synced', 
     'customer'
-FROM auth.users
-WHERE email IS NOT NULL
-ON CONFLICT (email) DO UPDATE SET
-    username = EXCLUDED.username;
+FROM auth.users au
+WHERE au.email IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1 FROM public.users pu WHERE pu.email = au.email
+  );
 
--- 2. Automatic trigger function to sync every future signup to public.users table
+-- 3. Automatic trigger function to sync future signups to public.users
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
 BEGIN
-    INSERT INTO public.users (email, username, password_hash, role)
-    VALUES (
-        NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', split_part(NEW.email, '@', 1)),
-        'auth_synced',
-        'customer'
-    )
-    ON CONFLICT (email) DO UPDATE SET
-        username = EXCLUDED.username;
+    IF NOT EXISTS (SELECT 1 FROM public.users WHERE email = NEW.email) THEN
+        INSERT INTO public.users (email, username, password_hash, role)
+        VALUES (
+            NEW.email,
+            COALESCE(
+                NULLIF(NEW.raw_user_meta_data->>'full_name', ''),
+                NULLIF(NEW.raw_user_meta_data->>'name', ''),
+                split_part(NEW.email, '@', 1)
+            ) || '_' || SUBSTRING(NEW.id::text, 1, 5),
+            'auth_synced',
+            'customer'
+        );
+    END IF;
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- 3. Bind trigger to auth.users table
+-- 4. Bind trigger to auth.users table
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
-    AFTER INSERT OR UPDATE ON auth.users
+    AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 
