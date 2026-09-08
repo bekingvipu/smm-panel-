@@ -908,64 +908,92 @@ class SmmStateStore {
     }
   }
 
-  // Get all master orders across the entire system with full metadata preservation
+  // Get all master orders across the entire system with full metadata preservation & smart deduplication
   getAllAdminOrders() {
-    const orderMap = new Map();
+    const ordersList = [];
 
-    // Helper to merge into orderMap, prioritizing richer and newer data
-    const mergeOrder = (o) => {
+    // Helper to add or merge an order (deduplicates across LikeX Order ID and Provider Order ID)
+    const addOrMerge = (o) => {
       if (!o || !o.id) return;
-      const idKey = String(o.id);
-      const existing = orderMap.get(idKey);
-      if (!existing) {
-        orderMap.set(idKey, {
+      const oId = String(o.id).trim();
+      const oProvId = o.providerOrderId ? String(o.providerOrderId).trim() : null;
+
+      // Find existing match by either id OR providerOrderId
+      const existingIdx = ordersList.findIndex(existing => {
+        const eId = String(existing.id).trim();
+        const eProvId = existing.providerOrderId ? String(existing.providerOrderId).trim() : null;
+
+        return eId === oId || 
+               (oProvId && eProvId && oProvId === eProvId) ||
+               (oProvId && eId === oProvId) ||
+               (eProvId && oId === eProvId);
+      });
+
+      const amountVal = Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : 0));
+      const qtyVal = Number(o.quantity || 1000);
+      const createdTs = Number(o.createdAt) || (o.date ? new Date(o.date).getTime() : Date.now());
+
+      if (existingIdx === -1) {
+        ordersList.push({
           ...o,
-          id: idKey,
-          amount: Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : 0)),
-          quantity: Number(o.quantity || 1000),
-          createdAt: Number(o.createdAt) || (o.date ? new Date(o.date).getTime() : Date.now()),
-          date: o.date || this.formatRealDate(Number(o.createdAt) || Date.now())
+          id: oId,
+          providerOrderId: oProvId,
+          amount: amountVal,
+          quantity: qtyVal,
+          createdAt: createdTs,
+          date: o.date || this.formatRealDate(createdTs)
         });
       } else {
+        const existing = ordersList[existingIdx];
+        // Prefer shorter 5-digit ID as primary likeX ID (e.g. 59184 instead of 58662283)
+        const bestId = (String(existing.id).length <= 5 && !isNaN(existing.id)) 
+          ? String(existing.id) 
+          : ((String(oId).length <= 5 && !isNaN(oId)) ? oId : (existing.id || oId));
+
+        const bestProvId = oProvId || existing.providerOrderId || (String(oId).length > 5 ? oId : (String(existing.id).length > 5 ? String(existing.id) : null));
+
         const bestName = (o.serviceName && !o.serviceName.startsWith('Service #') && o.serviceName !== 'Social Growth Package') 
           ? o.serviceName 
-          : existing.serviceName;
-        const bestEmail = o.userEmail || o.customerEmail || existing.userEmail || existing.customerEmail || '';
-        const bestCustName = o.customerName || existing.customerName || (bestEmail ? bestEmail.split('@')[0] : 'Customer');
-        const bestCreatedAt = Math.min(
-          Number(existing.createdAt) || Date.now(), 
-          Number(o.createdAt) || Date.now()
-        );
+          : (existing.serviceName || o.serviceName);
 
-        orderMap.set(idKey, {
+        const bestEmail = o.userEmail || o.customerEmail || existing.userEmail || existing.customerEmail || '';
+        const bestCustName = (o.customerName && o.customerName !== 'Guest' && o.customerName !== 'Customer')
+          ? o.customerName
+          : (existing.customerName && existing.customerName !== 'Guest' && existing.customerName !== 'Customer')
+            ? existing.customerName
+            : (bestEmail ? bestEmail.split('@')[0] : (o.customerName || existing.customerName || 'Customer'));
+
+        const bestAmount = amountVal > 0 ? amountVal : (Number(existing.amount || existing.charge || 0));
+
+        ordersList[existingIdx] = {
           ...existing,
           ...o,
-          id: idKey,
+          id: bestId,
+          providerOrderId: bestProvId,
           serviceName: bestName,
           userEmail: bestEmail,
           customerName: bestCustName,
           target: o.target || existing.target || '',
           comments: o.comments || existing.comments || '',
-          provider: o.provider || existing.provider || 'jap',
+          provider: o.provider || existing.provider || 'worldofsmm',
           providerDisplayName: o.providerDisplayName || existing.providerDisplayName || 'Provider API',
-          providerOrderId: o.providerOrderId || existing.providerOrderId || null,
-          createdAt: bestCreatedAt,
-          date: o.date || existing.date || this.formatRealDate(bestCreatedAt),
-          amount: Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : (existing.amount || 0))),
-          quantity: Number(o.quantity || existing.quantity || 1000),
-          status: o.status || existing.status || 'Processing'
-        });
+          createdAt: Math.min(Number(existing.createdAt) || createdTs, createdTs),
+          date: o.date || existing.date || this.formatRealDate(createdTs),
+          amount: bestAmount,
+          quantity: qtyVal || existing.quantity || 1000,
+          status: (o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing')
+        };
       }
     };
 
     // 1. Current store orders
-    (this.data.orders || []).forEach(mergeOrder);
+    (this.data.orders || []).forEach(addOrMerge);
 
     // 2. Global master orders from localStorage
     try {
       const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
       if (Array.isArray(master)) {
-        master.forEach(mergeOrder);
+        master.forEach(addOrMerge);
       }
     } catch (e) {}
 
@@ -976,7 +1004,7 @@ class SmmStateStore {
         if (key && key.startsWith('smm_user_') && key.endsWith('_orders')) {
           const uOrders = JSON.parse(localStorage.getItem(key) || '[]');
           if (Array.isArray(uOrders)) {
-            uOrders.forEach(mergeOrder);
+            uOrders.forEach(addOrMerge);
           }
         }
       }
@@ -986,13 +1014,12 @@ class SmmStateStore {
     try {
       const supaOrders = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
       if (Array.isArray(supaOrders)) {
-        supaOrders.forEach(mergeOrder);
+        supaOrders.forEach(addOrMerge);
       }
     } catch (e) {}
 
-    const all = Array.from(orderMap.values());
-    all.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
-    return all;
+    ordersList.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+    return ordersList;
   }
 
   // Get accurate count of registered customers
@@ -1487,8 +1514,13 @@ class SmmStateStore {
       return { success: false, message: 'Insufficient balance' };
     }
 
-    // Sanitize target URL to prevent bot issues (strips ?igsi=..., handles @handle)
+    // Clean and sanitize target URL
     const cleanedTarget = this.cleanTargetUrl(target);
+
+    // Generate unique 5-Digit LikeX Order ID (e.g. #58392)
+    const assignedOrderId = this.generateLikeXOrderId();
+    const now = Date.now();
+    const formattedDate = this.formatRealDate(now);
 
     // Dispatch live order to upstream provider
     let liveOrderId = null;
@@ -1505,7 +1537,12 @@ class SmmStateStore {
           service: String(rawServiceId),
           link: cleanedTarget,
           quantity: quantity,
-          comments: comments || undefined
+          comments: comments || undefined,
+          likeXOrderId: assignedOrderId,
+          serviceName: serviceName || `Service #${serviceId}`,
+          charge: totalCost,
+          customerEmail: this.data.customer?.email || '',
+          customerName: this.data.customer?.name || 'Customer'
         })
       });
       if (liveRes.ok) {
@@ -1530,12 +1567,6 @@ class SmmStateStore {
 
     // Deduct user wallet (profit locked in LikeX!)
     this.data.customer.balance -= totalCost;
-
-    // Generate unique 5-Digit LikeX Order ID (e.g. #58392)
-    const assignedOrderId = this.generateLikeXOrderId();
-
-    const now = Date.now();
-    const formattedDate = this.formatRealDate(now);
 
     const newOrder = {
       id: assignedOrderId,
