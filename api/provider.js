@@ -53,14 +53,24 @@ export default async function handler(req, res) {
     if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-    const response = await fetch(providerConfig.url, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
-      }
-    });
+    // 4-second timeout to ensure ultra-fast responsive user experience
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
+
+    let response;
+    try {
+      response = await fetch(providerConfig.url, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
+        }
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
     return await response.json();
   };
 
@@ -83,37 +93,35 @@ export default async function handler(req, res) {
 
     const data = await callProvider(providerConfig);
 
-    // If order was placed, automatically log to Supabase PostgreSQL orders table
+    // If order was placed, log to Supabase PostgreSQL orders table
     if (action === 'add' && data && (data.order || !data.error)) {
-      try {
-        const orderIdNum = data.order 
-          ? parseInt(data.order, 10) 
-          : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
+      const orderIdNum = data.order 
+        ? parseInt(data.order, 10) 
+        : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
 
-        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-          method: 'POST',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'return=representation'
-          },
-          body: JSON.stringify({
-            id: orderIdNum,
-            service_id: parseInt(paramsObj.service, 10) || 1,
-            target_url: paramsObj.link || '',
-            quantity: Number(paramsObj.quantity) || 1000,
-            charge: Number(paramsObj.charge) || 0,
-            provider_order_id: data.order ? String(data.order) : null,
-            assigned_provider_id: providerKey === 'worldofsmm' ? 2 : 1,
-            status: data.order ? 'Processing' : 'Pending',
-            remains: Number(paramsObj.quantity) || 1000,
-            created_at: new Date().toISOString()
-          })
-        });
-      } catch (dbErr) {
+      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify({
+          id: orderIdNum,
+          service_id: parseInt(paramsObj.service, 10) || 1,
+          target_url: paramsObj.link || '',
+          quantity: Number(paramsObj.quantity) || 1000,
+          charge: Number(paramsObj.charge) || 0,
+          provider_order_id: data.order ? String(data.order) : null,
+          assigned_provider_id: providerKey === 'worldofsmm' ? 2 : 1,
+          status: data.order ? 'Processing' : 'Pending',
+          remains: Number(paramsObj.quantity) || 1000,
+          created_at: new Date().toISOString()
+        })
+      }).catch(dbErr => {
         console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message);
-      }
+      });
     }
 
     // If upstream returns an array (e.g. action: 'services'), return array directly
@@ -129,7 +137,7 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     return res.status(500).json({ 
-      error: 'Upstream provider connection error: ' + error.message,
+      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (4.5s)' : error.message),
       provider: requestedProvider 
     });
   }

@@ -29,10 +29,135 @@ const CustomerApp = {
     `;
   },
 
+  renderMaintenanceScreen(store) {
+    const maint = store.getMaintenanceMode ? store.getMaintenanceMode() : (store.data.maintenanceMode || {});
+    return `
+      <div style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 28px 20px; background: radial-gradient(circle at 50% 15%, rgba(99, 102, 241, 0.18), transparent 70%), var(--bg-base); font-family: var(--font-sans); text-align: center;">
+        
+        <!-- Glowing Pulse Icon -->
+        <div style="position: relative; width: 90px; height: 90px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+          <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #A855F7); opacity: 0.25; filter: blur(14px); animation: pulse 2s infinite;"></div>
+          <div style="width: 76px; height: 76px; border-radius: 22px; background: linear-gradient(135deg, #6366F1, #8B5CF6); display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.35); font-size: 36px;">
+            ⚙️
+          </div>
+        </div>
+
+        <!-- Logo -->
+        <div style="margin-bottom: 18px;">
+          <img src="assets/likex-logo-transparent.png" alt="LikeX" style="height: 36px; object-fit: contain;" />
+        </div>
+
+        <!-- Return ETA Badge -->
+        <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(245, 158, 11, 0.14); border: 1.5px solid rgba(245, 158, 11, 0.35); color: #B45309; padding: 6px 18px; border-radius: 999px; font-weight: 800; font-size: 13px; margin-bottom: 18px;">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #F59E0B; animation: pulse 1.5s infinite;"></span>
+          <span>${maint.estimatedTime || 'Back online in a few minutes'}</span>
+        </div>
+
+        <!-- Main Heading -->
+        <h1 style="font-size: clamp(23px, 5vw, 32px); font-weight: 900; color: var(--text-main); margin: 0 0 12px; line-height: 1.28; max-width: 560px;">
+          ${maint.title || 'We are Upgrading Systems ⚙️'}
+        </h1>
+
+        <!-- Notice Message -->
+        <p style="font-size: 14.5px; color: var(--text-secondary); line-height: 1.6; max-width: 500px; margin: 0 auto 28px;">
+          ${maint.message || 'LikeX is currently undergoing scheduled performance optimizations to provide you with faster delivery speeds. All active orders are processing normally.'}
+        </p>
+
+        <!-- Direct VIP WhatsApp Button & Refresh Action -->
+        <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; margin-bottom: 28px;">
+          <a href="https://wa.me/919837371137?text=Hi%20LikeX%20Support%2C%20I%20have%20an%20urgent%20query%20during%20maintenance." target="_blank" rel="noopener noreferrer" class="btn btn-lg" style="background: #25D366; color: white; font-weight: 800; border-radius: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); height: 50px; font-size: 14px;">
+            <span>💬 24/7 WhatsApp VIP Support</span>
+          </a>
+          <button type="button" class="btn btn-secondary btn-lg" onclick="location.reload()" style="border-radius: 14px; font-weight: 700; height: 48px; font-size: 14px;">
+            🔄 Refresh Status
+          </button>
+        </div>
+
+        <!-- Admin Bypass Modal Link -->
+        <div style="margin-top: 6px; border-top: 1px dashed var(--border-color); padding-top: 16px;">
+          <button type="button" onclick="CustomerApp.openAdminUnlockModal()" style="background: none; border: none; font-size: 12px; color: var(--text-muted); cursor: pointer; text-decoration: underline; opacity: 0.85;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85">
+            Admin Unlock / Password Access 🔐
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  openAdminUnlockModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title">🔐 Admin Master Unlock</h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+      <form onsubmit="CustomerApp.handleAdminUnlock(event)" style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0;">
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+          Enter your Master Admin Password to bypass Maintenance Mode and access the Admin Console & Storefront preview.
+        </p>
+        <div id="admin-unlock-error" style="display: none; background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 14px; border-radius: 10px; font-size: 13px;"></div>
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Master Admin Password</label>
+          <input type="password" id="admin-unlock-password" class="form-input" placeholder="Enter admin master password" required style="height: 46px; border-radius: 12px; font-size: 14px;" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-admin-unlock" style="margin-top: 4px; border-radius: 12px; font-weight: 800; background: linear-gradient(135deg, #6366F1, #8B5CF6); height: 48px;">
+          Unlock Access 🚀
+        </button>
+      </form>
+    `;
+    CustomerApp.openModal();
+  },
+
+  async handleAdminUnlock(e) {
+    e.preventDefault();
+    const pass = document.getElementById('admin-unlock-password')?.value || '';
+    const errBox = document.getElementById('admin-unlock-error');
+    const btn = document.getElementById('btn-admin-unlock');
+
+    if (!pass) return;
+    btn.disabled = true;
+    btn.innerText = 'Verifying with Supabase... ⏳';
+    if (errBox) errBox.style.display = 'none';
+
+    try {
+      if (!window.supabaseClient) throw new Error('Database connection error');
+      const hash = await sha256Hex(pass);
+      const { data, error } = await window.supabaseClient.from('users').select('password_hash, username').eq('role', 'admin').limit(1);
+      if (error || !data || data.length === 0) throw new Error('Admin account verification failed');
+
+      if (data[0].password_hash !== hash) {
+        throw new Error('Access Denied: Incorrect Master Admin Password');
+      }
+
+      sessionStorage.setItem('likex_super_admin_auth', 'true');
+      sessionStorage.setItem('likex_super_admin_user', data[0].username || 'super_admin');
+      CustomerApp.closeModal();
+      window.store.showToast('Super Admin Access Unlocked! 🛡️', 'success');
+      window.navigateToRoute('/admin');
+    } catch (err) {
+      if (errBox) {
+        errBox.textContent = err.message || 'Incorrect Password';
+        errBox.style.display = 'block';
+      }
+      btn.disabled = false;
+      btn.innerText = 'Unlock Access 🚀';
+    }
+  },
+
   render(container) {
     const store = window.store;
     const tab = store.customerTab;
     const isLoggedIn = store.data.isLoggedIn;
+
+    // Check Maintenance Mode (bypassed if super admin is authenticated)
+    const isMaintenanceOn = store.data.maintenanceMode?.enabled;
+    const isAdminAuth = sessionStorage.getItem('likex_super_admin_auth') === 'true';
+
+    if (isMaintenanceOn && !isAdminAuth) {
+      container.innerHTML = this.renderMaintenanceScreen(store);
+      return;
+    }
 
     let contentHtml = '';
     if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
@@ -1496,7 +1621,15 @@ const CustomerApp = {
     if (!serviceSelect) return;
     const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
     const serviceId = serviceSelect.value;
-    const serviceName = selectedOpt.getAttribute('data-name') || `Service #${serviceId}`;
+    
+    let serviceName = selectedOpt ? selectedOpt.getAttribute('data-name') : '';
+    if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
+      const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
+      const found = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
+      if (found) serviceName = found.customerName || found.name;
+      else serviceName = `Social Growth Service #${serviceId}`;
+    }
+
     const wholesaleCost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
     const rawMin = parseInt(selectedOpt.getAttribute('data-min')) || 10;
     const target = document.getElementById('new-order-target').value.trim();
@@ -1579,7 +1712,7 @@ const CustomerApp = {
     const submitBtn = document.getElementById('btn-submit-order');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span>⚡ Processing Order...</span>';
+      submitBtn.innerHTML = '<span>⚡ Placing Order...</span>';
     }
 
     try {

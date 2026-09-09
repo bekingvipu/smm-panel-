@@ -172,6 +172,28 @@ class SmmStateStore {
       this.data.pixelSettings = { enabled: true, pixelId: '1107755188608830' };
     }
 
+    // Initialize Maintenance Mode Config
+    try {
+      const savedMaint = localStorage.getItem('likex_maintenance_mode');
+      if (savedMaint) {
+        this.data.maintenanceMode = JSON.parse(savedMaint);
+      } else {
+        this.data.maintenanceMode = {
+          enabled: false,
+          title: 'We are Upgrading Systems ⚙️',
+          message: 'LikeX is currently undergoing scheduled performance optimizations to provide you with faster delivery speeds. We will be back shortly!',
+          estimatedTime: 'Back online in a few minutes'
+        };
+      }
+    } catch (e) {
+      this.data.maintenanceMode = {
+        enabled: false,
+        title: 'We are Upgrading Systems ⚙️',
+        message: 'LikeX is currently undergoing scheduled performance optimizations to provide you with faster delivery speeds. We will be back shortly!',
+        estimatedTime: 'Back online in a few minutes'
+      };
+    }
+
     // Initialize Claimed UTRs Registry (Anti-Duplicate Fraud Protection)
     try {
       const savedClaimedUtrs = localStorage.getItem('likex_claimed_utrs');
@@ -303,6 +325,71 @@ class SmmStateStore {
       return r;
     });
     this.updateAboutReels(reels);
+  }
+
+  reorderAboutReel(id, direction) {
+    const reels = [...this.getAboutReels()];
+    const index = reels.findIndex(r => r.id === id);
+    if (index === -1) return;
+
+    if (direction === 'up' && index > 0) {
+      const temp = reels[index];
+      reels[index] = reels[index - 1];
+      reels[index - 1] = temp;
+    } else if (direction === 'down' && index < reels.length - 1) {
+      const temp = reels[index];
+      reels[index] = reels[index + 1];
+      reels[index + 1] = temp;
+    } else if (direction === 'top' && index > 0) {
+      const item = reels.splice(index, 1)[0];
+      reels.unshift(item);
+    }
+    this.updateAboutReels(reels);
+  }
+
+  updateAboutReel(id, updatedData) {
+    let reels = this.getAboutReels().map(r => {
+      if (r.id === id) {
+        return {
+          ...r,
+          title: updatedData.title !== undefined ? String(updatedData.title).trim() : r.title,
+          videoUrl: updatedData.videoUrl !== undefined ? String(updatedData.videoUrl).trim() : r.videoUrl,
+          badge: updatedData.badge !== undefined ? String(updatedData.badge).trim() : r.badge,
+          views: updatedData.views !== undefined ? String(updatedData.views).trim() : r.views,
+          duration: updatedData.duration !== undefined ? String(updatedData.duration).trim() : r.duration,
+          active: updatedData.active !== undefined ? Boolean(updatedData.active) : r.active
+        };
+      }
+      return r;
+    });
+    this.updateAboutReels(reels);
+  }
+
+  getMaintenanceMode() {
+    if (!this.data.maintenanceMode) {
+      this.data.maintenanceMode = {
+        enabled: false,
+        title: 'We are Upgrading Systems ⚙️',
+        message: 'LikeX is currently undergoing scheduled performance optimizations to provide you with faster delivery speeds. We will be back shortly!',
+        estimatedTime: 'Back online in a few minutes'
+      };
+    }
+    return this.data.maintenanceMode;
+  }
+
+  setMaintenanceMode(enabled, customData = {}) {
+    this.data.maintenanceMode = {
+      ...this.getMaintenanceMode(),
+      ...customData,
+      enabled: Boolean(enabled)
+    };
+    try {
+      localStorage.setItem('likex_maintenance_mode', JSON.stringify(this.data.maintenanceMode));
+    } catch (e) {}
+
+    this.saveCloudConfig({ maintenance_mode: this.data.maintenanceMode });
+    this.notify();
+    this.showToast(enabled ? '⚠️ Maintenance Mode is now ACTIVE on Storefront!' : '✅ Maintenance Mode turned OFF! Storefront is LIVE.', enabled ? 'warning' : 'success');
   }
 
   // Save configuration to Cloud storage (Supabase config row 999 + site_settings)
@@ -828,6 +915,13 @@ class SmmStateStore {
               window.PixelTracker.init(this.data.pixelSettings.pixelId);
             }
             changed = true;
+          } else if (item.key === 'maintenance_mode' && item.value) {
+            this.data.maintenanceMode = {
+              ...this.getMaintenanceMode(),
+              ...item.value
+            };
+            try { localStorage.setItem('likex_maintenance_mode', JSON.stringify(this.data.maintenanceMode)); } catch(e){}
+            changed = true;
           } else if (item.key === 'claimed_utrs' && typeof item.value === 'object') {
             this.data.claimedUtrs = {
               ...this.data.claimedUtrs,
@@ -847,6 +941,14 @@ class SmmStateStore {
       if (configRows && configRows.length > 0 && configRows[0].password_hash) {
         try {
           const parsed = JSON.parse(configRows[0].password_hash);
+          if (parsed.maintenance_mode) {
+            this.data.maintenanceMode = {
+              ...this.getMaintenanceMode(),
+              ...parsed.maintenance_mode
+            };
+            try { localStorage.setItem('likex_maintenance_mode', JSON.stringify(this.data.maintenanceMode)); } catch(e){}
+            changed = true;
+          }
           if (parsed.about_reels && Array.isArray(parsed.about_reels)) {
             this.data.aboutReels = parsed.about_reels;
             try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
@@ -911,6 +1013,50 @@ class SmmStateStore {
   // Get all master orders across the entire system with full metadata preservation & smart deduplication
   getAllAdminOrders() {
     const ordersList = [];
+    const activeServices = (this.getActiveServices ? this.getActiveServices() : window.JAP_SERVICES) || [];
+
+    // Helper to resolve clean service title
+    const resolveServiceTitle = (order) => {
+      if (order.serviceName && !order.serviceName.includes('null') && !order.serviceName.includes('undefined') && !order.serviceName.startsWith('Service #') && order.serviceName !== 'Social Growth Package') {
+        return order.serviceName;
+      }
+      const matched = activeServices.find(s => 
+        (order.serviceId && (String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId))) ||
+        (order.rawServiceId && String(s.rawId) === String(order.rawServiceId))
+      );
+      if (matched) return matched.customerName || matched.name;
+      
+      const targetStr = String(order.target || '').toLowerCase();
+      if (targetStr.includes('instagram.com') || targetStr.includes('instagr.am')) {
+        return 'Instagram HQ Followers / Likes / Views [Instant]';
+      } else if (targetStr.includes('youtube.com') || targetStr.includes('youtu.be')) {
+        return 'YouTube Video Views & Engagement [HQ]';
+      } else if (targetStr.includes('tiktok.com')) {
+        return 'TikTok Growth Package [Instant Start]';
+      }
+      return order.serviceId ? `Service #${String(order.serviceId).replace(/^wos-/, '')}` : 'Social Growth Package';
+    };
+
+    // Helper to resolve accurate provider
+    const resolveProvider = (order) => {
+      const pIdStr = String(order.providerOrderId || order.id || '');
+      const sIdStr = String(order.serviceId || order.rawServiceId || '');
+      const matched = activeServices.find(s => 
+        (order.serviceId && (String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId))) ||
+        (order.rawServiceId && String(s.rawId) === String(order.rawServiceId))
+      );
+      
+      if (matched && matched.provider) {
+        return matched.provider;
+      }
+      if (sIdStr.startsWith('wos-') || pIdStr.startsWith('58') || pIdStr.startsWith('59') || (pIdStr.length >= 8 && !pIdStr.startsWith('10'))) {
+        return 'worldofsmm';
+      }
+      if (sIdStr.startsWith('jap-') || pIdStr.startsWith('10')) {
+        return 'jap';
+      }
+      return order.provider || 'worldofsmm';
+    };
 
     // Helper to add or merge an order (deduplicates across LikeX Order ID and Provider Order ID)
     const addOrMerge = (o) => {
@@ -932,6 +1078,8 @@ class SmmStateStore {
       const amountVal = Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : 0));
       const qtyVal = Number(o.quantity || 1000);
       const createdTs = Number(o.createdAt) || (o.date ? new Date(o.date).getTime() : Date.now());
+      const accurateProv = resolveProvider(o);
+      const accurateSvcName = resolveServiceTitle(o);
 
       if (existingIdx === -1) {
         const displayId = oProvId || oId;
@@ -939,6 +1087,9 @@ class SmmStateStore {
           ...o,
           id: displayId,
           providerOrderId: oProvId || displayId,
+          serviceName: accurateSvcName,
+          provider: accurateProv,
+          providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
           amount: amountVal,
           quantity: qtyVal,
           createdAt: createdTs,
@@ -950,9 +1101,11 @@ class SmmStateStore {
         const bestProvId = oProvId || existing.providerOrderId || (String(oId).length > 5 ? oId : (String(existing.id).length > 5 ? String(existing.id) : null));
         const bestId = bestProvId || existing.id || oId;
 
-        const bestName = (o.serviceName && !o.serviceName.startsWith('Service #') && o.serviceName !== 'Social Growth Package') 
-          ? o.serviceName 
-          : (existing.serviceName || o.serviceName);
+        const bestName = resolveServiceTitle({
+          ...existing,
+          ...o,
+          serviceName: (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : existing.serviceName
+        });
 
         const bestEmail = o.userEmail || o.customerEmail || existing.userEmail || existing.customerEmail || '';
         const bestCustName = (o.customerName && o.customerName !== 'Guest' && o.customerName !== 'Customer')
@@ -962,6 +1115,7 @@ class SmmStateStore {
             : (bestEmail ? bestEmail.split('@')[0] : (o.customerName || existing.customerName || 'Customer'));
 
         const bestAmount = amountVal > 0 ? amountVal : (Number(existing.amount || existing.charge || 0));
+        const mergedProv = resolveProvider({ ...existing, ...o, provider: accurateProv });
 
         ordersList[existingIdx] = {
           ...existing,
@@ -973,8 +1127,8 @@ class SmmStateStore {
           customerName: bestCustName,
           target: o.target || existing.target || '',
           comments: o.comments || existing.comments || '',
-          provider: o.provider || existing.provider || 'worldofsmm',
-          providerDisplayName: o.providerDisplayName || existing.providerDisplayName || 'Provider API',
+          provider: mergedProv,
+          providerDisplayName: mergedProv === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
           createdAt: Math.min(Number(existing.createdAt) || createdTs, createdTs),
           date: o.date || existing.date || this.formatRealDate(createdTs),
           amount: bestAmount,
@@ -1132,20 +1286,40 @@ class SmmStateStore {
             String(s.japId) === String(so.service_id)
           );
 
-          const svcTitle = matchedSvc 
+          let svcTitle = matchedSvc 
             ? (matchedSvc.customerName || matchedSvc.name) 
-            : (so.target_url ? `Service #${so.service_id}` : 'Social Growth Package');
+            : null;
 
+          if (!svcTitle) {
+            const targetLower = String(so.target_url || '').toLowerCase();
+            if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
+              svcTitle = 'Instagram HQ Followers / Likes / Views [Instant]';
+            } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
+              svcTitle = 'YouTube Video Views & Engagement [HQ]';
+            } else if (targetLower.includes('tiktok.com')) {
+              svcTitle = 'TikTok Growth Package [Instant Start]';
+            } else {
+              svcTitle = so.service_id ? `Social Growth Service #${so.service_id}` : 'Social Growth Package';
+            }
+          }
+
+          const orderIdStr = String(so.provider_order_id || so.id || '');
+          const isWosOrder = so.assigned_provider_id === 2 || 
+                             orderIdStr.startsWith('58') || 
+                             orderIdStr.startsWith('59') ||
+                             (matchedSvc && matchedSvc.provider === 'worldofsmm');
+
+          const finalProvider = isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 1 ? 'jap' : (orderIdStr.startsWith('10') ? 'jap' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
 
           return {
             id: String(so.id),
-            serviceId: so.service_id,
-            rawServiceId: matchedSvc?.rawId || so.service_id,
+            serviceId: matchedSvc ? matchedSvc.id : (so.service_id ? `wos-${so.service_id}` : 'wos-2868'),
+            rawServiceId: matchedSvc?.rawId || so.service_id || '2868',
             serviceName: svcTitle,
-            provider: so.assigned_provider_id === 2 ? 'worldofsmm' : 'jap',
-            providerDisplayName: so.assigned_provider_id === 2 ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
-            providerOrderId: so.provider_order_id,
+            provider: finalProvider,
+            providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
+            providerOrderId: so.provider_order_id || String(so.id),
             target: so.target_url || '',
             quantity: Number(so.quantity) || 1000,
             amount: Number(so.charge) || 0,
@@ -1484,12 +1658,26 @@ class SmmStateStore {
     if (foundSvc) {
       targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm');
       rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '').replace('jap-', '').replace(/-likex$/, '');
+      if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
+        serviceName = foundSvc.customerName || foundSvc.name;
+      }
     } else if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
       rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
     } else if (String(serviceId).startsWith('jap-')) {
       targetProvider = 'jap';
       rawServiceId = String(serviceId).replace('jap-', '').replace(/-likex$/, '');
+    }
+
+    if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
+      const targetLower = String(target || '').toLowerCase();
+      if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
+        serviceName = 'Instagram HQ Followers / Likes / Views [Instant]';
+      } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
+        serviceName = 'YouTube Video Views & Engagement [HQ]';
+      } else {
+        serviceName = `Social Growth Service #${rawServiceId || '2868'}`;
+      }
     }
 
     const providerDisplayName = targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API');
@@ -1516,21 +1704,24 @@ class SmmStateStore {
     // Clean and sanitize target URL
     const cleanedTarget = this.cleanTargetUrl(target);
 
-    // Generate unique 5-Digit LikeX Order ID (e.g. #58392)
-    // Fallback 5-Digit LikeX Order ID (used if provider gateway is offline or queues order)
+    // Fallback 5-Digit LikeX Order ID
     const fallbackOrderId = this.generateLikeXOrderId();
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
-    // Dispatch live order to upstream provider
+    // Dispatch live order to upstream provider with 3.8s timeout for ultra-fast UX
     let liveOrderId = null;
     let upstreamError = null;
     let isQueued = false;
+
+    const abortCtrl = new AbortController();
+    const timeoutTimer = setTimeout(() => abortCtrl.abort(), 3800);
 
     try {
       const liveRes = await fetch('/api/provider', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: abortCtrl.signal,
         body: JSON.stringify({
           provider: targetProvider,
           action: 'add',
@@ -1539,12 +1730,13 @@ class SmmStateStore {
           quantity: quantity,
           comments: comments || undefined,
           likeXOrderId: fallbackOrderId,
-          serviceName: serviceName || `Service #${serviceId}`,
+          serviceName: serviceName,
           charge: totalCost,
           customerEmail: this.data.customer?.email || '',
           customerName: this.data.customer?.name || 'Customer'
         })
       });
+      clearTimeout(timeoutTimer);
       if (liveRes.ok) {
         const liveData = await liveRes.json();
         if (liveData.order) {
@@ -1556,26 +1748,25 @@ class SmmStateStore {
         upstreamError = `Server responded with HTTP ${liveRes.status}`;
       }
     } catch (e) {
-      upstreamError = 'Network communication error with provider gateway';
+      clearTimeout(timeoutTimer);
+      upstreamError = e.name === 'AbortError' ? 'Provider queued (Fast dispatch)' : 'Network communication error';
     }
 
-    // SMART QUEUE LOGIC: If provider rejected due to low funds, server timeout or inactive state,
-    // we safely queue the order on LikeX and alert the admin via WhatsApp & Email!
+    // SMART QUEUE LOGIC: If provider did not return immediate ID, safely queue
     if (!liveOrderId) {
       isQueued = true;
     }
 
-    // Exact Provider Order ID (e.g. 58662283) is primary so customer and admin see identical IDs for direct provider lookup
     const finalOrderId = liveOrderId || fallbackOrderId;
 
-    // Deduct user wallet (profit locked in LikeX!)
+    // Deduct user wallet immediately (snappy instant confirmation)
     this.data.customer.balance -= totalCost;
 
     const newOrder = {
       id: finalOrderId,
-      serviceId: serviceId,
+      serviceId: serviceId || `wos-${rawServiceId}`,
       rawServiceId: rawServiceId,
-      serviceName: serviceName || `Service #${serviceId}`,
+      serviceName: serviceName,
       provider: targetProvider,
       providerName: 'LikeX Cloud Engine',
       providerDisplayName: providerDisplayName,
@@ -1601,21 +1792,6 @@ class SmmStateStore {
       customerName: this.data.customer?.name || 'Customer'
     };
 
-    // If order is queued due to low provider funds, trigger instant WhatsApp + Gmail Alert to Admin!
-    if (isQueued) {
-      this.triggerAlert({
-        type: 'queued_order',
-        orderId: finalOrderId,
-        providerName: providerDisplayName,
-        providerKey: targetProvider,
-        serviceName: serviceName || `Service #${serviceId}`,
-        target: cleanedTarget,
-        quantity: quantity,
-        customerPaid: totalCost.toFixed(2),
-        customerEmail: this.data.customer?.email || ''
-      });
-    }
-
     this.data.orders.unshift(newOrder);
 
     // Save to global likex_master_orders
@@ -1625,28 +1801,46 @@ class SmmStateStore {
       localStorage.setItem('likex_master_orders', JSON.stringify(master));
     } catch (e) {}
 
-    // Persist order to Supabase PostgreSQL database
-    if (window.supabaseClient) {
-      try {
-        const orderNum = parseInt(finalOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
-        window.supabaseClient
-          .from('orders')
-          .insert([{
-            id: orderNum,
-            target_url: cleanedTarget,
-            quantity: Number(quantity),
-            charge: totalCost,
-            provider_order_id: liveOrderId || finalOrderId,
-            status: isQueued ? 'Pending' : 'Processing',
-            remains: Number(quantity),
-            created_at: new Date(now).toISOString()
-          }])
-          .then(({ error }) => {
-            if (error) console.warn('[LikeX Supabase] Order insert note:', error.message);
-          })
-          .catch(err => console.warn('[LikeX Supabase] Order insert error:', err));
-      } catch (e) {}
-    }
+    // Async background Supabase insertion & Alert notification (non-blocking)
+    setTimeout(async () => {
+      if (isQueued) {
+        this.triggerAlert({
+          type: 'queued_order',
+          orderId: finalOrderId,
+          providerName: providerDisplayName,
+          providerKey: targetProvider,
+          serviceName: serviceName,
+          target: cleanedTarget,
+          quantity: quantity,
+          customerPaid: totalCost.toFixed(2),
+          customerEmail: this.data.customer?.email || ''
+        });
+      }
+
+      if (window.supabaseClient) {
+        try {
+          const orderNum = parseInt(finalOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
+          await window.supabaseClient
+            .from('orders')
+            .insert([{
+              id: orderNum,
+              user_id: this.data.customer?.id || null,
+              service_id: parseInt(rawServiceId, 10) || 2868,
+              assigned_provider_id: targetProvider === 'worldofsmm' ? 2 : 1,
+              target_url: cleanedTarget,
+              quantity: Number(quantity),
+              charge: totalCost,
+              provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
+              provider_order_id: liveOrderId || finalOrderId,
+              status: isQueued ? 'Pending' : 'Processing',
+              remains: Number(quantity),
+              created_at: new Date(now).toISOString()
+            }]);
+        } catch (dbErr) {
+          console.warn('[LikeX Supabase] Order insert notice:', dbErr);
+        }
+      }
+    }, 10);
 
     // Track customer registration
     try {

@@ -4,6 +4,8 @@ async function sha256Hex(message) {
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
+window.sha256Hex = sha256Hex;
+
 
 const AdminApp = {
   isAdminAuthenticated() {
@@ -289,6 +291,11 @@ const AdminApp = {
               <h1 class="admin-header-title">${this.getTabTitle(tab)}</h1>
             </div>
             <div class="admin-header-actions">
+              ${store.data.maintenanceMode?.enabled ? `
+                <span class="badge" style="background: #F59E0B; color: #000; font-weight: 900; padding: 6px 14px; border-radius: 999px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(245, 158, 11, 0.4); animation: pulse 1.8s infinite;" onclick="store.setAdminTab('dashboard')" title="Maintenance Mode is ACTIVE for regular customers. Click to manage.">
+                  <span>🚧</span> <span>MAINTENANCE ON</span>
+                </span>
+              ` : ''}
               <button class="btn btn-sm btn-secondary" onclick="store.setCurrency(store.currency === 'USD' ? 'INR' : 'USD')">
                 ${store.currency === 'USD' ? '💵 USD' : '₹ INR'}
               </button>
@@ -500,11 +507,31 @@ const AdminApp = {
                 const thumb = (store.getYouTubeThumbnailUrl ? store.getYouTubeThumbnailUrl(r.videoUrl) : '') || 
                   'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80';
                 return `
-                  <div style="display: flex; align-items: center; gap: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 12px; transition: border-color 0.2s;">
+                  <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 10px 12px; transition: border-color 0.2s;">
+                    <!-- Reorder Up/Down Column -->
+                    <div style="display: flex; flex-direction: column; gap: 3px; align-items: center; flex-shrink: 0;">
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-secondary" 
+                        style="padding: 2px 5px; font-size: 10px; line-height: 1; border-radius: 4px; ${idx === 0 ? 'opacity: 0.3; cursor: not-allowed;' : ''}" 
+                        onclick="AdminApp.moveReel('${r.id}', 'up')" 
+                        title="Move Up (Appear Earlier)"
+                        ${idx === 0 ? 'disabled' : ''}
+                      >⬆️</button>
+                      <button 
+                        type="button" 
+                        class="btn btn-sm btn-secondary" 
+                        style="padding: 2px 5px; font-size: 10px; line-height: 1; border-radius: 4px; ${idx === reels.length - 1 ? 'opacity: 0.3; cursor: not-allowed;' : ''}" 
+                        onclick="AdminApp.moveReel('${r.id}', 'down')" 
+                        title="Move Down (Appear Later)"
+                        ${idx === reels.length - 1 ? 'disabled' : ''}
+                      >⬇️</button>
+                    </div>
+
                     <!-- Thumbnail -->
-                    <div style="position: relative; width: 60px; height: 80px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #000;">
+                    <div style="position: relative; width: 56px; height: 76px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: #000;">
                       <img src="${thumb}" alt="${r.title}" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80'" />
-                      <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 4px; border-radius: 4px;">
+                      <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: #fff; font-size: 8.5px; font-weight: 700; padding: 1px 4px; border-radius: 3px;">
                         ${r.duration || '0:45'}
                       </div>
                     </div>
@@ -512,55 +539,69 @@ const AdminApp = {
                     <!-- Details -->
                     <div style="flex: 1; min-width: 0;">
                       <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                        <span style="background: rgba(124, 58, 237, 0.12); color: #7C3AED; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                        <span style="font-size: 11px; font-weight: 900; color: var(--primary);">#${idx + 1}</span>
+                        <span style="background: rgba(124, 58, 237, 0.12); color: #7C3AED; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 999px;">
                           ${r.badge || '🔥 Live Proof'}
                         </span>
-                        <span style="font-size: 11px; color: var(--text-muted);">
+                        <span style="font-size: 10.5px; color: var(--text-muted);">
                           ${r.views || ''}
                         </span>
-                        <span style="font-size: 10.5px; font-weight: 800; padding: 2px 6px; border-radius: 6px; ${r.active !== false ? 'background: #DCFCE7; color: #166534;' : 'background: #FEE2E2; color: #991B1B;'}">
+                        <span style="font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 5px; ${r.active !== false ? 'background: #DCFCE7; color: #166534;' : 'background: #FEE2E2; color: #991B1B;'}">
                           ${r.active !== false ? '✅ Active' : '❌ Hidden'}
                         </span>
                       </div>
 
-                      <h4 style="font-size: 13.5px; font-weight: 700; color: var(--text-main); margin: 4px 0 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      <h4 style="font-size: 13px; font-weight: 700; color: var(--text-main); margin: 3px 0 2px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${r.title}">
                         ${r.title}
                       </h4>
 
-                      <a href="${r.videoUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 11px; color: var(--primary); text-decoration: underline; overflow: hidden; text-overflow: ellipsis; display: block; white-space: nowrap;">
+                      <a href="${r.videoUrl}" target="_blank" rel="noopener noreferrer" style="font-size: 10.5px; color: var(--primary); text-decoration: underline; overflow: hidden; text-overflow: ellipsis; display: block; white-space: nowrap;">
                         ${r.videoUrl} ↗
                       </a>
                     </div>
 
                     <!-- Actions -->
-                    <div style="display: flex; flex-direction: column; gap: 4px; flex-shrink: 0;">
-                      <button 
-                        type="button" 
-                        class="btn btn-sm btn-outline" 
-                        style="padding: 4px 8px; font-size: 11px; font-weight: 700;" 
-                        onclick="AdminApp.testPlayReel('${r.videoUrl}', '${r.title.replace(/'/g, "\\'")}')" 
-                        title="Test Play Video"
-                      >
-                        ▶ Play
-                      </button>
-                      <button 
-                        type="button" 
-                        class="btn btn-sm btn-secondary" 
-                        style="padding: 4px 8px; font-size: 11px;" 
-                        onclick="AdminApp.toggleReel('${r.id}')" 
-                        title="${r.active !== false ? 'Hide Reel' : 'Show Reel'}"
-                      >
-                        ${r.active !== false ? '👁️ Hide' : '👁️ Show'}
-                      </button>
-                      <button 
-                        type="button" 
-                        class="btn btn-sm btn-outline" 
-                        style="padding: 4px 8px; font-size: 11px; color: var(--error); border-color: var(--error);" 
-                        onclick="AdminApp.deleteReel('${r.id}')" 
-                        title="Delete Reel"
-                      >
-                        🗑️ Del
-                      </button>
+                    <div style="display: flex; flex-direction: column; gap: 3px; flex-shrink: 0;">
+                      <div style="display: flex; gap: 4px;">
+                        <button 
+                          type="button" 
+                          class="btn btn-sm btn-outline" 
+                          style="padding: 3px 7px; font-size: 10.5px; font-weight: 700;" 
+                          onclick="AdminApp.testPlayReel('${r.videoUrl}', '${r.title.replace(/'/g, "\\'")}')" 
+                          title="Test Play Video"
+                        >
+                          ▶ Play
+                        </button>
+                        <button 
+                          type="button" 
+                          class="btn btn-sm btn-secondary" 
+                          style="padding: 3px 7px; font-size: 10.5px; font-weight: 700; color: #4F46E5;" 
+                          onclick="AdminApp.openEditReelModal('${r.id}')" 
+                          title="Edit Reel Title, URL & Details"
+                        >
+                          ✏️ Edit
+                        </button>
+                      </div>
+                      <div style="display: flex; gap: 4px;">
+                        <button 
+                          type="button" 
+                          class="btn btn-sm btn-secondary" 
+                          style="padding: 3px 7px; font-size: 10.5px; flex: 1;" 
+                          onclick="AdminApp.toggleReel('${r.id}')" 
+                          title="${r.active !== false ? 'Hide Reel' : 'Show Reel'}"
+                        >
+                          ${r.active !== false ? '👁️ Hide' : '👁️ Show'}
+                        </button>
+                        <button 
+                          type="button" 
+                          class="btn btn-sm btn-outline" 
+                          style="padding: 3px 7px; font-size: 10.5px; color: var(--error); border-color: var(--error);" 
+                          onclick="AdminApp.deleteReel('${r.id}')" 
+                          title="Delete Reel"
+                        >
+                          🗑️
+                        </button>
+                      </div>
                     </div>
                   </div>
                 `;
@@ -1443,6 +1484,51 @@ const AdminApp = {
           </button>
         </div>
       </div>
+
+      <!-- STOREFRONT MAINTENANCE MODE MANAGER -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 2px solid ${store.data.maintenanceMode?.enabled ? '#F59E0B' : 'var(--border-color)'}; background: ${store.data.maintenanceMode?.enabled ? 'linear-gradient(135deg, rgba(245, 158, 11, 0.09), rgba(239, 68, 68, 0.05))' : 'var(--bg-surface)'}; border-radius: 18px; box-shadow: ${store.data.maintenanceMode?.enabled ? '0 8px 24px rgba(245, 158, 11, 0.15)' : 'none'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #F59E0B; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>🚧</span> <span>STOREFRONT ACCESS LOCK</span>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 3px;">
+              Website Maintenance Mode
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; max-width: 680px;">
+              When turned ON, regular customers see a modern maintenance screen with your direct WhatsApp VIP link. You (Admin) can still preview and access the website using your Admin password.
+            </p>
+          </div>
+
+          <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 14px; background: ${store.data.maintenanceMode?.enabled ? '#FEF3C7' : 'var(--bg-subtle)'}; padding: 10px 18px; border-radius: 12px; border: 1.5px solid ${store.data.maintenanceMode?.enabled ? '#F59E0B' : 'var(--border-color)'}; transition: all 0.2s;">
+            <input type="checkbox" id="admin-maintenance-toggle" ${store.data.maintenanceMode?.enabled ? 'checked' : ''} onchange="AdminApp.toggleMaintenanceMode(this.checked)" style="width: 20px; height: 20px; cursor: pointer;" />
+            <span style="color: ${store.data.maintenanceMode?.enabled ? '#B45309' : 'var(--text-main)'};">
+              ${store.data.maintenanceMode?.enabled ? '⚠️ Maintenance Mode is ACTIVE (Storefront Locked)' : '✅ Storefront is LIVE (Normal Access)'}
+            </span>
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Maintenance Heading / Title</label>
+            <input type="text" id="admin-maint-title" class="form-input" value="${(store.data.maintenanceMode?.title || 'We are Upgrading Systems ⚙️').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Estimated Time / Return Badge</label>
+            <input type="text" id="admin-maint-eta" class="form-input" value="${(store.data.maintenanceMode?.estimatedTime || 'Back online in a few minutes').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px;" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px; margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Notice Message to Customers</label>
+          <textarea id="admin-maint-msg" class="form-input" rows="2" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 13px;">${store.data.maintenanceMode?.message || 'LikeX is currently undergoing scheduled performance optimizations to provide you with faster delivery speeds. We will be back shortly!'}</textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="AdminApp.saveMaintenanceSettings()" style="font-weight: 800; padding: 10px 24px; border-radius: 12px;">
+          💾 Save Maintenance Settings
+        </button>
+      </div>
     `;
   },
 
@@ -2261,8 +2347,9 @@ const AdminApp = {
   adminOrdersFilter: 'all',
 
   getOrderServiceId(order) {
-    if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId).trim() !== '') {
-      return String(order.rawServiceId);
+    if (!order) return 'N/A';
+    if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '') {
+      return String(order.rawServiceId).replace(/^wos-/, '').replace(/^jap-/, '');
     }
     // Check in customerServices catalog
     const custSvc = (window.mockData?.customerServices || []).find(s => String(s.id) === String(order.serviceId));
@@ -2272,12 +2359,12 @@ const AdminApp = {
     // Check in window.JAP_SERVICES
     const japSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId));
     if (japSvc) {
-      return String(japSvc.rawId || japSvc.id);
+      return String(japSvc.rawId || japSvc.id).replace(/^wos-/, '').replace(/^jap-/, '');
     }
-    if (order.serviceId) {
-      return String(order.serviceId).replace(/^wos-/, '');
+    if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined') {
+      return String(order.serviceId).replace(/^wos-/, '').replace(/^jap-/, '');
     }
-    return 'N/A';
+    return '2868';
   },
 
   handleAdminOrdersSearch(val) {
@@ -2361,7 +2448,18 @@ const AdminApp = {
 
     return filteredOrders.map(o => {
       const svcId = this.getOrderServiceId(o);
-      const isWos = o.provider === 'worldofsmm' || (o.serviceId && String(o.serviceId).startsWith('wos-'));
+      const idStr = String(o.id || '');
+      const provIdStr = String(o.providerOrderId || '');
+      const sIdStr = String(o.serviceId || o.rawServiceId || '');
+
+      const isWos = o.provider === 'worldofsmm' || 
+                    sIdStr.startsWith('wos-') || 
+                    idStr.startsWith('58') || 
+                    idStr.startsWith('59') || 
+                    provIdStr.startsWith('58') || 
+                    provIdStr.startsWith('59') ||
+                    (provIdStr.length >= 8 && !provIdStr.startsWith('10'));
+
       const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
 
       const custEmail = o.userEmail || o.customerEmail || '';
@@ -2370,8 +2468,26 @@ const AdminApp = {
       const dateStr = o.date || (o.createdAt ? store.formatRealDate(o.createdAt) : 'Recently');
       const relativeBadge = store.formatOrderDisplayDate ? store.formatOrderDisplayDate(o) : '';
 
+      let svcDisplayName = (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : '';
+      if (!svcDisplayName || svcDisplayName.startsWith('Service #')) {
+        const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
+        const matched = activeServices.find(s => String(s.id) === String(o.serviceId) || String(s.rawId) === String(o.serviceId) || String(s.rawId) === String(svcId));
+        if (matched) {
+          svcDisplayName = matched.customerName || matched.name;
+        } else {
+          const targetLower = String(o.target || '').toLowerCase();
+          if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
+            svcDisplayName = 'Instagram HQ Followers / Likes / Views [Instant]';
+          } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
+            svcDisplayName = 'YouTube Video Views & Engagement [HQ]';
+          } else {
+            svcDisplayName = `Social Growth Service #${svcId}`;
+          }
+        }
+      }
+
       let platformIcon = '⚡';
-      const lowSvc = (o.serviceName || '').toLowerCase();
+      const lowSvc = (svcDisplayName || '').toLowerCase();
       if (lowSvc.includes('instagram') || o.platform === 'instagram') platformIcon = '📸';
       else if (lowSvc.includes('youtube') || o.platform === 'youtube') platformIcon = '▶️';
       else if (lowSvc.includes('tiktok') || o.platform === 'tiktok') platformIcon = '🎵';
@@ -2432,7 +2548,7 @@ const AdminApp = {
               <span style="font-size: 16px; line-height: 1.2; flex-shrink: 0; margin-top: 1px;">${platformIcon}</span>
               <div style="min-width: 0;">
                 <div style="font-weight: 700; color: var(--text-main); font-size: 13.5px; line-height: 1.4;">
-                  ${o.serviceName}
+                  ${svcDisplayName}
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; flex-wrap: wrap;">
                   <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4338CA; font-weight: 800; font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.25); cursor: pointer;" title="Click to copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');">
@@ -2461,8 +2577,8 @@ const AdminApp = {
             `}
             <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
               <span>${o.providerOrderId || 'Prov #' + o.id}</span>
-              ${o.providerOrderId ? `
-                <button type="button" title="Copy Provider Order ID" onclick="navigator.clipboard.writeText('${o.providerOrderId}'); window.store.showToast('Provider Order ID copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 10px; opacity: 0.6;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">📋</button>
+              ${(o.providerOrderId || o.id) ? `
+                <button type="button" title="Copy Provider Order ID" onclick="navigator.clipboard.writeText('${o.providerOrderId || o.id}'); window.store.showToast('Provider Order ID copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 10px; opacity: 0.6;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">📋</button>
               ` : ''}
             </div>
           </td>
@@ -2800,6 +2916,185 @@ const AdminApp = {
       window.store.updateAboutReels(Array.isArray(window.SMM_DEFAULT_REELS) ? [...window.SMM_DEFAULT_REELS] : []);
       this.render(document.getElementById('screen-container'));
     }
+  },
+
+  moveReel(reelId, direction) {
+    window.store.reorderAboutReel(reelId, direction);
+    this.render(document.getElementById('screen-container'));
+  },
+
+  openEditReelModal(reelId) {
+    const store = window.store;
+    const reels = store.getAboutReels ? store.getAboutReels() : (store.data.aboutReels || []);
+    const reel = reels.find(r => r.id === reelId);
+    if (!reel) {
+      store.showToast('Reel not found.', 'error');
+      return;
+    }
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Edit Reel Details</h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+      <form onsubmit="AdminApp.saveEditedReel(event, '${reel.id}')" style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0;">
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">YouTube Video / Shorts Link: *</label>
+          <input 
+            type="url" 
+            id="edit-reel-url" 
+            class="form-input" 
+            value="${reel.videoUrl || ''}"
+            required 
+            style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+            oninput="AdminApp.handleEditReelPreview(this.value)"
+          />
+        </div>
+
+        <div id="edit-reel-preview-box" style="border-radius: 12px; overflow: hidden; border: 1.5px solid var(--border-color); background: #0F172A; min-height: 120px; display: flex; align-items: center; justify-content: center;">
+          <img src="${store.getYouTubeThumbnailUrl(reel.videoUrl)}" style="max-height: 120px; border-radius: 8px;" onerror="this.style.display='none'" />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Reel Title / Caption: *</label>
+          <input 
+            type="text" 
+            id="edit-reel-title" 
+            class="form-input" 
+            value="${(reel.title || '').replace(/"/g, '&quot;')}"
+            required 
+            style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+          />
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Badge / Tag:</label>
+            <select id="edit-reel-badge" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px; font-weight: 700;">
+              <option value="🔥 Live Proof" ${reel.badge === '🔥 Live Proof' ? 'selected' : ''}>🔥 Live Proof</option>
+              <option value="👑 Official Guide" ${reel.badge === '👑 Official Guide' ? 'selected' : ''}>👑 Official Guide</option>
+              <option value="⚡ Instant Speed" ${reel.badge === '⚡ Instant Speed' ? 'selected' : ''}>⚡ Instant Speed</option>
+              <option value="✨ Client Review" ${reel.badge === '✨ Client Review' ? 'selected' : ''}>✨ Client Review</option>
+              <option value="🚀 Viral Boost" ${reel.badge === '🚀 Viral Boost' ? 'selected' : ''}>🚀 Viral Boost</option>
+              <option value="💰 Lowest Rate" ${reel.badge === '💰 Lowest Rate' ? 'selected' : ''}>💰 Lowest Rate</option>
+              <option value="🛡️ 365D Refill" ${reel.badge === '🛡️ 365D Refill' ? 'selected' : ''}>🛡️ 365D Refill</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Views Tag:</label>
+            <input 
+              type="text" 
+              id="edit-reel-views" 
+              class="form-input" 
+              value="${reel.views || '48.5K views'}"
+              style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+            />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Duration:</label>
+            <input 
+              type="text" 
+              id="edit-reel-duration" 
+              class="form-input" 
+              value="${reel.duration || '0:45'}"
+              style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+            />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Status:</label>
+            <select id="edit-reel-active" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px; font-weight: 700;">
+              <option value="true" ${reel.active !== false ? 'selected' : ''}>✅ Visible (Active)</option>
+              <option value="false" ${reel.active === false ? 'selected' : ''}>❌ Hidden (Draft)</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 8px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1; height: 46px; border-radius: 12px;" onclick="CustomerApp.closeModal()">Cancel</button>
+          <button type="submit" class="btn btn-primary" style="flex: 2; height: 46px; border-radius: 12px; font-weight: 800; background: linear-gradient(135deg, #7C3AED, #4F46E5);">Save Changes 💾</button>
+        </div>
+      </form>
+    `;
+
+    CustomerApp.openModal();
+  },
+
+  handleEditReelPreview(val) {
+    const box = document.getElementById('edit-reel-preview-box');
+    if (!box) return;
+    const thumb = window.store.getYouTubeThumbnailUrl(val);
+    if (thumb) {
+      box.innerHTML = `<img src="${thumb}" style="max-height: 120px; border-radius: 8px;" onerror="this.parentElement.innerHTML='<div style=\\'color:#94A3B8;font-size:12px;\\'>Invalid thumbnail</div>'" />`;
+    } else {
+      box.innerHTML = `<div style="color:#94A3B8;font-size:12px;">Paste valid YouTube link to preview</div>`;
+    }
+  },
+
+  saveEditedReel(e, reelId) {
+    e.preventDefault();
+    const url = document.getElementById('edit-reel-url').value.trim();
+    const title = document.getElementById('edit-reel-title').value.trim();
+    const badge = document.getElementById('edit-reel-badge').value;
+    const views = document.getElementById('edit-reel-views').value.trim();
+    const duration = document.getElementById('edit-reel-duration').value.trim();
+    const active = document.getElementById('edit-reel-active').value === 'true';
+
+    if (!url || !title) {
+      window.store.showToast('Please provide both YouTube URL and Title.', 'error');
+      return;
+    }
+
+    window.store.updateAboutReel(reelId, {
+      videoUrl: url,
+      title: title,
+      badge: badge,
+      views: views,
+      duration: duration,
+      active: active
+    });
+
+    CustomerApp.closeModal();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  toggleMaintenanceMode(enabled) {
+    const title = document.getElementById('admin-maint-title') ? document.getElementById('admin-maint-title').value.trim() : '';
+    const eta = document.getElementById('admin-maint-eta') ? document.getElementById('admin-maint-eta').value.trim() : '';
+    const msg = document.getElementById('admin-maint-msg') ? document.getElementById('admin-maint-msg').value.trim() : '';
+
+    window.store.setMaintenanceMode(enabled, {
+      title: title || undefined,
+      estimatedTime: eta || undefined,
+      message: msg || undefined
+    });
+    this.render(document.getElementById('screen-container'));
+  },
+
+  saveMaintenanceSettings() {
+    const titleEl = document.getElementById('admin-maint-title');
+    const etaEl = document.getElementById('admin-maint-eta');
+    const msgEl = document.getElementById('admin-maint-msg');
+    const toggleEl = document.getElementById('admin-maintenance-toggle');
+
+    const enabled = toggleEl ? toggleEl.checked : (window.store.data.maintenanceMode?.enabled || false);
+    const title = titleEl ? titleEl.value.trim() : 'We are Upgrading Systems ⚙️';
+    const eta = etaEl ? etaEl.value.trim() : 'Back online in a few minutes';
+    const msg = msgEl ? msgEl.value.trim() : '';
+
+    window.store.setMaintenanceMode(enabled, {
+      title: title,
+      estimatedTime: eta,
+      message: msg
+    });
+    this.render(document.getElementById('screen-container'));
   }
 };
 
