@@ -862,7 +862,15 @@ class SmmStateStore {
       this.reconcilePendingOrders();
       this.syncOrdersStatus(true);
     } catch (e) {}
+
+    // Background poller for live Supabase orders every 10 seconds
+    if (!this._adminOrderPoller) {
+      this._adminOrderPoller = setInterval(() => {
+        this.syncSupabaseDataForAdmin();
+      }, 10000);
+    }
   }
+
 
   // Background sync Supabase global settings for all visitors across mobile and desktop
   async syncGlobalSiteSettings() {
@@ -1704,18 +1712,18 @@ class SmmStateStore {
     // Clean and sanitize target URL
     const cleanedTarget = this.cleanTargetUrl(target);
 
-    // Fallback 5-Digit LikeX Order ID
+    // Fallback 5-Digit LikeX Order ID (used only if provider is unreachable)
     const fallbackOrderId = this.generateLikeXOrderId();
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
-    // Dispatch live order to upstream provider with 3.8s timeout for ultra-fast UX
+    // Dispatch live order to upstream provider with 15s timeout
     let liveOrderId = null;
     let upstreamError = null;
     let isQueued = false;
 
     const abortCtrl = new AbortController();
-    const timeoutTimer = setTimeout(() => abortCtrl.abort(), 3800);
+    const timeoutTimer = setTimeout(() => abortCtrl.abort(), 15000);
 
     try {
       const liveRes = await fetch('/api/provider', {
@@ -1749,17 +1757,17 @@ class SmmStateStore {
       }
     } catch (e) {
       clearTimeout(timeoutTimer);
-      upstreamError = e.name === 'AbortError' ? 'Provider queued (Fast dispatch)' : 'Network communication error';
+      upstreamError = e.name === 'AbortError' ? 'Provider connection timed out' : 'Network communication error';
     }
 
-    // SMART QUEUE LOGIC: If provider did not return immediate ID, safely queue
+    // QUEUE LOGIC: If provider did not return immediate ID, safely queue
     if (!liveOrderId) {
       isQueued = true;
     }
 
     const finalOrderId = liveOrderId || fallbackOrderId;
 
-    // Deduct user wallet immediately (snappy instant confirmation)
+    // Deduct user wallet immediately
     this.data.customer.balance -= totalCost;
 
     const newOrder = {
@@ -1804,9 +1812,23 @@ class SmmStateStore {
     // Async background Supabase insertion & Alert notification (non-blocking)
     setTimeout(async () => {
       if (isQueued) {
+        // Send alert ONLY if truly queued or balance error
         this.triggerAlert({
           type: 'queued_order',
           orderId: finalOrderId,
+          providerName: providerDisplayName,
+          providerKey: targetProvider,
+          serviceName: serviceName,
+          target: cleanedTarget,
+          quantity: quantity,
+          customerPaid: totalCost.toFixed(2),
+          customerEmail: this.data.customer?.email || ''
+        });
+      } else if (liveOrderId) {
+        // Successful live order dispatch notification
+        this.triggerAlert({
+          type: 'live_order',
+          orderId: liveOrderId,
           providerName: providerDisplayName,
           providerKey: targetProvider,
           serviceName: serviceName,
@@ -1824,9 +1846,9 @@ class SmmStateStore {
             .from('orders')
             .insert([{
               id: orderNum,
-              user_id: this.data.customer?.id || null,
-              service_id: parseInt(rawServiceId, 10) || 2868,
-              assigned_provider_id: targetProvider === 'worldofsmm' ? 2 : 1,
+              user_id: null,
+              service_id: null, // Null prevents foreign key constraint error with customer_services table
+              assigned_provider_id: null,
               target_url: cleanedTarget,
               quantity: Number(quantity),
               charge: totalCost,
@@ -1936,12 +1958,19 @@ class SmmStateStore {
       }
     }
 
+    // Also refresh admin orders from Supabase cloud
+    try {
+      this.syncSupabaseDataForAdmin();
+    } catch (e) {}
+
     if (updatedCount > 0) {
       this.saveUserData();
       this.notify();
       if (!silent) {
         this.showToast(`🔄 Synchronized ${updatedCount} orders with live server!`, 'success');
       }
+    } else if (!silent) {
+      this.showToast('✅ All live orders are up to date!', 'info');
     }
     return updatedCount;
   }

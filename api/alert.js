@@ -49,7 +49,17 @@ export default async function handler(req, res) {
   let alertTitle = '🚨 LikeX SMM System Alert';
   let messageText = '';
 
-  if (type === 'queued_order') {
+  if (type === 'live_order') {
+    alertTitle = `✅ [LikeX Live Order] #${orderId} Dispatched to ${providerName}`;
+    messageText = `✅ *LikeX Live Order Dispatched!*\n\n` +
+      `🛒 *Provider Order ID:* #${orderId}\n` +
+      `🔌 *Provider:* ${providerName}\n` +
+      `📦 *Service:* ${serviceName}\n` +
+      `🔗 *Target Link:* ${target}\n` +
+      `👥 *Quantity:* ${Number(quantity || 0).toLocaleString()}\n` +
+      `💰 *Customer Paid:* ₹${customerPaid}\n` +
+      `⚡ *Status:* Processing Live on ${providerName}`;
+  } else if (type === 'queued_order') {
     alertTitle = `🚨 [LikeX Urgent] Order #${orderId} Queued — Top-Up ${providerName}`;
     messageText = `🚨 *LikeX Queued Order Alert!*\n\n` +
       `🛒 *Order ID:* #${orderId}\n` +

@@ -53,9 +53,9 @@ export default async function handler(req, res) {
     if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-    // 4-second timeout to ensure ultra-fast responsive user experience
+    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / JAP) to process and return live order ID
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     let response;
     try {
@@ -109,12 +109,12 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           id: orderIdNum,
-          service_id: parseInt(paramsObj.service, 10) || 1,
+          service_id: null, // Null to prevent Foreign Key constraint errors with customer_services table
           target_url: paramsObj.link || '',
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
-          provider_order_id: data.order ? String(data.order) : null,
-          assigned_provider_id: providerKey === 'worldofsmm' ? 2 : 1,
+          provider_order_id: data.order ? String(data.order) : String(orderIdNum),
+          assigned_provider_id: null, // Null to avoid provider FK constraint
           status: data.order ? 'Processing' : 'Pending',
           remains: Number(paramsObj.quantity) || 1000,
           created_at: new Date().toISOString()
