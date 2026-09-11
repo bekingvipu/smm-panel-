@@ -4407,72 +4407,37 @@
   border-color: rgba(168, 85, 247, 0.45);
 }
 
-.rec-banner-quick-hint {
+.rec-banner-verified-badge {
   display: inline-flex;
   align-items: center;
   font-size: 11px;
-  font-weight: 700;
-  color: #7C3AED;
+  font-weight: 800;
+  color: #6D28D9;
   background: rgba(124, 58, 237, 0.08);
-  border: 1px solid rgba(139, 92, 246, 0.25);
-  padding: 3px 10px;
+  border: 1.2px solid rgba(139, 92, 246, 0.3);
+  padding: 4px 12px;
   border-radius: 999px;
-  letter-spacing: 0.2px;
+  letter-spacing: 0.3px;
   white-space: nowrap;
   flex-shrink: 0;
+  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.06);
 }
 
-[data-theme="dark"] .rec-banner-quick-hint {
+[data-theme="dark"] .rec-banner-verified-badge {
   color: #DDD6FE;
-  background: rgba(139, 92, 246, 0.2);
-  border-color: rgba(168, 85, 247, 0.35);
-}
-
-.rec-banner-title-block {
-  margin: 2px 0 8px 0;
-  width: 100%;
-  text-align: center;
+  background: rgba(139, 92, 246, 0.22);
+  border-color: rgba(168, 85, 247, 0.45);
 }
 
 .rec-banner-main-title {
-  font-size: clamp(14.5px, 4vw, 17px);
+  font-size: clamp(15px, 4.2vw, 17.5px);
   font-weight: 900;
   color: var(--text-main);
-  margin: 0 auto;
+  margin: 4px auto 6px auto;
   letter-spacing: -0.025em;
   line-height: 1.35;
   text-align: center;
   width: 100%;
-}
-
-.rec-banner-subtag-wrap {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 6px;
-  width: 100%;
-}
-
-.rec-banner-subtag {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(124, 58, 237, 0.08);
-  border: 1.2px solid rgba(139, 92, 246, 0.3);
-  color: #6D28D9;
-  font-size: 11.5px;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  padding: 3px 12px;
-  border-radius: 999px;
-  box-shadow: 0 1px 4px rgba(124, 58, 237, 0.08);
-  text-align: center;
-}
-
-[data-theme="dark"] .rec-banner-subtag {
-  background: rgba(139, 92, 246, 0.22);
-  border-color: rgba(168, 85, 247, 0.45);
-  color: #DDD6FE;
 }
 
 .rec-banner-notice {
@@ -4480,6 +4445,7 @@
   color: var(--text-secondary);
   line-height: 1.5;
   margin: 0 0 14px 0;
+  text-align: center;
   width: 100%;
 }
 

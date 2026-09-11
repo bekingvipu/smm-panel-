@@ -1085,17 +1085,10 @@ const CustomerApp = {
                 <span class="rec-banner-badge">
                   <span>${cleanBadge}</span>
                 </span>
-                <span class="rec-banner-quick-hint">Click ID to Select ↓</span>
+                <span class="rec-banner-verified-badge">${subTag || '[Tested & Verified]'}</span>
               </div>
               
-              <div class="rec-banner-title-block">
-                <h3 class="rec-banner-main-title">${mainTitle}</h3>
-                ${subTag ? `
-                  <div class="rec-banner-subtag-wrap">
-                    <span class="rec-banner-subtag">${subTag}</span>
-                  </div>
-                ` : ''}
-              </div>
+              <h3 class="rec-banner-main-title">${mainTitle}</h3>
               
               <p class="rec-banner-notice">
                 ${cleanNotice}
