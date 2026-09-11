@@ -1943,50 +1943,30 @@ const CustomerApp = {
 
   setDepositAmount(val) {
     const input = document.getElementById('add-funds-amount-input');
-    if (input) input.value = val;
-  },
-
-  async pasteTargetLink() {
-    const target = document.getElementById('new-order-target');
-    if (!target) return;
-    try {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        const text = await navigator.clipboard.readText();
-        if (text) {
-          target.value = text.trim();
-          window.store.showToast('Target link pasted! 📋', 'success');
-          return;
-        }
-      }
-    } catch (e) {}
-    target.focus();
-    window.store.showToast('Please paste your target link into the box', 'info');
-  },
-
-  pasteSampleLink() {
-    this.pasteTargetLink();
-  },
-
-  copyUpiId() {
-    const upiId = 'bazara245283.rzp@rxairtel';
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(upiId).then(() => {
-        window.store.showToast('Razorpay UPI ID copied: ' + upiId + ' 📋', 'success');
-      }).catch(() => {
-        window.store.showToast('UPI ID: ' + upiId, 'info');
-      });
-    } else {
-      window.store.showToast('UPI ID: ' + upiId, 'info');
+    if (input) {
+      input.value = val;
+      const display = document.getElementById('display-deposit-amount');
+      if (display) display.textContent = Number(val).toLocaleString('en-IN');
     }
   },
 
-  async handleDeposit() {
+  onDepositAmountInput(e) {
+    const val = Number(e.target.value || 0);
+    const display = document.getElementById('display-deposit-amount');
+    if (display) display.textContent = val > 0 ? val.toLocaleString('en-IN') : '0';
+  },
+
+  async handleDynamicDeposit() {
     if (this._isDepositing) return;
 
+    if (!window.store.data.isLoggedIn) {
+      window.store.showToast('Please sign in first to add funds to your wallet', 'error');
+      CustomerApp.openAuthModal('login');
+      return;
+    }
+
     const amountInput = document.getElementById('add-funds-amount-input');
-    const utrInput = document.getElementById('add-funds-utr-input');
     const amount = Number(amountInput ? amountInput.value : 0);
-    const rawUtr = utrInput ? utrInput.value.trim() : '';
 
     if (!amount || amount < 10) {
       window.store.showToast('Minimum deposit amount is ₹10', 'error');
@@ -1994,89 +1974,226 @@ const CustomerApp = {
       return;
     }
 
-    if (!rawUtr) {
-      window.store.showToast('Please enter the 12-digit UPI UTR / Transaction ID', 'error');
-      if (utrInput) utrInput.focus();
-      return;
-    }
-
-    // Strict 12-Digit Numeric UPI UTR Validation
-    const cleanUtr = rawUtr.replace(/\s+/g, '');
-
-    if (!/^\d{12}$/.test(cleanUtr)) {
-      window.store.showToast('❌ Please enter the exact 12-digit numeric Bank UTR / UPI Ref No (e.g. 423981029381), NOT the app Transaction ID!', 'error');
-      if (utrInput) {
-        utrInput.focus();
-        utrInput.select();
-      }
-      return;
-    }
-
-    if (!window.store.data.isLoggedIn) {
-      window.store.showToast('Please sign in first to add funds to your wallet', 'error');
-      CustomerApp.openAuthModal();
-      return;
-    }
-
-    const btn = document.getElementById('btn-verify-deposit');
+    const btn = document.getElementById('btn-create-deposit');
     this._isDepositing = true;
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>⚡ Verifying Transaction ID & UTR...</span>';
+      btn.innerHTML = '<span>⚡ Generating Secure Dynamic UPI QR...</span>';
     }
 
     try {
-      // 1. Anti-Duplicate Fraud Check (Local, Transaction history & Cloud database)
-      const checkResult = await window.store.checkUtrStatus(cleanUtr);
-      if (checkResult && checkResult.claimed) {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
-        }
-        this._isDepositing = false;
-        window.store.showToast(`❌ UTR ${cleanUtr} has already been claimed! Each payment can only be credited once.`, 'error');
+      const res = await fetch('/api/zapupi-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amount,
+          email: window.store.data.customer?.email || 'customer@likex.in',
+          userId: window.store.data.customer?.id || 1
+        })
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = `<span>⚡ Pay ₹<span id="display-deposit-amount">${amount.toLocaleString('en-IN')}</span> via Paytm Dynamic UPI (Instant)</span>`;
+      }
+      this._isDepositing = false;
+
+      if (!res.ok || !data.success || !data.payment_url) {
+        const errorMsg = data.error || 'Failed to initialize payment. Please try again.';
+        window.store.showToast('❌ ' + errorMsg, 'error');
         return;
       }
 
-      // 2. Lock & Register Claimed UTR immediately
-      await window.store.registerClaimedUtr(cleanUtr, amount, 'Razorpay UPI');
-
-      // 3. Credit wallet balance
-      const usdAmount = amount / (window.store.data.exchangeRate || 83);
-      window.store.addFunds(usdAmount, `Razorpay UPI (UTR: ${cleanUtr})`);
-
-      if (window.PixelTracker) {
-        window.PixelTracker.trackPurchase({
-          orderId: cleanUtr || ('DEP_' + Date.now()),
-          amount: amount,
-          serviceName: 'LikeX Wallet Funds Top-Up (UPI)'
-        });
-      }
-
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
-      }
-      this._isDepositing = false;
-
-      // Clear the UTR input box
-      if (utrInput) utrInput.value = '';
-
-      CustomerApp.showDepositCelebrationModal({
-        amount,
-        utr: cleanUtr,
-        newBalance: window.store.data.customer.balance
+      // Open Dynamic Payment Modal (YOSMM Style)
+      this.openDynamicPaymentModal({
+        order_id: data.order_id,
+        amount: data.amount,
+        payment_url: data.payment_url
       });
+
     } catch (err) {
-      console.error('[Deposit Error]', err);
+      console.error('[ZapUPI Deposit Error]', err);
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = '<span>⚡ Verify & Add Funds to Wallet</span>';
+        btn.innerHTML = `<span>⚡ Pay ₹<span id="display-deposit-amount">${amount.toLocaleString('en-IN')}</span> via Paytm Dynamic UPI (Instant)</span>`;
       }
       this._isDepositing = false;
-      window.store.showToast('Verification error. Please check your UTR and try again.', 'error');
+      window.store.showToast('Network error while connecting to payment gateway. Please try again.', 'error');
     }
   },
+
+  openDynamicPaymentModal({ order_id, amount, payment_url }) {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    const store = window.store;
+
+    let countdownSeconds = 300; // 5 minutes timer
+    if (this._depositPollInterval) clearInterval(this._depositPollInterval);
+    if (this._depositTimerInterval) clearInterval(this._depositTimerInterval);
+
+    sheet.innerHTML = `
+      <div style="max-width: 520px; width: 100%; margin: 0 auto; text-align: center;">
+        <!-- Header -->
+        <div style="background: linear-gradient(135deg, #002244 0%, #001220 100%); color: white; padding: 18px 20px; border-radius: 16px 16px 0 0; text-align: left; position: relative;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+              <div style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 6px;">
+                <span>🛒</span> Payment to LikeX
+              </div>
+              <div style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; margin-top: 4px;">
+                <span style="font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.7);">INR</span> ₹${Number(amount).toFixed(2)}
+              </div>
+              <div style="font-size: 11.5px; font-family: var(--font-mono); color: rgba(255,255,255,0.65); margin-top: 2px;">
+                Order ID: ${order_id}
+              </div>
+            </div>
+            <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
+          </div>
+        </div>
+
+        <!-- Payment Body -->
+        <div style="background: var(--bg-card); padding: 16px; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 16px 16px;">
+          <!-- Embedded Gateway Iframe -->
+          <div style="position: relative; width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; height: 420px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
+            <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none;" title="Paytm Dynamic QR" allow="clipboard-write"></iframe>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
+            <a href="${payment_url}" target="_blank" class="btn btn-secondary" style="text-decoration: none; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
+              <span>📲 Open in App ↗</span>
+            </a>
+            <button class="btn btn-primary btn-refraction" id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="font-size: 12.5px; font-weight: 800; padding: 10px;">
+              <span>⚡ Tap to Verify</span>
+            </button>
+          </div>
+
+          <!-- Instructions Card (YOSMM Style) -->
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 12px 14px; margin-top: 12px; text-align: left; font-size: 11.5px; color: #92400e; line-height: 1.6;">
+            <div style="font-weight: 800; margin-bottom: 3px; color: #b45309;">📌 How to pay:</div>
+            <div>1. Scan the QR code with any UPI app (Paytm, PhonePe, GPay, etc.)</div>
+            <div>2. Complete the payment of <strong>₹${Number(amount).toFixed(2)}</strong></div>
+            <div>3. We automatically check your payment every <strong>4 seconds</strong>, or tap verify anytime.</div>
+            <div style="font-weight: 700; color: #b91c1c; margin-top: 3px;">⚠️ Do not close this page until the payment is verified.</div>
+          </div>
+
+          <!-- Live Countdown & Status Pulse -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 8px 12px; background: var(--bg-subtle); border-radius: 10px; font-size: 12px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="pulse-indicator" style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
+              <span style="font-weight: 700; color: var(--text-secondary);" id="deposit-status-text">Listening for payment confirmation...</span>
+            </div>
+            <div style="font-family: var(--font-mono); font-weight: 900; color: var(--primary); font-size: 14px;" id="deposit-countdown-timer">
+              05:00
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
+
+    // Start 5-minute countdown timer
+    this._depositTimerInterval = setInterval(() => {
+      countdownSeconds--;
+      const min = String(Math.floor(countdownSeconds / 60)).padStart(2, '0');
+      const sec = String(countdownSeconds % 60).padStart(2, '0');
+      const timerEl = document.getElementById('deposit-countdown-timer');
+      if (timerEl) timerEl.textContent = `${min}:${sec}`;
+
+      if (countdownSeconds <= 0) {
+        clearInterval(this._depositTimerInterval);
+        clearInterval(this._depositPollInterval);
+        const statusText = document.getElementById('deposit-status-text');
+        if (statusText) statusText.textContent = 'Session expired. Please generate a new QR.';
+      }
+    }, 1000);
+
+    // Auto-polling verification loop every 3.5 seconds
+    this._depositPollInterval = setInterval(() => {
+      CustomerApp.verifyDynamicPaymentStatus(order_id, amount, false);
+    }, 3500);
+  },
+
+  async verifyDynamicPaymentStatus(orderId, amount, isManual = false) {
+    if (this._isVerifyingStatus && isManual) return;
+    this._isVerifyingStatus = true;
+
+    const verifyBtn = document.getElementById('btn-manual-verify-qr');
+    if (isManual && verifyBtn) {
+      verifyBtn.disabled = true;
+      verifyBtn.innerHTML = '<span>⏳ Checking...</span>';
+    }
+
+    try {
+      const res = await fetch(`/api/zapupi-status?order_id=${encodeURIComponent(orderId)}`);
+      const data = await res.json().catch(() => ({}));
+
+      if (data && data.paid) {
+        // Payment Confirmed!
+        if (this._depositPollInterval) clearInterval(this._depositPollInterval);
+        if (this._depositTimerInterval) clearInterval(this._depositTimerInterval);
+
+        CustomerApp.closeModal();
+
+        // Calculate USD credit
+        const usdAmount = Number((amount / (window.store.data.exchangeRate || 83)).toFixed(4));
+        window.store.data.customer.balance = Number((window.store.data.customer.balance + usdAmount).toFixed(4));
+
+        // Add to local state transactions list
+        window.store.data.transactions.unshift({
+          id: `TXN-${orderId}`,
+          type: 'Deposit',
+          amount: usdAmount,
+          description: `Paytm Dynamic UPI Deposit [Order: ${orderId}]`,
+          date: new Date().toISOString(),
+          status: 'Success'
+        });
+
+        window.store.saveToStorage();
+        window.store.updateCustomerHeader();
+        window.store.renderCurrentTab();
+
+        // Trigger celebratory sound & confirmation modal
+        CustomerApp.showDepositCelebrationModal({
+          amount: amount,
+          utr: data.utr || orderId,
+          newBalance: window.store.data.customer.balance
+        });
+
+        window.store.showToast('🎉 Payment Confirmed! ₹' + amount + ' added to wallet.', 'success');
+        return;
+      }
+
+      if (isManual) {
+        window.store.showToast('Payment not detected yet. Please complete UPI transfer in your app.', 'info');
+      }
+    } catch (e) {
+      if (isManual) {
+        window.store.showToast('Verification check error. Retrying...', 'warning');
+      }
+    } finally {
+      this._isVerifyingStatus = false;
+      if (isManual && verifyBtn) {
+        verifyBtn.disabled = false;
+        verifyBtn.innerHTML = '<span>⚡ Tap to Verify</span>';
+      }
+    }
+  },
+
+  closeDynamicPaymentModal() {
+    if (this._depositPollInterval) clearInterval(this._depositPollInterval);
+    if (this._depositTimerInterval) clearInterval(this._depositTimerInterval);
+    CustomerApp.closeModal();
+  },
+
+  // Legacy fallback redirects to secure dynamic deposit
+  handleDeposit() {
+    this.handleDynamicDeposit();
+  },
+
 
   showDepositCelebrationModal({ amount, utr, newBalance }) {
     const store = window.store;
@@ -2971,37 +3088,34 @@ const CustomerApp = {
           </p>
         </div>
 
-        <!-- Razorpay Business QR Deposit Box -->
+        <!-- Paytm Dynamic (All UPI Apps) Deposit Box -->
         <div class="paytm-qr-box">
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <span style="font-size: 22px;">⚡</span>
+            <span style="font-size: 24px;">⚡</span>
             <h3 style="font-size: 21px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">
-              Razorpay / All UPI Instant QR Deposit
+              Paytm Dynamic (All UPI Apps)
             </h3>
           </div>
           <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; max-width: 520px;">
-            Scan QR with PhonePe, Google Pay, Paytm, BHIM, or any UPI app for instant automated wallet credit.
+            Scan unique order QR with Paytm, PhonePe, Google Pay, BHIM, or any UPI app for instant automated wallet credit.
           </p>
 
-          <!-- QR Code Image -->
-          <div style="margin: 18px 0 10px; position: relative;">
-            <img src="assets/razorpay-qr.png" alt="Razorpay All-In-One QR Code - Bazara" class="paytm-qr-img" />
-          </div>
-
-          <!-- Merchant Info & Copyable UPI ID -->
-          <div style="font-size: 14px; font-weight: 800; color: var(--text-main); margin-top: 4px;">
-            Bazara <span style="font-weight: 600; color: #10B981; font-size: 12px; background: rgba(16, 185, 129, 0.12); padding: 2px 8px; border-radius: 999px;">✓ Verified Merchant</span>
-          </div>
-
-          <div class="upi-id-badge" onclick="CustomerApp.copyUpiId()" title="Click to copy UPI ID">
-            <span>bazara245283.rzp@rxairtel</span>
-            <span style="font-size: 11.5px; background: var(--primary); color: white; padding: 2px 8px; border-radius: 999px; font-weight: 800;">Copy</span>
+          <!-- Method Card Badge -->
+          <div style="background: rgba(108, 92, 231, 0.08); border: 1.5px solid var(--primary); border-radius: 14px; padding: 14px 18px; margin: 18px 0 14px; display: flex; align-items: center; justify-content: space-between; text-align: left;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 26px;">📱</span>
+              <div>
+                <div style="font-weight: 900; font-size: 14.5px; color: var(--text-main);">Paytm Dynamic UPI Gateway</div>
+                <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Automated 30-Sec Credit • All UPI Apps Supported</div>
+              </div>
+            </div>
+            <span style="font-weight: 800; color: #10B981; font-size: 12px; background: rgba(16, 185, 129, 0.15); padding: 4px 12px; border-radius: 999px;">✓ Active</span>
           </div>
 
           <!-- Quick Preset Pills (Min ₹10) -->
-          <div style="width: 100%; margin-top: 22px; text-align: left;">
+          <div style="width: 100%; text-align: left;">
             <label class="form-label" style="font-weight: 800; font-size: 13px;">
-              <span>1. Choose or Enter Deposit Amount (Min ₹10)</span>
+              <span>Choose or Enter Deposit Amount (Min ₹10)</span>
             </label>
             <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 10px;">
               <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(10)">₹10</button>
@@ -3011,41 +3125,25 @@ const CustomerApp = {
               <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(500)">₹500</button>
               <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(1000)">₹1,000</button>
             </div>
-            <div class="form-group" style="margin-bottom: 14px;">
-              <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="10" max="50000" style="font-size: 16px; font-weight: 700; min-height: 48px; border-radius: 12px;" placeholder="Enter amount in ₹ (e.g. 100)" />
+            <div class="form-group" style="margin-bottom: 16px;">
+              <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="10" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (e.g. 100)" oninput="CustomerApp.onDepositAmountInput(event)" />
             </div>
 
-            <!-- 12-Digit Numeric Bank UTR Input -->
-            <label class="form-label" style="font-weight: 800; font-size: 13px;">
-              <span>2. Enter 12-Digit Bank UTR / UPI Ref No</span>
-              <span class="form-label-hint">12-digit numeric only</span>
-            </label>
-            <div style="position: relative; margin-bottom: 6px;">
-              <input type="text" inputmode="numeric" pattern="[0-9]*" class="form-input" id="add-funds-utr-input" placeholder="e.g. 423981029381 (12 digits only)" maxlength="12" style="font-family: var(--font-mono); font-size: 16px; font-weight: 800; min-height: 48px; border-radius: 12px; letter-spacing: 0.08em;" oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 12)" />
-            </div>
-            <div style="background: rgba(108, 92, 231, 0.06); border: 1px solid rgba(108, 92, 231, 0.18); border-radius: 10px; padding: 10px 14px; font-size: 11.5px; color: var(--text-secondary); margin-bottom: 16px; text-align: left; line-height: 1.5;">
-              <div style="font-weight: 800; color: var(--primary); margin-bottom: 3px;">📌 Where to find 12-digit UTR in your payment receipt:</div>
-              <div>• <strong>PhonePe:</strong> Look for <em>"UTR"</em> (e.g. 423981029381)</div>
-              <div>• <strong>Google Pay:</strong> Look for <em>"UPI transaction ID"</em> (12 numeric digits)</div>
-              <div>• <strong>Paytm:</strong> Look for <em>"UPI Ref No"</em> (12 numeric digits)</div>
-              <div style="color: #ef4444; font-weight: 700; margin-top: 3px;">⚠️ Note: Do NOT enter app Order/Transaction IDs (e.g. T240907...). Only enter the 12-digit Bank UTR.</div>
-            </div>
-
-            <!-- Refraction Action Button -->
-            <button class="btn btn-primary btn-block btn-lg btn-refraction" id="btn-verify-deposit" onclick="CustomerApp.handleDeposit()" style="height: 52px; font-size: 16px; border-radius: 14px;">
-              <span>⚡ Verify & Add Funds to Wallet</span>
+            <!-- Instant Dynamic QR Action Button -->
+            <button class="btn btn-primary btn-block btn-lg btn-refraction" id="btn-create-deposit" onclick="CustomerApp.handleDynamicDeposit()" style="height: 54px; font-size: 16px; border-radius: 14px; font-weight: 800;">
+              <span>⚡ Pay ₹<span id="display-deposit-amount">100</span> via Paytm Dynamic UPI (Instant)</span>
             </button>
           </div>
 
-          <!-- Trust Badges (No scary warnings) -->
-          <div class="trust-badges-row">
+          <!-- Trust Badges -->
+          <div class="trust-badges-row" style="margin-top: 20px;">
             <div class="trust-badge-item">
               <span style="color: #10B981;">✓</span>
-              <span>Instant Automated Credit (0-60s)</span>
+              <span>Instant Auto-Credit (0-30s)</span>
             </div>
             <div class="trust-badge-item">
               <span style="color: #10B981;">🛡️</span>
-              <span>100% Safe Razorpay Verified Merchant</span>
+              <span>100% Safe Verified Merchant</span>
             </div>
             <div class="trust-badge-item">
               <span style="color: #6C5CE7;">⚡</span>
