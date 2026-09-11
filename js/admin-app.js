@@ -1560,12 +1560,12 @@ const AdminApp = {
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Banner Headline / Title</label>
-            <input type="text" id="admin-rec-followers-title" class="form-input" value="${(store.data.recommendedFollowers?.title || '💎 Best Non-Drop Instagram Followers [Tested & Verified]').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
+            <input type="text" id="admin-rec-followers-title" class="form-input" value="${(store.data.recommendedFollowers?.title || 'Best Non-Drop Instagram Followers [Tested & Verified]').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
           </div>
 
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Top Badge Label</label>
-            <input type="text" id="admin-rec-followers-badge" class="form-input" value="${(store.data.recommendedFollowers?.badgeText || '🔥 100% Non-Drop VIP').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
+            <input type="text" id="admin-rec-followers-badge" class="form-input" value="${(store.data.recommendedFollowers?.badgeText || '100% Non-Drop VIP').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
           </div>
         </div>
 
@@ -1786,10 +1786,10 @@ const AdminApp = {
 
     const config = {
       enabled: toggleEl ? toggleEl.checked : true,
-      title: titleEl ? titleEl.value.trim() : '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
+      title: titleEl ? titleEl.value.trim() : 'Best Non-Drop Instagram Followers [Tested & Verified]',
       notice: noticeEl ? noticeEl.value.trim() : '',
       serviceIds: idsEl ? idsEl.value.trim() : '2868, 10323, 6435, 10349',
-      badgeText: badgeEl ? badgeEl.value.trim() : '🔥 100% Non-Drop VIP'
+      badgeText: badgeEl ? badgeEl.value.trim() : '100% Non-Drop VIP'
     };
 
     window.store.updateRecommendedFollowers(config);

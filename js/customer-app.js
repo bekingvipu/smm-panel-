@@ -1054,27 +1054,39 @@ const CustomerApp = {
 
           if (rawIds.length === 0) return '';
 
+          const stripEmoji = (str) => {
+            if (!str) return '';
+            return str
+              .replace(/[\u{1F300}-\u{1F6FF}\u{1F900}-\u{1F9FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+              .replace(/^[^\w\[\(]+/g, '')
+              .trim();
+          };
+
+          const cleanBadge = stripEmoji(rec.badgeText) || '100% Non-Drop VIP';
+          const cleanTitle = stripEmoji(rec.title) || 'Best Non-Drop Instagram Followers [Tested & Verified]';
+          const cleanNotice = rec.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:';
+
           return `
             <div class="recommended-services-banner">
               <div class="rec-banner-top-row">
                 <span class="rec-banner-badge">
-                  <span>${rec.badgeText || '🔥 100% Non-Drop VIP'}</span>
+                  <span>${cleanBadge}</span>
                 </span>
-                <span class="rec-banner-quick-hint">⚡ Click ID to Quick Select</span>
+                <span class="rec-banner-quick-hint">Click ID to Select →</span>
               </div>
               
               <h3 class="rec-banner-title">
-                ${rec.title || '💎 Best Non-Drop Instagram Followers [Tested & Verified]'}
+                ${cleanTitle}
               </h3>
               
               <p class="rec-banner-notice">
-                ${rec.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:'}
+                ${cleanNotice}
               </p>
 
               <div class="rec-services-chips-grid">
                 ${rawIds.map(id => {
                   const sMatch = rawServices.find(s => String(s.id) === String(id) || String(s.rawId) === String(id));
-                  let shortName = sMatch ? sMatch.name : `Service #${id}`;
+                  let shortName = sMatch ? sMatch.name.replace(/^[^\w\d🇮🇳]+/, '').trim() : `Service #${id}`;
                   if (shortName.length > 34) shortName = shortName.substring(0, 34) + '...';
                   const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1) : null;
                   const rateStr = rateNum ? `≈ ${store.formatMoney(rateNum)}/1K` : '';

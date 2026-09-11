@@ -180,19 +180,19 @@ class SmmStateStore {
       } else {
         this.data.recommendedFollowers = {
           enabled: true,
-          title: '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
+          title: 'Best Non-Drop Instagram Followers [Tested & Verified]',
           notice: 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:',
           serviceIds: '2868, 10323, 6435, 10349',
-          badgeText: '🔥 100% Non-Drop VIP'
+          badgeText: '100% Non-Drop VIP'
         };
       }
     } catch (e) {
       this.data.recommendedFollowers = {
         enabled: true,
-        title: '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
+        title: 'Best Non-Drop Instagram Followers [Tested & Verified]',
         notice: 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:',
         serviceIds: '2868, 10323, 6435, 10349',
-        badgeText: '🔥 100% Non-Drop VIP'
+        badgeText: '100% Non-Drop VIP'
       };
     }
 
@@ -542,10 +542,10 @@ class SmmStateStore {
   updateRecommendedFollowers(config) {
     this.data.recommendedFollowers = {
       enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
-      title: String(config.title || '💎 Best Non-Drop Instagram Followers [Tested & Verified]').trim(),
+      title: String(config.title || 'Best Non-Drop Instagram Followers [Tested & Verified]').trim(),
       notice: String(config.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:').trim(),
       serviceIds: String(config.serviceIds || '2868, 10323, 6435, 10349').trim(),
-      badgeText: String(config.badgeText || '🔥 100% Non-Drop VIP').trim()
+      badgeText: String(config.badgeText || '100% Non-Drop VIP').trim()
     };
     try {
       localStorage.setItem('likex_recommended_followers_config', JSON.stringify(this.data.recommendedFollowers));
