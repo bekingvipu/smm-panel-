@@ -1113,9 +1113,11 @@ const CustomerApp = {
                   if (idx100k !== -1) {
                     shortName = shortName.substring(0, idx100k).replace(/[\s\-\|]+$/, '').trim();
                   }
-                  if (shortName.length > 22) shortName = shortName.substring(0, 22).trim() + '...';
+                  // In Instagram banner, strip redundant "Instagram" prefix so meaningful service info shows cleanly (e.g. "HQ Followers R365" instead of getting clipped to "In...")
+                  shortName = shortName.replace(/^instagram\s+/i, '');
+                  if (shortName.length > 20) shortName = shortName.substring(0, 20).trim() + '...';
                   const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1) : null;
-                  const rateStr = rateNum ? `≈ ${store.formatMoney(rateNum)}/1K` : '';
+                  const rateStr = rateNum ? `${store.formatMoney(rateNum)}/1K` : '';
                   return `
                     <button type="button" class="rec-service-chip" onclick="CustomerApp.selectRecommendedService('${id}')" title="Click to auto-select #${id}">
                       <span class="chip-id">#${id}</span>
