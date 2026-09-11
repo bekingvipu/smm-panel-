@@ -1063,8 +1063,17 @@ const CustomerApp = {
           };
 
           const cleanBadge = stripEmoji(rec.badgeText) || '100% Non-Drop VIP';
-          const cleanTitle = stripEmoji(rec.title) || 'Best Non-Drop Instagram Followers [Tested & Verified]';
+          const fullTitle = stripEmoji(rec.title) || 'Best Non-Drop Instagram Followers [Tested & Verified]';
           const cleanNotice = rec.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:';
+
+          // Separate headline and bracketed tag so headline stays cleanly on Line 1 and [Tested & Verified] is centered on Line 2
+          let mainTitle = fullTitle;
+          let subTag = '';
+          const bracketIdx = fullTitle.search(/[\[\(]/);
+          if (bracketIdx !== -1) {
+            mainTitle = fullTitle.substring(0, bracketIdx).trim();
+            subTag = fullTitle.substring(bracketIdx).trim();
+          }
 
           return `
             <div class="recommended-services-banner">
@@ -1072,12 +1081,17 @@ const CustomerApp = {
                 <span class="rec-banner-badge">
                   <span>${cleanBadge}</span>
                 </span>
-                <span class="rec-banner-quick-hint">Click ID to Select →</span>
+                <span class="rec-banner-quick-hint">Click ID to Select ↓</span>
               </div>
               
-              <h3 class="rec-banner-title">
-                ${cleanTitle}
-              </h3>
+              <div class="rec-banner-title-block">
+                <h3 class="rec-banner-main-title">${mainTitle}</h3>
+                ${subTag ? `
+                  <div class="rec-banner-subtag-wrap">
+                    <span class="rec-banner-subtag">${subTag}</span>
+                  </div>
+                ` : ''}
+              </div>
               
               <p class="rec-banner-notice">
                 ${cleanNotice}
@@ -1094,8 +1108,10 @@ const CustomerApp = {
                     <button type="button" class="rec-service-chip" onclick="CustomerApp.selectRecommendedService('${id}')" title="Click to auto-select #${id}">
                       <span class="chip-id">#${id}</span>
                       <span class="chip-name">${shortName}</span>
-                      ${rateStr ? `<span class="chip-rate">${rateStr}</span>` : ''}
-                      <span class="chip-arrow">→</span>
+                      <div class="chip-end-pill">
+                        ${rateStr ? `<span class="chip-rate">${rateStr}</span>` : ''}
+                        <span class="chip-select-btn">Select ↓</span>
+                      </div>
                     </button>
                   `;
                 }).join('')}
