@@ -1105,7 +1105,15 @@ const CustomerApp = {
                 ${rawIds.map(id => {
                   const sMatch = rawServices.find(s => String(s.id) === String(id) || String(s.rawId) === String(id));
                   let shortName = sMatch ? sMatch.name.replace(/^[^\w\d🇮🇳]+/, '').trim() : `Service #${id}`;
-                  if (shortName.length > 34) shortName = shortName.substring(0, 34) + '...';
+                  // Cut before pipe (|) or before 100k so text cuts cleanly before the box ends
+                  if (shortName.includes('|')) {
+                    shortName = shortName.split('|')[0].trim();
+                  }
+                  const idx100k = shortName.search(/\b100k\b/i);
+                  if (idx100k !== -1) {
+                    shortName = shortName.substring(0, idx100k).replace(/[\s\-\|]+$/, '').trim();
+                  }
+                  if (shortName.length > 22) shortName = shortName.substring(0, 22).trim() + '...';
                   const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1) : null;
                   const rateStr = rateNum ? `≈ ${store.formatMoney(rateNum)}/1K` : '';
                   return `
