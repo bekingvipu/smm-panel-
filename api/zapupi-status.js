@@ -56,16 +56,15 @@ export default async function handler(req, res) {
       });
 
       const zapData = await zapStatusRes.json().catch(() => ({}));
-      const zapStatus = String(zapData.status || zapData.data?.status || '').toLowerCase();
+      const paymentStatus = String(zapData.data?.status || '').trim().toLowerCase();
 
-      if (zapStatus === 'success' || zapStatus === 'paid' || zapStatus === 'completed') {
-        // Trigger credit via webhook handler logic or return paid
+      if (paymentStatus === 'success' || paymentStatus === 'paid' || paymentStatus === 'completed') {
         return res.status(200).json({
           paid: true,
           status: 'Success',
           order_id: orderId,
-          utr: zapData.utr || zapData.data?.utr || '',
-          amount: zapData.amount || zapData.data?.amount || 0,
+          utr: zapData.data?.utr || zapData.data?.txn_id || '',
+          amount: zapData.data?.amount || zapData.data?.pay_amount || 0,
           source: 'zapupi_live_query'
         });
       }
