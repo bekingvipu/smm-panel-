@@ -1720,6 +1720,50 @@
   font-weight: 600;
 }
 
+/* Deposit Presets Slider (Touch-Scrollable) */
+.deposit-presets-slider {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.deposit-presets-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.preset-pill {
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.preset-pill:active {
+  transform: scale(0.96);
+}
+
+.deposit-trust-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 480px) {
+  .deposit-trust-strip {
+    font-size: 10.5px;
+    gap: 6px;
+    padding: 6px 10px !important;
+  }
+}
+
 /* ==========================================================================
    UNIFIED FLOATING VIP SUPPORT HUB (SPEED-DIAL EXPANDABLE POPUP)
    ========================================================================== */

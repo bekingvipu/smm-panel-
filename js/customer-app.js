@@ -1947,6 +1947,7 @@ const CustomerApp = {
       input.value = val;
       const display = document.getElementById('display-deposit-amount');
       if (display) display.textContent = Number(val).toLocaleString('en-IN');
+      this.updatePresetPills(val);
     }
   },
 
@@ -1954,6 +1955,25 @@ const CustomerApp = {
     const val = Number(e.target.value || 0);
     const display = document.getElementById('display-deposit-amount');
     if (display) display.textContent = val > 0 ? val.toLocaleString('en-IN') : '0';
+    this.updatePresetPills(val);
+  },
+
+  updatePresetPills(val) {
+    const pills = document.querySelectorAll('.preset-pill');
+    pills.forEach(pill => {
+      const pillVal = Number(pill.getAttribute('data-val'));
+      if (pillVal === Number(val)) {
+        pill.classList.add('active');
+        pill.style.background = 'var(--primary)';
+        pill.style.color = '#ffffff';
+        pill.style.borderColor = 'var(--primary)';
+      } else {
+        pill.classList.remove('active');
+        pill.style.background = 'var(--bg-subtle)';
+        pill.style.color = 'var(--text-main)';
+        pill.style.borderColor = 'var(--border-color)';
+      }
+    });
   },
 
   async handleDynamicDeposit() {
@@ -1968,8 +1988,8 @@ const CustomerApp = {
     const amountInput = document.getElementById('add-funds-amount-input');
     const amount = Number(amountInput ? amountInput.value : 0);
 
-    if (!amount || amount < 10) {
-      window.store.showToast('Minimum deposit amount is ₹10', 'error');
+    if (!amount || amount < 50) {
+      window.store.showToast('Minimum deposit amount is ₹50', 'error');
       if (amountInput) amountInput.focus();
       return;
     }
@@ -1978,7 +1998,7 @@ const CustomerApp = {
     this._isDepositing = true;
     if (btn) {
       btn.disabled = true;
-      btn.innerHTML = '<span>⚡ Generating Secure Dynamic UPI QR...</span>';
+      btn.innerHTML = '<span>Processing Secure Payment...</span>';
     }
 
     try {
@@ -1996,7 +2016,7 @@ const CustomerApp = {
 
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span>⚡ Pay ₹<span id="display-deposit-amount">${amount.toLocaleString('en-IN')}</span> via Paytm Dynamic UPI (Instant)</span>`;
+        btn.innerHTML = `<span>Add ₹<span id="display-deposit-amount">${amount.toLocaleString('en-IN')}</span> to Wallet • Instant Credit →</span>`;
       }
       this._isDepositing = false;
 
@@ -2017,7 +2037,7 @@ const CustomerApp = {
       console.error('[ZapUPI Deposit Error]', err);
       if (btn) {
         btn.disabled = false;
-        btn.innerHTML = `<span>⚡ Pay ₹<span id="display-deposit-amount">${amount.toLocaleString('en-IN')}</span> via Paytm Dynamic UPI (Instant)</span>`;
+        btn.innerHTML = `<span>Add ₹<span id="display-deposit-amount">${amount.toLocaleString('en-IN')}</span> to Wallet • Instant Credit →</span>`;
       }
       this._isDepositing = false;
       window.store.showToast('Network error while connecting to payment gateway. Please try again.', 'error');
@@ -2040,7 +2060,7 @@ const CustomerApp = {
           <div style="display: flex; justify-content: space-between; align-items: flex-start;">
             <div>
               <div style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 6px;">
-                <span>🛒</span> Payment to LikeX
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Payment to LikeX
               </div>
               <div style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; margin-top: 4px;">
                 <span style="font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.7);">INR</span> ₹${Number(amount).toFixed(2)}
@@ -2063,20 +2083,24 @@ const CustomerApp = {
           <!-- Quick Action Buttons -->
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
             <a href="${payment_url}" target="_blank" class="btn btn-secondary" style="text-decoration: none; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
-              <span>📲 Open in App ↗</span>
+              <span>Open in App ↗</span>
             </a>
-            <button class="btn btn-primary btn-refraction" id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="font-size: 12.5px; font-weight: 800; padding: 10px;">
-              <span>⚡ Tap to Verify</span>
+            <button class="btn btn-primary btn-refraction" id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="font-size: 12.5px; font-weight: 800; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Verify Payment</span>
             </button>
           </div>
 
           <!-- Instructions Card (YOSMM Style) -->
           <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 12px 14px; margin-top: 12px; text-align: left; font-size: 11.5px; color: #92400e; line-height: 1.6;">
-            <div style="font-weight: 800; margin-bottom: 3px; color: #b45309;">📌 How to pay:</div>
-            <div>1. Scan the QR code with any UPI app (Paytm, PhonePe, GPay, etc.)</div>
+            <div style="font-weight: 800; margin-bottom: 3px; color: #b45309; display: flex; align-items: center; gap: 5px;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>Payment Steps:</span>
+            </div>
+            <div>1. Scan the QR code with any UPI app (Paytm, PhonePe, GPay, BHIM)</div>
             <div>2. Complete the payment of <strong>₹${Number(amount).toFixed(2)}</strong></div>
-            <div>3. We automatically check your payment every <strong>4 seconds</strong>, or tap verify anytime.</div>
-            <div style="font-weight: 700; color: #b91c1c; margin-top: 3px;">⚠️ Do not close this page until the payment is verified.</div>
+            <div>3. Auto-detected within <strong>30 seconds</strong>, or tap Verify Payment anytime.</div>
+            <div style="font-weight: 700; color: #b91c1c; margin-top: 3px;">Important: Do not close this window until payment is verified.</div>
           </div>
 
           <!-- Live Countdown & Status Pulse -->
@@ -2164,7 +2188,10 @@ const CustomerApp = {
       this._isVerifyingStatus = false;
       if (isManual && verifyBtn) {
         verifyBtn.disabled = false;
-        verifyBtn.innerHTML = '<span>⚡ Tap to Verify</span>';
+        verifyBtn.innerHTML = `
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <span>Verify Payment</span>
+        `;
       }
     }
   },
@@ -2193,7 +2220,7 @@ const CustomerApp = {
         </div>
 
         <div>
-          <h3 style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">Payment Verified! 💰</h3>
+          <h3 style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">Payment Confirmed</h3>
           <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px;">Funds credited to your wallet instantly</p>
         </div>
 
@@ -2214,7 +2241,7 @@ const CustomerApp = {
 
         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; margin-top: 6px;">
           <button class="btn btn-primary btn-block btn-refraction" onclick="CustomerApp.closeModal(); store.setCustomerTab('new_order')">
-            🛒 Place an Order Now
+            Place an Order Now →
           </button>
           <button class="btn btn-secondary btn-block" onclick="CustomerApp.closeModal();">
             Close
@@ -3077,64 +3104,74 @@ const CustomerApp = {
         <!-- Paytm Dynamic (All UPI Apps) Deposit Box -->
         <div class="paytm-qr-box">
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-            <span style="font-size: 24px;">⚡</span>
-            <h3 style="font-size: 21px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">
-              Paytm Dynamic (All UPI Apps)
+            <h3 style="font-size: 21px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main); margin: 0;">
+              Paytm Dynamic UPI
             </h3>
           </div>
-          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px; max-width: 520px;">
-            Scan unique order QR with Paytm, PhonePe, Google Pay, BHIM, or any UPI app for instant automated wallet credit.
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 6px; max-width: 520px; line-height: 1.5;">
+            Instant automated top-up via PhonePe, Google Pay, Paytm, BHIM or any UPI app.
           </p>
 
           <!-- Method Card Badge -->
-          <div style="background: rgba(108, 92, 231, 0.08); border: 1.5px solid var(--primary); border-radius: 14px; padding: 14px 18px; margin: 18px 0 14px; display: flex; align-items: center; justify-content: space-between; text-align: left;">
+          <div style="background: rgba(108, 92, 231, 0.08); border: 1.5px solid var(--primary); border-radius: 14px; padding: 12px 16px; margin: 16px 0 14px; display: flex; align-items: center; justify-content: space-between; text-align: left;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <span style="font-size: 26px;">📱</span>
+              <div style="width: 38px; height: 38px; border-radius: 10px; background: var(--bg-card); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; color: var(--primary); flex-shrink: 0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+              </div>
               <div>
-                <div style="font-weight: 900; font-size: 14.5px; color: var(--text-main);">Paytm Dynamic UPI Gateway</div>
+                <div style="font-weight: 800; font-size: 14px; color: var(--text-main);">Paytm Dynamic UPI Gateway</div>
                 <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Automated 30-Sec Credit • All UPI Apps Supported</div>
               </div>
             </div>
-            <span style="font-weight: 800; color: #10B981; font-size: 12px; background: rgba(16, 185, 129, 0.15); padding: 4px 12px; border-radius: 999px;">✓ Active</span>
+            <span style="font-weight: 800; color: #10B981; font-size: 11.5px; background: rgba(16, 185, 129, 0.15); padding: 3px 10px; border-radius: 999px; letter-spacing: 0.3px;">ACTIVE</span>
           </div>
 
-          <!-- Quick Preset Pills (Min ₹10) -->
+          <!-- Quick Preset Pills (Min ₹50) with Horizontal Touch Slider -->
           <div style="width: 100%; text-align: left;">
-            <label class="form-label" style="font-weight: 800; font-size: 13px;">
-              <span>Choose or Enter Deposit Amount (Min ₹10)</span>
-            </label>
-            <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 10px;">
-              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(10)">₹10</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(50)">₹50</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(100)">₹100</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(250)">₹250</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(500)">₹500</button>
-              <button type="button" class="btn btn-sm btn-secondary" onclick="CustomerApp.setDepositAmount(1000)">₹1,000</button>
-            </div>
-            <div class="form-group" style="margin-bottom: 16px;">
-              <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="10" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (e.g. 100)" oninput="CustomerApp.onDepositAmountInput(event)" />
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="form-label" style="font-weight: 800; font-size: 13px; margin: 0;">
+                <span>Choose or Enter Deposit Amount (Min ₹50)</span>
+              </label>
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Swipe for more →</span>
             </div>
 
-            <!-- Instant Dynamic QR Action Button -->
-            <button class="btn btn-primary btn-block btn-lg btn-refraction" id="btn-create-deposit" onclick="CustomerApp.handleDynamicDeposit()" style="height: 54px; font-size: 16px; border-radius: 14px; font-weight: 800;">
-              <span>⚡ Pay ₹<span id="display-deposit-amount">100</span> via Paytm Dynamic UPI (Instant)</span>
+            <!-- Horizontal Scrollable Preset Slider -->
+            <div class="deposit-presets-slider" style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+              <button type="button" class="btn btn-sm preset-pill" data-val="50" onclick="CustomerApp.setDepositAmount(50)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹50</button>
+              <button type="button" class="btn btn-sm preset-pill active" data-val="100" onclick="CustomerApp.setDepositAmount(100)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--primary); color: #ffffff; border: 1px solid var(--primary);">₹100</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="250" onclick="CustomerApp.setDepositAmount(250)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹250</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="500" onclick="CustomerApp.setDepositAmount(500)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹500</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="1000" onclick="CustomerApp.setDepositAmount(1000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹1,000</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="2500" onclick="CustomerApp.setDepositAmount(2500)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹2,500</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="5000" onclick="CustomerApp.setDepositAmount(5000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹5,000</button>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 16px;">
+              <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="50" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (min 50)" oninput="CustomerApp.onDepositAmountInput(event)" />
+            </div>
+
+            <!-- Instant Dynamic QR Action Button (High Converting) -->
+            <button class="btn btn-primary btn-block btn-lg btn-refraction" id="btn-create-deposit" onclick="CustomerApp.handleDynamicDeposit()" style="height: 54px; font-size: 15.5px; border-radius: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 24px rgba(108, 92, 231, 0.35);">
+              <span>Add ₹<span id="display-deposit-amount">100</span> to Wallet • Instant Credit →</span>
             </button>
           </div>
 
-          <!-- Trust Badges -->
-          <div class="trust-badges-row" style="margin-top: 20px;">
-            <div class="trust-badge-item">
-              <span style="color: #10B981;">✓</span>
-              <span>Instant Auto-Credit (0-30s)</span>
-            </div>
-            <div class="trust-badge-item">
-              <span style="color: #10B981;">🛡️</span>
-              <span>100% Safe Verified Merchant</span>
-            </div>
-            <div class="trust-badge-item">
-              <span style="color: #6C5CE7;">⚡</span>
-              <span>0% Surcharge / Zero Fee</span>
-            </div>
+          <!-- Single Horizontal Trust Strip -->
+          <div class="deposit-trust-strip" style="display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; font-size: 11.5px; color: var(--text-secondary); background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 999px; padding: 6px 14px; width: fit-content; margin-left: auto; margin-right: auto; max-width: 100%;">
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; white-space: nowrap; color: #10B981;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Auto-Credit (0-30s)
+            </span>
+            <span style="color: var(--text-muted); opacity: 0.4;">•</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; white-space: nowrap;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              Verified Merchant
+            </span>
+            <span style="color: var(--text-muted); opacity: 0.4;">•</span>
+            <span style="display: inline-flex; align-items: center; gap: 4px; font-weight: 700; white-space: nowrap; color: #8B5CF6;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8l-8 8"/><circle cx="9" cy="9" r="1.5" fill="currentColor"/><circle cx="15" cy="15" r="1.5" fill="currentColor"/></svg>
+              0% Fee
+            </span>
           </div>
 
           <div style="font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 14px;">
