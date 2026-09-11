@@ -664,8 +664,10 @@ class SmmStateStore {
         localStorage.setItem('likex_last_rates_sync_time', String(now));
       } catch (e) {}
 
-      // Notify UI of updated prices across customer and admin views
-      this.notify();
+      // Notify UI of updated prices for admin views or when explicitly forced
+      if (this.persona === 'admin' || force) {
+        this.notify();
+      }
       return { success: true, updatedCount, timestamp: now };
     } catch (err) {
       console.warn('[LikeX Rate Sync] Error syncing live provider rates:', err);
@@ -950,10 +952,12 @@ class SmmStateStore {
       this.syncOrdersStatus(true);
     } catch (e) {}
 
-    // Background poller for live Supabase orders every 10 seconds
+    // Background poller for live Supabase orders every 10 seconds (Admin console only)
     if (!this._adminOrderPoller) {
       this._adminOrderPoller = setInterval(() => {
-        this.syncSupabaseDataForAdmin();
+        if (this.persona === 'admin') {
+          this.syncSupabaseDataForAdmin();
+        }
       }, 10000);
     }
   }
@@ -964,6 +968,15 @@ class SmmStateStore {
     if (!window.supabaseClient) return;
     try {
       let changed = false;
+      const updateIfDifferent = (prop, key, nextVal) => {
+        const prevJson = JSON.stringify(this.data[prop]);
+        const nextJson = JSON.stringify(nextVal);
+        if (prevJson !== nextJson) {
+          this.data[prop] = nextVal;
+          try { localStorage.setItem(key, nextJson); } catch(e){}
+          changed = true;
+        }
+      };
 
       // 1. Try dedicated site_settings table
       const { data: settingsData, error } = await window.supabaseClient
@@ -973,69 +986,27 @@ class SmmStateStore {
       if (settingsData && Array.isArray(settingsData) && !error && settingsData.length > 0) {
         settingsData.forEach(item => {
           if (item.key === 'wallet_tutorial' && item.value) {
-            this.data.walletTutorial = {
-              ...this.data.walletTutorial,
-              ...item.value
-            };
-            try { localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial)); } catch(e){}
-            changed = true;
+            updateIfDifferent('walletTutorial', 'likex_wallet_tutorial_config', { ...this.data.walletTutorial, ...item.value });
           } else if (item.key === 'earn_tutorial' && item.value) {
-            this.data.earnTutorial = {
-              ...this.data.earnTutorial,
-              ...item.value
-            };
-            try { localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial)); } catch(e){}
-            changed = true;
+            updateIfDifferent('earnTutorial', 'likex_earn_tutorial_config', { ...this.data.earnTutorial, ...item.value });
           } else if (item.key === 'announcement_config' && item.value) {
-            this.data.announcement = {
-              ...this.data.announcement,
-              ...item.value
-            };
-            try { localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement)); } catch(e){}
-            changed = true;
+            updateIfDifferent('announcement', 'likex_announcement_config', { ...this.data.announcement, ...item.value });
           } else if (item.key === 'about_reels' && Array.isArray(item.value)) {
-            this.data.aboutReels = item.value;
-            try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
-            changed = true;
+            updateIfDifferent('aboutReels', 'likex_about_reels_config', item.value);
           } else if (item.key === 'pixel_config' && item.value) {
-            this.data.pixelSettings = {
-              ...this.data.pixelSettings,
-              ...item.value
-            };
-            try {
-              localStorage.setItem('likex_meta_pixel_id', this.data.pixelSettings.pixelId);
-              localStorage.setItem('likex_pixel_config', JSON.stringify(this.data.pixelSettings));
-            } catch(e){}
-            if (window.PixelTracker && this.data.pixelSettings.pixelId) {
-              window.PixelTracker.init(this.data.pixelSettings.pixelId);
+            const nextPixel = { ...this.data.pixelSettings, ...item.value };
+            updateIfDifferent('pixelSettings', 'likex_pixel_config', nextPixel);
+            if (window.PixelTracker && nextPixel.pixelId) {
+              window.PixelTracker.init(nextPixel.pixelId);
             }
-            changed = true;
           } else if (item.key === 'maintenance_mode' && item.value) {
-            this.data.maintenanceMode = {
-              ...this.getMaintenanceMode(),
-              ...item.value
-            };
-            try { localStorage.setItem('likex_maintenance_mode', JSON.stringify(this.data.maintenanceMode)); } catch(e){}
-            changed = true;
+            updateIfDifferent('maintenanceMode', 'likex_maintenance_mode', { ...this.getMaintenanceMode(), ...item.value });
           } else if (item.key === 'recommended_followers' && item.value) {
-            this.data.recommendedFollowers = {
-              ...this.data.recommendedFollowers,
-              ...item.value
-            };
-            try { localStorage.setItem('likex_recommended_followers_config', JSON.stringify(this.data.recommendedFollowers)); } catch(e){}
-            changed = true;
+            updateIfDifferent('recommendedFollowers', 'likex_recommended_followers_config', { ...this.data.recommendedFollowers, ...item.value });
           } else if (item.key === 'support_video' && item.value) {
-            this.data.supportVideo = {
-              ...this.data.supportVideo,
-              ...item.value
-            };
-            try { localStorage.setItem('likex_support_video_config', JSON.stringify(this.data.supportVideo)); } catch(e){}
-            changed = true;
+            updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...item.value });
           } else if (item.key === 'claimed_utrs' && typeof item.value === 'object') {
-            this.data.claimedUtrs = {
-              ...this.data.claimedUtrs,
-              ...item.value
-            };
+            this.data.claimedUtrs = { ...this.data.claimedUtrs, ...item.value };
             try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
           }
         });
@@ -1051,78 +1022,36 @@ class SmmStateStore {
         try {
           const parsed = JSON.parse(configRows[0].password_hash);
           if (parsed.maintenance_mode) {
-            this.data.maintenanceMode = {
-              ...this.getMaintenanceMode(),
-              ...parsed.maintenance_mode
-            };
-            try { localStorage.setItem('likex_maintenance_mode', JSON.stringify(this.data.maintenanceMode)); } catch(e){}
-            changed = true;
+            updateIfDifferent('maintenanceMode', 'likex_maintenance_mode', { ...this.getMaintenanceMode(), ...parsed.maintenance_mode });
           }
           if (parsed.about_reels && Array.isArray(parsed.about_reels)) {
-            this.data.aboutReels = parsed.about_reels;
-            try { localStorage.setItem('likex_about_reels_config', JSON.stringify(this.data.aboutReels)); } catch(e){}
-            changed = true;
+            updateIfDifferent('aboutReels', 'likex_about_reels_config', parsed.about_reels);
           }
           if (parsed.pixel_config && parsed.pixel_config.pixelId) {
-            this.data.pixelSettings = {
-              ...this.data.pixelSettings,
-              ...parsed.pixel_config
-            };
-            try {
-              localStorage.setItem('likex_meta_pixel_id', this.data.pixelSettings.pixelId);
-              localStorage.setItem('likex_pixel_config', JSON.stringify(this.data.pixelSettings));
-            } catch(e){}
-            if (window.PixelTracker && this.data.pixelSettings.pixelId) {
-              window.PixelTracker.init(this.data.pixelSettings.pixelId);
+            const nextPx = { ...this.data.pixelSettings, ...parsed.pixel_config };
+            updateIfDifferent('pixelSettings', 'likex_pixel_config', nextPx);
+            if (window.PixelTracker && nextPx.pixelId) {
+              window.PixelTracker.init(nextPx.pixelId);
             }
-            changed = true;
           }
           if (parsed.earn_tutorial && parsed.earn_tutorial.videoUrl) {
-            this.data.earnTutorial = {
-              ...this.data.earnTutorial,
-              ...parsed.earn_tutorial
-            };
-            try { localStorage.setItem('likex_earn_tutorial_config', JSON.stringify(this.data.earnTutorial)); } catch(e){}
-            changed = true;
+            updateIfDifferent('earnTutorial', 'likex_earn_tutorial_config', { ...this.data.earnTutorial, ...parsed.earn_tutorial });
           }
           if (parsed.wallet_tutorial && parsed.wallet_tutorial.videoUrl) {
-            this.data.walletTutorial = {
-              ...this.data.walletTutorial,
-              ...parsed.wallet_tutorial
-            };
-            try { localStorage.setItem('likex_wallet_tutorial_config', JSON.stringify(this.data.walletTutorial)); } catch(e){}
-            changed = true;
+            updateIfDifferent('walletTutorial', 'likex_wallet_tutorial_config', { ...this.data.walletTutorial, ...parsed.wallet_tutorial });
           }
           if (parsed.claimed_utrs && typeof parsed.claimed_utrs === 'object') {
-            this.data.claimedUtrs = {
-              ...this.data.claimedUtrs,
-              ...parsed.claimed_utrs
-            };
+            this.data.claimedUtrs = { ...this.data.claimedUtrs, ...parsed.claimed_utrs };
             try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
           }
           if (parsed.announcement_config && parsed.announcement_config.text) {
-            this.data.announcement = {
-              ...this.data.announcement,
-              ...parsed.announcement_config
-            };
-            try { localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement)); } catch(e){}
-            changed = true;
+            updateIfDifferent('announcement', 'likex_announcement_config', { ...this.data.announcement, ...parsed.announcement_config });
           }
           if (parsed.recommended_followers) {
-            this.data.recommendedFollowers = {
-              ...this.data.recommendedFollowers,
-              ...parsed.recommended_followers
-            };
-            try { localStorage.setItem('likex_recommended_followers_config', JSON.stringify(this.data.recommendedFollowers)); } catch(e){}
-            changed = true;
+            updateIfDifferent('recommendedFollowers', 'likex_recommended_followers_config', { ...this.data.recommendedFollowers, ...parsed.recommended_followers });
           }
           if (parsed.support_video) {
-            this.data.supportVideo = {
-              ...this.data.supportVideo,
-              ...parsed.support_video
-            };
-            try { localStorage.setItem('likex_support_video_config', JSON.stringify(this.data.supportVideo)); } catch(e){}
-            changed = true;
+            updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...parsed.support_video });
           }
         } catch (e) {}
       }
@@ -1465,7 +1394,7 @@ class SmmStateStore {
       }
 
       this.recalculateAdminStats();
-      if (dataChanged) {
+      if (dataChanged && this.persona === 'admin') {
         this.notify();
       }
     } catch (err) {

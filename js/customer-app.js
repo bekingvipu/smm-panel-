@@ -149,10 +149,18 @@ const CustomerApp = {
     }
   },
 
+  _lastCustomerTab: null,
+
   render(container) {
     const store = window.store;
     const tab = store.customerTab;
     const isLoggedIn = store.data.isLoggedIn;
+
+    // Preserve scroll position if staying on the same tab during re-render
+    const prevTab = this._lastCustomerTab;
+    const isTabSwitch = Boolean(prevTab && prevTab !== tab);
+    this._lastCustomerTab = tab;
+    const savedScrollY = (!isTabSwitch && typeof window !== 'undefined') ? window.scrollY : 0;
 
     // Check Maintenance Mode (bypassed if super admin is authenticated)
     const isMaintenanceOn = store.data.maintenanceMode?.enabled;
@@ -450,6 +458,12 @@ const CustomerApp = {
     `;
 
     this.bindEvents();
+
+    if (!isTabSwitch && savedScrollY > 0) {
+      requestAnimationFrame(() => {
+        window.scrollTo({ top: savedScrollY, behavior: 'instant' });
+      });
+    }
   },
 
   openSideDrawer() {
@@ -1423,27 +1437,36 @@ const CustomerApp = {
     if (!plat) return;
     const activeChip = document.querySelector(`.platform-chip[data-platform="${plat}"]`);
     if (activeChip) {
-      activeChip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      const scrollContainer = activeChip.closest('.platform-chips-scroll');
+      if (scrollContainer) {
+        // Horizontally center active chip within its scroll container only - NEVER scroll window vertically
+        const chipLeft = activeChip.offsetLeft;
+        const chipWidth = activeChip.offsetWidth;
+        const containerWidth = scrollContainer.clientWidth;
+        const targetScrollLeft = chipLeft - (containerWidth / 2) + (chipWidth / 2);
+        scrollContainer.scrollTo({
+          left: Math.max(0, targetScrollLeft),
+          behavior: 'smooth'
+        });
+      }
     }
   },
 
   selectPlatform(plat) {
+    if (this.currentPlatform === plat && !this.searchQuery) return;
     this.currentPlatform = plat;
     this.searchQuery = '';
     const screenContainer = document.getElementById('screen-container');
     this.render(screenContainer);
-    setTimeout(() => {
-      this.scrollActivePlatformIntoView(plat);
-    }, 40);
+    this.scrollActivePlatformIntoView(plat);
   },
 
   handleCategoryChange(cat) {
+    if (this.currentCategory === cat) return;
     this.currentCategory = cat;
     const screenContainer = document.getElementById('screen-container');
     this.render(screenContainer);
-    setTimeout(() => {
-      this.scrollActivePlatformIntoView(this.currentPlatform || 'instagram');
-    }, 40);
+    this.scrollActivePlatformIntoView(this.currentPlatform || 'instagram');
   },
 
   getServiceTags(service) {
@@ -1710,9 +1733,8 @@ const CustomerApp = {
         });
       }
 
-      // Initial check on render & auto-scroll active platform
+      // Initial calculation check on render
       updateCalc();
-      CustomerApp.scrollActivePlatformIntoView(CustomerApp.currentPlatform || 'instagram');
     }
   },
 
@@ -4462,9 +4484,17 @@ window.CustomerApp = CustomerApp;
 
 // Global listener to close custom inline dropdowns on outside tap
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.custom-dropdown-container')) {
+  const isInsideDropdown = e.target.closest('#custom-cat-dropdown-group') ||
+                           e.target.closest('#custom-service-dropdown-group') ||
+                           e.target.closest('.custom-dropdown-card') ||
+                           e.target.closest('.custom-dropdown-menu');
+  if (!isInsideDropdown) {
     if (window.CustomerApp && typeof window.CustomerApp.closeAllCustomDropdowns === 'function') {
-      window.CustomerApp.closeAllCustomDropdowns();
+      const catMenu = document.getElementById('custom-cat-dropdown-menu');
+      const srvMenu = document.getElementById('custom-service-dropdown-menu');
+      if ((catMenu && catMenu.style.display !== 'none') || (srvMenu && srvMenu.style.display !== 'none')) {
+        window.CustomerApp.closeAllCustomDropdowns();
+      }
     }
   }
 });
