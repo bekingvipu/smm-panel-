@@ -42,12 +42,12 @@ export default async function handler(req, res) {
   const uniqueOrderId = `LKX${Date.now()}${Math.floor(100 + Math.random() * 900)}`;
 
   try {
-    // 1. Call ZapUPI create-order API
+    // 1. Call ZapUPI create-order API (clean alphanumeric remark for UPI bank compliance)
     const zapPayload = {
       zap_key: ZAP_KEY,
       order_id: uniqueOrderId,
       amount: String(amountNum),
-      remark: `LikeX Wallet Deposit [${userEmail}]`,
+      remark: 'LikeX Deposit',
       webhook_url: 'https://likex.in/api/zapupi-webhook'
     };
 
@@ -62,10 +62,10 @@ export default async function handler(req, res) {
 
     const zapData = await zapRes.json().catch(() => ({}));
 
-    if (!zapRes.ok || zapData.status === false || zapData.error) {
+    if (!zapRes.ok || zapData.status !== 'success' || !zapData.payment_url) {
       const errorMsg = zapData.message || zapData.error || 'Failed to create order on ZapUPI gateway';
       console.error('[ZapUPI Order Error]', zapData);
-      return res.status(500).json({ 
+      return res.status(400).json({ 
         error: errorMsg,
         details: zapData
       });
