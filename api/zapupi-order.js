@@ -75,7 +75,7 @@ export default async function handler(req, res) {
 
     // 2. Log pending transaction to Supabase wallet_transactions
     try {
-      const exchangeRate = 83; // 1 USD = 83 INR
+      const exchangeRate = 95.385; // 1 USD = 95.385 INR (Matched to LikeX Storefront)
       const usdAmount = Number((amountNum / exchangeRate).toFixed(4));
 
       let resolvedUserId = userId;

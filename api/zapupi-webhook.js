@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const exchangeRate = 83; // 1 USD = 83 INR
+    const exchangeRate = 95.385; // 1 USD = 95.385 INR (Matched to LikeX Storefront)
     const usdCredit = Number((amount / exchangeRate).toFixed(4));
 
     // 1. Check if this order or UTR has already been successfully credited (Idempotency)

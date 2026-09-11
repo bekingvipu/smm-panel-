@@ -1475,14 +1475,47 @@ class SmmStateStore {
         .then(({ data: cloudTxns }) => {
           if (Array.isArray(cloudTxns) && cloudTxns.length > 0) {
             let updated = false;
+
+            // 1. Deduplicate local transactions array first by 12-digit UTR
+            const seenKeys = new Set();
+            const cleanTxns = [];
+            let duplicateDepositDeduction = 0;
+
+            this.data.transactions.forEach(t => {
+              const uMatch = (t.description || '').match(/\b\d{12}\b/);
+              const oMatch = (t.description || '').match(/\bLKX\d+\b/);
+              const key = uMatch ? uMatch[0] : (oMatch ? oMatch[0] : (t.id || JSON.stringify(t)));
+              if (!seenKeys.has(key)) {
+                seenKeys.add(key);
+                cleanTxns.push(t);
+              } else {
+                if (t.type === 'Wallet Deposit' || t.type === 'Deposit') {
+                  duplicateDepositDeduction += Number(t.amount || 0);
+                }
+                updated = true;
+              }
+            });
+            this.data.transactions = cleanTxns;
+
+            // 2. Reconcile missing cloud deposits
             cloudTxns.forEach(ctxn => {
-              const alreadyExists = this.data.transactions.some(t => 
-                (t.id && (t.id === ctxn.id || t.id === `TXN-${ctxn.id}`)) ||
-                (ctxn.description && t.description && t.description.includes(ctxn.id))
-              );
+              const uMatch = (ctxn.description || '').match(/\b\d{12}\b/);
+              const oMatch = (ctxn.description || '').match(/\bLKX\d+\b/);
+              const key = uMatch ? uMatch[0] : (oMatch ? oMatch[0] : ctxn.id);
+
+              const alreadyExists = seenKeys.has(key) || this.data.transactions.some(t => {
+                if (t.id === ctxn.id || t.id === `TXN-${ctxn.id}`) return true;
+                if (uMatch && (t.description || '').includes(uMatch[0])) return true;
+                if (oMatch && (t.description || '').includes(oMatch[0])) return true;
+                return false;
+              });
+
               if (!alreadyExists && ctxn.type === 'Deposit') {
+                const inrRate = this.data.exchangeRate || 95.385;
+                // If ctxn amount was recorded in raw USD, normalize
                 const depAmt = Number(ctxn.amount || 0);
-                this.data.customer.balance += depAmt;
+                this.data.customer.balance = Number((this.data.customer.balance + depAmt).toFixed(4));
+                seenKeys.add(key);
                 this.data.transactions.unshift({
                   id: ctxn.id,
                   type: 'Wallet Deposit',
@@ -1495,6 +1528,12 @@ class SmmStateStore {
                 updated = true;
               }
             });
+
+            if (duplicateDepositDeduction > 0) {
+              this.data.customer.balance = Math.max(0, Number((this.data.customer.balance - duplicateDepositDeduction).toFixed(4)));
+              updated = true;
+            }
+
             if (updated) {
               this.saveUserData();
               this.notify();

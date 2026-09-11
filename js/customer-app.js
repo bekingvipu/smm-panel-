@@ -2138,8 +2138,8 @@ const CustomerApp = {
 
         CustomerApp.closeModal();
 
-        // Calculate USD credit
-        const usdAmount = Number((amount / (window.store.data.exchangeRate || 83)).toFixed(4));
+        // Calculate USD credit using exact storefront conversion
+        const usdAmount = Number((amount / (window.store.data.exchangeRate || 95.385)).toFixed(4));
         window.store.addFunds(usdAmount, `Paytm Dynamic UPI (Order: ${orderId})`);
 
         // Trigger celebratory confirmation modal
