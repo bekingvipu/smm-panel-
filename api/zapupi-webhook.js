@@ -67,13 +67,35 @@ export default async function handler(req, res) {
     }
 
     // 2. Fetch User to update balance
-    const targetUserId = (existingTxns && existingTxns[0] && existingTxns[0].user_id) ? existingTxns[0].user_id : 1;
+    let targetUserId = (existingTxns && existingTxns[0] && existingTxns[0].user_id) ? existingTxns[0].user_id : null;
+    let userEmail = 'customer@likex.in';
+
+    if (existingTxns && existingTxns[0] && existingTxns[0].description) {
+      const emailMatch = existingTxns[0].description.match(/\[([^\]@]+@[^\]]+)\]/);
+      if (emailMatch) {
+        userEmail = emailMatch[1].trim().toLowerCase();
+      }
+    }
+
+    if (userEmail && (!targetUserId || targetUserId === 1)) {
+      try {
+        const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(userEmail)}&select=id,balance`, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const uData = await uRes.json();
+        if (Array.isArray(uData) && uData.length > 0) {
+          targetUserId = uData[0].id;
+        }
+      } catch (e) {}
+    }
+
+    if (!targetUserId) targetUserId = 1;
+
     const userRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${targetUserId}&select=id,email,balance`, {
       headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
     });
     const userData = await userRes.json();
     let currentBalance = 0;
-    let userEmail = 'customer@likex.in';
 
     if (Array.isArray(userData) && userData.length > 0) {
       currentBalance = Number(userData[0].balance || 0);

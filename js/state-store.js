@@ -1463,6 +1463,46 @@ class SmmStateStore {
 
     this.data.customer.ordersCount = this.data.orders.length;
     this.data.customer.spent = this.data.orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+
+    // Asynchronous Cloud Reconcile from Supabase wallet_transactions
+    if (window.supabaseClient) {
+      window.supabaseClient
+        .from('wallet_transactions')
+        .select('*')
+        .eq('status', 'Success')
+        .ilike('description', `%${email}%`)
+        .order('created_at', { ascending: false })
+        .then(({ data: cloudTxns }) => {
+          if (Array.isArray(cloudTxns) && cloudTxns.length > 0) {
+            let updated = false;
+            cloudTxns.forEach(ctxn => {
+              const alreadyExists = this.data.transactions.some(t => 
+                (t.id && (t.id === ctxn.id || t.id === `TXN-${ctxn.id}`)) ||
+                (ctxn.description && t.description && t.description.includes(ctxn.id))
+              );
+              if (!alreadyExists && ctxn.type === 'Deposit') {
+                const depAmt = Number(ctxn.amount || 0);
+                this.data.customer.balance += depAmt;
+                this.data.transactions.unshift({
+                  id: ctxn.id,
+                  type: 'Wallet Deposit',
+                  description: ctxn.description,
+                  amount: depAmt,
+                  balanceAfter: this.data.customer.balance,
+                  status: 'Success',
+                  date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
+                });
+                updated = true;
+              }
+            });
+            if (updated) {
+              this.saveUserData();
+              this.notify();
+              this.updateCustomerHeader();
+            }
+          }
+        }).catch(() => {});
+    }
   }
 
   saveUserData() {

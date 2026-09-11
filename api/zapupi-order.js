@@ -78,6 +78,19 @@ export default async function handler(req, res) {
       const exchangeRate = 83; // 1 USD = 83 INR
       const usdAmount = Number((amountNum / exchangeRate).toFixed(4));
 
+      let resolvedUserId = userId;
+      if (userEmail && userEmail !== 'customer@likex.in') {
+        try {
+          const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(userEmail)}&select=id`, {
+            headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+          });
+          const uData = await uRes.json();
+          if (Array.isArray(uData) && uData.length > 0 && uData[0].id) {
+            resolvedUserId = uData[0].id;
+          }
+        } catch (e) {}
+      }
+
       await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
         method: 'POST',
         headers: {
@@ -88,7 +101,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({
           id: `ORD-${uniqueOrderId}`,
-          user_id: userId,
+          user_id: resolvedUserId,
           type: 'Deposit',
           description: `Paytm Dynamic UPI Deposit [Pending] (Order: ${uniqueOrderId}) [${userEmail}]`,
           amount: usdAmount,

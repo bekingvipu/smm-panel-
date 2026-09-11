@@ -2140,23 +2140,9 @@ const CustomerApp = {
 
         // Calculate USD credit
         const usdAmount = Number((amount / (window.store.data.exchangeRate || 83)).toFixed(4));
-        window.store.data.customer.balance = Number((window.store.data.customer.balance + usdAmount).toFixed(4));
+        window.store.addFunds(usdAmount, `Paytm Dynamic UPI (Order: ${orderId})`);
 
-        // Add to local state transactions list
-        window.store.data.transactions.unshift({
-          id: `TXN-${orderId}`,
-          type: 'Deposit',
-          amount: usdAmount,
-          description: `Paytm Dynamic UPI Deposit [Order: ${orderId}]`,
-          date: new Date().toISOString(),
-          status: 'Success'
-        });
-
-        window.store.saveToStorage();
-        window.store.updateCustomerHeader();
-        window.store.renderCurrentTab();
-
-        // Trigger celebratory sound & confirmation modal
+        // Trigger celebratory confirmation modal
         CustomerApp.showDepositCelebrationModal({
           amount: amount,
           utr: data.utr || orderId,
