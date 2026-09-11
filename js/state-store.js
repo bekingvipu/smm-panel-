@@ -173,15 +173,19 @@ class SmmStateStore {
     }
 
     // Initialize Recommended Instagram Followers Notice Config
+    const defaultRecNotice = 'To prevent follower drops during Instagram updates, use LikeX verified Non-Drop service IDs. Fast & stable delivery:';
     try {
       const savedRec = localStorage.getItem('likex_recommended_followers_config');
       if (savedRec) {
         this.data.recommendedFollowers = JSON.parse(savedRec);
+        if (!this.data.recommendedFollowers.notice || this.data.recommendedFollowers.notice.includes('Instagram updates ke dauran') || this.data.recommendedFollowers.notice.toLowerCase().includes('refill')) {
+          this.data.recommendedFollowers.notice = defaultRecNotice;
+        }
       } else {
         this.data.recommendedFollowers = {
           enabled: true,
           title: 'Best Non-Drop Instagram Followers [Tested & Verified]',
-          notice: 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:',
+          notice: defaultRecNotice,
           serviceIds: '2868, 10323, 6435, 10349',
           badgeText: '100% Non-Drop VIP'
         };
@@ -190,7 +194,7 @@ class SmmStateStore {
       this.data.recommendedFollowers = {
         enabled: true,
         title: 'Best Non-Drop Instagram Followers [Tested & Verified]',
-        notice: 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:',
+        notice: defaultRecNotice,
         serviceIds: '2868, 10323, 6435, 10349',
         badgeText: '100% Non-Drop VIP'
       };
@@ -543,7 +547,7 @@ class SmmStateStore {
     this.data.recommendedFollowers = {
       enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
       title: String(config.title || 'Best Non-Drop Instagram Followers [Tested & Verified]').trim(),
-      notice: String(config.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:').trim(),
+      notice: String(config.notice || 'To prevent follower drops during Instagram updates, use LikeX verified Non-Drop service IDs. Fast & stable delivery:').trim(),
       serviceIds: String(config.serviceIds || '2868, 10323, 6435, 10349').trim(),
       badgeText: String(config.badgeText || '100% Non-Drop VIP').trim()
     };

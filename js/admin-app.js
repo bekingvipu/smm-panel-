@@ -1579,7 +1579,7 @@ const AdminApp = {
 
         <div class="form-group" style="margin-top: 14px; margin-bottom: 16px;">
           <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Notice Message / Trust Guarantee</label>
-          <textarea id="admin-rec-followers-notice" class="form-input" rows="2" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 13px;">${store.data.recommendedFollowers?.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:'}</textarea>
+          <textarea id="admin-rec-followers-notice" class="form-input" rows="2" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 13px;">${store.data.recommendedFollowers?.notice || 'To prevent follower drops during Instagram updates, use LikeX verified Non-Drop service IDs. Fast & stable delivery:'}</textarea>
         </div>
 
         <button class="btn btn-primary" onclick="AdminApp.saveRecommendedFollowersSettings()" style="font-weight: 800; padding: 10px 24px; border-radius: 12px; background: linear-gradient(135deg, #8B5CF6, #6366F1);">

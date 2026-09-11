@@ -1064,7 +1064,11 @@ const CustomerApp = {
 
           const cleanBadge = stripEmoji(rec.badgeText) || '100% Non-Drop VIP';
           const fullTitle = stripEmoji(rec.title) || 'Best Non-Drop Instagram Followers [Tested & Verified]';
-          const cleanNotice = rec.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:';
+          const defaultRecNotice = 'To prevent follower drops during Instagram updates, use LikeX verified Non-Drop service IDs. Fast & stable delivery:';
+          let cleanNotice = rec.notice ? rec.notice.trim() : '';
+          if (!cleanNotice || cleanNotice.includes('Instagram updates ke dauran') || cleanNotice.toLowerCase().includes('refill')) {
+            cleanNotice = defaultRecNotice;
+          }
 
           // Separate headline and bracketed tag so headline stays cleanly on Line 1 and [Tested & Verified] is centered on Line 2
           let mainTitle = fullTitle;
