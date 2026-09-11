@@ -172,6 +172,52 @@ class SmmStateStore {
       this.data.pixelSettings = { enabled: true, pixelId: '1107755188608830' };
     }
 
+    // Initialize Recommended Instagram Followers Notice Config
+    try {
+      const savedRec = localStorage.getItem('likex_recommended_followers_config');
+      if (savedRec) {
+        this.data.recommendedFollowers = JSON.parse(savedRec);
+      } else {
+        this.data.recommendedFollowers = {
+          enabled: true,
+          title: '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
+          notice: 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:',
+          serviceIds: '2868, 10323, 6435, 10349',
+          badgeText: '🔥 100% Non-Drop VIP'
+        };
+      }
+    } catch (e) {
+      this.data.recommendedFollowers = {
+        enabled: true,
+        title: '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
+        notice: 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:',
+        serviceIds: '2868, 10323, 6435, 10349',
+        badgeText: '🔥 100% Non-Drop VIP'
+      };
+    }
+
+    // Initialize Support Tab YouTube Video Tutorial Config
+    try {
+      const savedSupVideo = localStorage.getItem('likex_support_video_config');
+      if (savedSupVideo) {
+        this.data.supportVideo = JSON.parse(savedSupVideo);
+      } else {
+        this.data.supportVideo = {
+          enabled: true,
+          videoUrl: 'https://www.youtube.com/watch?v=g5XHXSOmONk',
+          title: '🎬 Video Guide: How to Get 24/7 Instant Support & Fast Refill',
+          description: 'Watch this quick video to learn how to claim instant refills for dropped followers, add funds, and chat with 24/7 VIP support.'
+        };
+      }
+    } catch (e) {
+      this.data.supportVideo = {
+        enabled: true,
+        videoUrl: 'https://www.youtube.com/watch?v=g5XHXSOmONk',
+        title: '🎬 Video Guide: How to Get 24/7 Instant Support & Fast Refill',
+        description: 'Watch this quick video to learn how to claim instant refills for dropped followers, add funds, and chat with 24/7 VIP support.'
+      };
+    }
+
     // Initialize Maintenance Mode Config
     try {
       const savedMaint = localStorage.getItem('likex_maintenance_mode');
@@ -491,6 +537,43 @@ class SmmStateStore {
 
     this.notify();
     this.showToast(`✅ Meta Pixel ID (${this.data.pixelSettings.pixelId}) updated & synced!`, 'success');
+  }
+
+  updateRecommendedFollowers(config) {
+    this.data.recommendedFollowers = {
+      enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
+      title: String(config.title || '💎 Best Non-Drop Instagram Followers [Tested & Verified]').trim(),
+      notice: String(config.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:').trim(),
+      serviceIds: String(config.serviceIds || '2868, 10323, 6435, 10349').trim(),
+      badgeText: String(config.badgeText || '🔥 100% Non-Drop VIP').trim()
+    };
+    try {
+      localStorage.setItem('likex_recommended_followers_config', JSON.stringify(this.data.recommendedFollowers));
+    } catch (e) {}
+
+    // Cloud sync to Supabase (instantly updates across all mobile and PC devices)
+    this.saveCloudConfig({ recommended_followers: this.data.recommendedFollowers });
+
+    this.notify();
+    this.showToast('✅ Recommended Instagram Followers notice updated & synced!', 'success');
+  }
+
+  updateSupportVideo(config) {
+    this.data.supportVideo = {
+      enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
+      videoUrl: String(config.videoUrl || '').trim(),
+      title: String(config.title || '🎬 Video Guide: How to Get 24/7 Instant Support & Fast Refill').trim(),
+      description: String(config.description || 'Watch this quick video to learn how to claim instant refills for dropped followers, add funds, and chat with 24/7 VIP support.').trim()
+    };
+    try {
+      localStorage.setItem('likex_support_video_config', JSON.stringify(this.data.supportVideo));
+    } catch (e) {}
+
+    // Cloud sync to Supabase (instantly updates across all mobile and PC devices)
+    this.saveCloudConfig({ support_video: this.data.supportVideo });
+
+    this.notify();
+    this.showToast('✅ Support Video settings updated & synced across all devices!', 'success');
   }
 
   saveCatalogCustomizations() {
@@ -930,6 +1013,20 @@ class SmmStateStore {
             };
             try { localStorage.setItem('likex_maintenance_mode', JSON.stringify(this.data.maintenanceMode)); } catch(e){}
             changed = true;
+          } else if (item.key === 'recommended_followers' && item.value) {
+            this.data.recommendedFollowers = {
+              ...this.data.recommendedFollowers,
+              ...item.value
+            };
+            try { localStorage.setItem('likex_recommended_followers_config', JSON.stringify(this.data.recommendedFollowers)); } catch(e){}
+            changed = true;
+          } else if (item.key === 'support_video' && item.value) {
+            this.data.supportVideo = {
+              ...this.data.supportVideo,
+              ...item.value
+            };
+            try { localStorage.setItem('likex_support_video_config', JSON.stringify(this.data.supportVideo)); } catch(e){}
+            changed = true;
           } else if (item.key === 'claimed_utrs' && typeof item.value === 'object') {
             this.data.claimedUtrs = {
               ...this.data.claimedUtrs,
@@ -1005,6 +1102,22 @@ class SmmStateStore {
               ...parsed.announcement_config
             };
             try { localStorage.setItem('likex_announcement_config', JSON.stringify(this.data.announcement)); } catch(e){}
+            changed = true;
+          }
+          if (parsed.recommended_followers) {
+            this.data.recommendedFollowers = {
+              ...this.data.recommendedFollowers,
+              ...parsed.recommended_followers
+            };
+            try { localStorage.setItem('likex_recommended_followers_config', JSON.stringify(this.data.recommendedFollowers)); } catch(e){}
+            changed = true;
+          }
+          if (parsed.support_video) {
+            this.data.supportVideo = {
+              ...this.data.supportVideo,
+              ...parsed.support_video
+            };
+            try { localStorage.setItem('likex_support_video_config', JSON.stringify(this.data.supportVideo)); } catch(e){}
             changed = true;
           }
         } catch (e) {}

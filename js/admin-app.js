@@ -9,12 +9,14 @@ window.sha256Hex = sha256Hex;
 
 const AdminApp = {
   isAdminAuthenticated() {
-    return sessionStorage.getItem('likex_super_admin_auth') === 'true';
+    return sessionStorage.getItem('likex_super_admin_auth') === 'true' || localStorage.getItem('likex_super_admin_auth') === 'true';
   },
 
   logoutAdmin() {
     sessionStorage.removeItem('likex_super_admin_auth');
     sessionStorage.removeItem('likex_super_admin_user');
+    localStorage.removeItem('likex_super_admin_auth');
+    localStorage.removeItem('likex_super_admin_user');
     window.store.showToast('Super Admin session locked.', 'info');
     window.navigateToRoute('/');
   },
@@ -67,6 +69,8 @@ const AdminApp = {
       // Success! Unlocking Super Admin Console
       sessionStorage.setItem('likex_super_admin_auth', 'true');
       sessionStorage.setItem('likex_super_admin_user', adminRow.username || 'super_admin');
+      localStorage.setItem('likex_super_admin_auth', 'true');
+      localStorage.setItem('likex_super_admin_user', adminRow.username || 'super_admin');
       window.store.showToast('Super Admin Console Unlocked! 🛡️', 'success');
       this.render(document.getElementById('screen-container'));
     } catch (err) {
@@ -1529,6 +1533,130 @@ const AdminApp = {
           💾 Save Maintenance Settings
         </button>
       </div>
+
+      <!-- 💎 RECOMMENDED INSTAGRAM FOLLOWERS NOTICE MANAGER -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 2px solid ${store.data.recommendedFollowers?.enabled !== false ? '#8B5CF6' : 'var(--border-color)'}; background: ${store.data.recommendedFollowers?.enabled !== false ? 'linear-gradient(135deg, rgba(139, 92, 246, 0.06), rgba(99, 102, 241, 0.04))' : 'var(--bg-surface)'}; border-radius: 18px; box-shadow: ${store.data.recommendedFollowers?.enabled !== false ? '0 8px 24px rgba(139, 92, 246, 0.12)' : 'none'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #8B5CF6; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>💎</span> <span>STOREFRONT CONVERSION & TRUST BOOSTER</span>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 3px;">
+              Best Instagram Followers Notice Banner
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; max-width: 680px;">
+              Displays a high-trust recommendation notice card on the Storefront (between "Place New Order" and trust badges). Customers can click any recommended service ID to instantly select it.
+            </p>
+          </div>
+
+          <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 14px; background: ${store.data.recommendedFollowers?.enabled !== false ? '#F3E8FF' : 'var(--bg-subtle)'}; padding: 10px 18px; border-radius: 12px; border: 1.5px solid ${store.data.recommendedFollowers?.enabled !== false ? '#8B5CF6' : 'var(--border-color)'}; transition: all 0.2s;">
+            <input type="checkbox" id="admin-rec-followers-toggle" ${store.data.recommendedFollowers?.enabled !== false ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;" />
+            <span style="color: ${store.data.recommendedFollowers?.enabled !== false ? '#6B21A8' : 'var(--text-main)'};">
+              ${store.data.recommendedFollowers?.enabled !== false ? '✅ Notice is ACTIVE on Storefront' : '⏸️ Notice is HIDDEN'}
+            </span>
+          </label>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Banner Headline / Title</label>
+            <input type="text" id="admin-rec-followers-title" class="form-input" value="${(store.data.recommendedFollowers?.title || '💎 Best Non-Drop Instagram Followers [Tested & Verified]').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Top Badge Label</label>
+            <input type="text" id="admin-rec-followers-badge" class="form-input" value="${(store.data.recommendedFollowers?.badgeText || '🔥 100% Non-Drop VIP').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px; margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Recommended Service IDs (Comma-separated, e.g. 2868, 10323, 6435, 10349)</label>
+          <input type="text" id="admin-rec-followers-ids" class="form-input" value="${(store.data.recommendedFollowers?.serviceIds || '2868, 10323, 6435, 10349').replace(/"/g, '&quot;')}" placeholder="e.g. 2868, 10323, 6435, 10349" style="height: 44px; border-radius: 10px; font-weight: 800; color: #6D28D9;" />
+          <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 4px;">
+            Tip: These service IDs appear as clickable quick-chips on the Storefront. Clicking an ID automatically selects it for the customer!
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 14px; margin-bottom: 16px;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Notice Message / Trust Guarantee</label>
+          <textarea id="admin-rec-followers-notice" class="form-input" rows="2" style="width: 100%; border-radius: 10px; padding: 10px; font-size: 13px;">${store.data.recommendedFollowers?.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:'}</textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="AdminApp.saveRecommendedFollowersSettings()" style="font-weight: 800; padding: 10px 24px; border-radius: 12px; background: linear-gradient(135deg, #8B5CF6, #6366F1);">
+          💾 Save Recommended Followers Notice
+        </button>
+      </div>
+
+      <!-- 🎥 SUPPORT TAB YOUTUBE VIDEO TUTORIAL MANAGER -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 2px solid ${store.data.supportVideo?.enabled ? '#10B981' : 'var(--border-color)'}; background: ${store.data.supportVideo?.enabled ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(6, 182, 212, 0.04))' : 'var(--bg-surface)'}; border-radius: 18px; box-shadow: ${store.data.supportVideo?.enabled ? '0 8px 24px rgba(16, 185, 129, 0.12)' : 'none'};">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #059669; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>🎬</span> <span>CUSTOMER EDUCATION & GUIDE</span>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 3px;">
+              Support Tab YouTube Video Tutorial
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 3px; max-width: 680px;">
+              Manage the video guide embedded on the customer Support tab. You can update the YouTube URL anytime or toggle it OFF to completely hide the section from customers.
+            </p>
+          </div>
+
+          <label style="display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 14px; background: ${store.data.supportVideo?.enabled ? '#D1FAE5' : 'var(--bg-subtle)'}; padding: 10px 18px; border-radius: 12px; border: 1.5px solid ${store.data.supportVideo?.enabled ? '#10B981' : 'var(--border-color)'}; transition: all 0.2s;">
+            <input type="checkbox" id="admin-support-video-toggle" ${store.data.supportVideo?.enabled ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;" />
+            <span style="color: ${store.data.supportVideo?.enabled ? '#047857' : 'var(--text-main)'};">
+              ${store.data.supportVideo?.enabled ? '✅ Video Section is VISIBLE' : '⏸️ Video Section is HIDDEN'}
+            </span>
+          </label>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">YouTube Video URL or Video ID</label>
+          <input type="text" id="admin-support-video-url" class="form-input" value="${(store.data.supportVideo?.videoUrl || '').replace(/"/g, '&quot;')}" placeholder="e.g. https://www.youtube.com/watch?v=... or https://youtu.be/..." oninput="AdminApp.previewSupportVideoUrl(this.value)" style="height: 44px; border-radius: 10px; font-weight: 600;" />
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Video Heading / Title</label>
+            <input type="text" id="admin-support-video-title" class="form-input" value="${(store.data.supportVideo?.title || '🎬 Video Guide: How to Get 24/7 Instant Support & Fast Refill').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px; font-weight: 700;" />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Video Description / Subtitle</label>
+            <input type="text" id="admin-support-video-desc" class="form-input" value="${(store.data.supportVideo?.description || 'Watch this quick video to learn how to claim instant refills for dropped followers, add funds, and chat with 24/7 VIP support.').replace(/"/g, '&quot;')}" style="height: 44px; border-radius: 10px;" />
+          </div>
+        </div>
+
+        <!-- Live Video Preview Player Container -->
+        <div style="margin-top: 16px; border-radius: 14px; overflow: hidden; background: #0F172A; border: 1px solid var(--border-color); max-width: 480px;">
+          <div style="padding: 8px 14px; background: rgba(255,255,255,0.06); font-size: 11.5px; font-weight: 700; color: #94A3B8; display: flex; align-items: center; gap: 6px;">
+            <span>📺 Live Player Preview:</span>
+          </div>
+          <div id="admin-support-video-preview-box">
+            ${(() => {
+              const embed = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(store.data.supportVideo?.videoUrl || '') : '';
+              if (embed) {
+                return `
+                  <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+                    <iframe src="${embed}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allowfullscreen></iframe>
+                  </div>
+                `;
+              }
+              return `
+                <div style="padding: 32px 20px; text-align: center; color: #94A3B8;">
+                  <div style="font-size: 32px; margin-bottom: 4px;">🎥</div>
+                  <div style="font-weight: 700;">No Video URL set yet</div>
+                  <div style="font-size: 12px; margin-top: 2px;">Paste a YouTube link above to see the live preview.</div>
+                </div>
+              `;
+            })()}
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="AdminApp.saveSupportVideoSettings()" style="margin-top: 16px; font-weight: 800; padding: 10px 24px; border-radius: 12px; background: linear-gradient(135deg, #10B981, #059669);">
+          💾 Save Support Video Settings
+        </button>
+      </div>
     `;
   },
 
@@ -1647,6 +1775,66 @@ const AdminApp = {
     };
 
     window.store.saveAlertConfig(config);
+  },
+
+  saveRecommendedFollowersSettings() {
+    const toggleEl = document.getElementById('admin-rec-followers-toggle');
+    const titleEl = document.getElementById('admin-rec-followers-title');
+    const noticeEl = document.getElementById('admin-rec-followers-notice');
+    const idsEl = document.getElementById('admin-rec-followers-ids');
+    const badgeEl = document.getElementById('admin-rec-followers-badge');
+
+    const config = {
+      enabled: toggleEl ? toggleEl.checked : true,
+      title: titleEl ? titleEl.value.trim() : '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
+      notice: noticeEl ? noticeEl.value.trim() : '',
+      serviceIds: idsEl ? idsEl.value.trim() : '2868, 10323, 6435, 10349',
+      badgeText: badgeEl ? badgeEl.value.trim() : '🔥 100% Non-Drop VIP'
+    };
+
+    window.store.updateRecommendedFollowers(config);
+  },
+
+  previewSupportVideoUrl(val) {
+    const store = window.store;
+    const box = document.getElementById('admin-support-video-preview-box');
+    if (!box) return;
+    const embed = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(val) : '';
+    if (embed) {
+      box.innerHTML = `
+        <div style="position: relative; padding-bottom: 56.25%; height: 0;">
+          <iframe 
+            src="${embed}" 
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+            allowfullscreen
+          ></iframe>
+        </div>
+      `;
+    } else {
+      box.innerHTML = `
+        <div style="padding: 32px 20px; text-align: center; color: #94A3B8;">
+          <div style="font-size: 32px; margin-bottom: 4px;">🎥</div>
+          <div style="font-weight: 700;">No Video URL set yet</div>
+          <div style="font-size: 12px; margin-top: 2px;">Paste a YouTube link above to see the live preview.</div>
+        </div>
+      `;
+    }
+  },
+
+  saveSupportVideoSettings() {
+    const urlInput = document.getElementById('admin-support-video-url');
+    const titleInput = document.getElementById('admin-support-video-title');
+    const descInput = document.getElementById('admin-support-video-desc');
+    const toggleEl = document.getElementById('admin-support-video-toggle');
+
+    const config = {
+      videoUrl: urlInput ? urlInput.value.trim() : '',
+      title: titleInput ? titleInput.value.trim() : '🎬 Video Guide: How to Get 24/7 Instant Support & Fast Refill',
+      description: descInput ? descInput.value.trim() : '',
+      enabled: toggleEl ? toggleEl.checked : true
+    };
+
+    window.store.updateSupportVideo(config);
   },
 
   savePixelSettings() {

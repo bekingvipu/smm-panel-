@@ -87,6 +87,8 @@ const CustomerApp = {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
 
+    if (!modal || !sheet) return;
+
     sheet.innerHTML = `
       <div class="modal-header">
         <h3 class="modal-title">🔐 Admin Master Unlock</h3>
@@ -94,19 +96,19 @@ const CustomerApp = {
       </div>
       <form onsubmit="CustomerApp.handleAdminUnlock(event)" style="display: flex; flex-direction: column; gap: 14px; padding: 4px 0;">
         <p style="font-size: 13px; color: var(--text-secondary); margin: 0; line-height: 1.4;">
-          Enter your Master Admin Password to bypass Maintenance Mode and access the Admin Console & Storefront preview.
+          Enter your Master Admin Password to bypass Maintenance Mode and access the live Storefront preview & Admin Console.
         </p>
         <div id="admin-unlock-error" style="display: none; background: var(--error-light); border: 1px solid var(--error); color: var(--error); padding: 10px 14px; border-radius: 10px; font-size: 13px;"></div>
         <div class="form-group" style="margin-bottom: 0;">
           <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Master Admin Password</label>
-          <input type="password" id="admin-unlock-password" class="form-input" placeholder="Enter admin master password" required style="height: 46px; border-radius: 12px; font-size: 14px;" />
+          <input type="password" id="admin-unlock-password" class="form-input" placeholder="Enter admin master password" required autofocus style="height: 46px; border-radius: 12px; font-size: 14px;" />
         </div>
         <button type="submit" class="btn btn-primary btn-block btn-lg" id="btn-admin-unlock" style="margin-top: 4px; border-radius: 12px; font-weight: 800; background: linear-gradient(135deg, #6366F1, #8B5CF6); height: 48px;">
           Unlock Access 🚀
         </button>
       </form>
     `;
-    CustomerApp.openModal();
+    this.openModal();
   },
 
   async handleAdminUnlock(e) {
@@ -121,7 +123,7 @@ const CustomerApp = {
     if (errBox) errBox.style.display = 'none';
 
     try {
-      if (!window.supabaseClient) throw new Error('Database connection error');
+      if (!window.supabaseClient) throw new Error('Database connection error. Please refresh.');
       const hash = await sha256Hex(pass);
       const { data, error } = await window.supabaseClient.from('users').select('password_hash, username').eq('role', 'admin').limit(1);
       if (error || !data || data.length === 0) throw new Error('Admin account verification failed');
@@ -132,9 +134,11 @@ const CustomerApp = {
 
       sessionStorage.setItem('likex_super_admin_auth', 'true');
       sessionStorage.setItem('likex_super_admin_user', data[0].username || 'super_admin');
-      CustomerApp.closeModal();
-      window.store.showToast('Super Admin Access Unlocked! 🛡️', 'success');
-      window.navigateToRoute('/admin');
+      localStorage.setItem('likex_super_admin_auth', 'true');
+      localStorage.setItem('likex_super_admin_user', data[0].username || 'super_admin');
+      this.closeModal();
+      window.store.showToast('Super Admin Access Unlocked! 🛡️ Previewing website...', 'success');
+      this.render(document.getElementById('screen-container'));
     } catch (err) {
       if (errBox) {
         errBox.textContent = err.message || 'Incorrect Password';
@@ -152,12 +156,27 @@ const CustomerApp = {
 
     // Check Maintenance Mode (bypassed if super admin is authenticated)
     const isMaintenanceOn = store.data.maintenanceMode?.enabled;
-    const isAdminAuth = sessionStorage.getItem('likex_super_admin_auth') === 'true';
+    const isAdminAuth = sessionStorage.getItem('likex_super_admin_auth') === 'true' || localStorage.getItem('likex_super_admin_auth') === 'true';
 
     if (isMaintenanceOn && !isAdminAuth) {
       container.innerHTML = this.renderMaintenanceScreen(store);
       return;
     }
+
+    const adminPreviewBannerHtml = (isMaintenanceOn && isAdminAuth) ? `
+      <div class="admin-storefront-preview-bar">
+        <div class="admin-preview-content">
+          <div class="admin-preview-text">
+            <span class="preview-pulse-dot"></span>
+            <span><strong>Maintenance Active for Visitors</strong> • You are previewing as Admin</span>
+          </div>
+          <div class="admin-preview-actions">
+            <button type="button" class="btn-preview-action" onclick="window.navigateToRoute('/admin')">⚙️ Admin Console</button>
+            <button type="button" class="btn-preview-action btn-preview-lock" onclick="CustomerApp.lockAdminPreview()">🔒 Lock</button>
+          </div>
+        </div>
+      </div>
+    ` : '';
 
     let contentHtml = '';
     if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
@@ -169,6 +188,7 @@ const CustomerApp = {
     else contentHtml = this.renderNewOrderTab(store);
 
     container.innerHTML = `
+      ${adminPreviewBannerHtml}
       <!-- Desktop Header (Screens >= 768px) -->
       <nav class="desktop-navbar">
         <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')" title="LikeX Home">
@@ -928,6 +948,7 @@ const CustomerApp = {
       const bLower = b.toLowerCase();
       const getPriority = (str) => {
         if (str.includes('likex special') || str.includes('special very good') || str.includes('special')) return -2;
+        if (str.includes('emergency')) return -1;
         if (str.includes('cheapest') && str.includes('selling')) return 0;
         if (str.includes('newly arrived')) return 1;
         if (str.includes('indian followers')) return 2;
@@ -1020,6 +1041,56 @@ const CustomerApp = {
             Instant automated delivery across wholesale global servers.
           </p>
         </div>
+
+        <!-- 💎 Recommended Best Instagram Followers Notice Banner (Admin Controlled) -->
+        ${(() => {
+          const rec = store.data.recommendedFollowers || {};
+          if (rec.enabled === false) return '';
+
+          const rawIds = (rec.serviceIds || '2868, 10323, 6435, 10349')
+            .split(/[\s,]+/)
+            .map(s => s.trim().replace('#', ''))
+            .filter(Boolean);
+
+          if (rawIds.length === 0) return '';
+
+          return `
+            <div class="recommended-services-banner">
+              <div class="rec-banner-top-row">
+                <span class="rec-banner-badge">
+                  <span>${rec.badgeText || '🔥 100% Non-Drop VIP'}</span>
+                </span>
+                <span class="rec-banner-quick-hint">⚡ Click ID to Quick Select</span>
+              </div>
+              
+              <h3 class="rec-banner-title">
+                ${rec.title || '💎 Best Non-Drop Instagram Followers [Tested & Verified]'}
+              </h3>
+              
+              <p class="rec-banner-notice">
+                ${rec.notice || 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:'}
+              </p>
+
+              <div class="rec-services-chips-grid">
+                ${rawIds.map(id => {
+                  const sMatch = rawServices.find(s => String(s.id) === String(id) || String(s.rawId) === String(id));
+                  let shortName = sMatch ? sMatch.name : `Service #${id}`;
+                  if (shortName.length > 34) shortName = shortName.substring(0, 34) + '...';
+                  const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1) : null;
+                  const rateStr = rateNum ? `≈ ${store.formatMoney(rateNum)}/1K` : '';
+                  return `
+                    <button type="button" class="rec-service-chip" onclick="CustomerApp.selectRecommendedService('${id}')" title="Click to auto-select #${id}">
+                      <span class="chip-id">#${id}</span>
+                      <span class="chip-name">${shortName}</span>
+                      ${rateStr ? `<span class="chip-rate">${rateStr}</span>` : ''}
+                      <span class="chip-arrow">→</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        })()}
 
         <!-- Trust Micro-Badges Row -->
         <div class="order-trust-badges-row">
@@ -3094,6 +3165,40 @@ const CustomerApp = {
           </div>
         </div>
 
+        <!-- 🎥 YouTube Support Tutorial Video (Admin Manageable) -->
+        ${(() => {
+          const supVid = store.data.supportVideo || {};
+          if (!supVid.enabled || !supVid.videoUrl) return '';
+          const embedUrl = store.extractYouTubeEmbedUrl ? store.extractYouTubeEmbedUrl(supVid.videoUrl) : '';
+          if (!embedUrl) return '';
+
+          return `
+            <div class="card" style="padding: 16px; border-radius: 18px; border: 1.5px solid rgba(99, 102, 241, 0.25); background: var(--bg-surface); box-shadow: var(--shadow-xs); margin-bottom: 2px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px;">
+                <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.3); color: #4F46E5; font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px;">
+                  <span>🎬</span>
+                  <span>SUPPORT VIDEO GUIDE</span>
+                </div>
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Tutorial</span>
+              </div>
+              <h3 style="font-size: 15px; font-weight: 800; color: var(--text-main); margin: 0 0 4px;">
+                ${supVid.title || '🎬 Video Guide: How to Get 24/7 Instant Support & Fast Refill'}
+              </h3>
+              <p style="font-size: 12px; color: var(--text-secondary); margin: 0 0 12px; line-height: 1.4;">
+                ${supVid.description || 'Watch this quick video to learn how to claim instant refills for dropped followers, add funds, and chat with 24/7 VIP support.'}
+              </p>
+              <div style="position: relative; padding-bottom: 56.25%; height: 0; border-radius: 14px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.12); background: #000;">
+                <iframe 
+                  src="${embedUrl}" 
+                  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" 
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                  allowfullscreen
+                ></iframe>
+              </div>
+            </div>
+          `;
+        })()}
+
         <!-- Compact Action Cards List -->
         <div style="display: flex; flex-direction: column; gap: 10px;">
           
@@ -4262,9 +4367,59 @@ const CustomerApp = {
     modal.classList.add('active');
   },
 
+  openModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    if (modal) modal.classList.add('active');
+  },
+
   closeModal() {
     const modal = document.getElementById('generic-modal-backdrop');
     if (modal) modal.classList.remove('active');
+  },
+
+  lockAdminPreview() {
+    sessionStorage.removeItem('likex_super_admin_auth');
+    sessionStorage.removeItem('likex_super_admin_user');
+    localStorage.removeItem('likex_super_admin_auth');
+    localStorage.removeItem('likex_super_admin_user');
+    window.store.showToast('Admin preview locked. Maintenance screen active.', 'info');
+    this.render(document.getElementById('screen-container'));
+  },
+
+  selectRecommendedService(serviceId) {
+    const rawServices = (window.store && window.store.getActiveServices ? window.store.getActiveServices() : window.mockServices) || [];
+    const cleanTargetId = String(serviceId).trim().replace('#', '');
+    const found = rawServices.find(s => 
+      String(s.id) === cleanTargetId || 
+      String(s.rawId) === cleanTargetId ||
+      String(s.id).includes(cleanTargetId)
+    );
+
+    if (found) {
+      this.currentPlatform = found.platform || 'instagram';
+      this.currentCategory = found.category;
+      this.searchQuery = '';
+      this.render(document.getElementById('screen-container'));
+      setTimeout(() => {
+        const serviceSelect = document.getElementById('new-order-service-select');
+        if (serviceSelect) {
+          serviceSelect.value = found.id;
+          serviceSelect.dispatchEvent(new Event('change'));
+        }
+        const card = document.getElementById('custom-service-trigger-card');
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 80);
+      window.store.showToast(`Selected Service #${cleanTargetId} 🚀`, 'success');
+    } else {
+      this.handleSearch(cleanTargetId);
+      const searchInput = document.getElementById('service-search-input');
+      if (searchInput) {
+        searchInput.value = cleanTargetId;
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   }
 };
 
