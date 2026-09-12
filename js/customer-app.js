@@ -1988,8 +1988,8 @@ const CustomerApp = {
     const amountInput = document.getElementById('add-funds-amount-input');
     const amount = Number(amountInput ? amountInput.value : 0);
 
-    if (!amount || amount < 50) {
-      window.store.showToast('Minimum deposit amount is ₹50', 'error');
+    if (!amount || amount < 1) {
+      window.store.showToast('Please enter a valid deposit amount (min ₹1)', 'error');
       if (amountInput) amountInput.focus();
       return;
     }
@@ -3126,33 +3126,32 @@ const CustomerApp = {
             <span style="font-weight: 800; color: #10B981; font-size: 11.5px; background: rgba(16, 185, 129, 0.15); padding: 3px 10px; border-radius: 999px; letter-spacing: 0.3px;">ACTIVE</span>
           </div>
 
-          <!-- Quick Preset Pills (Min ₹50) with Horizontal Touch Slider -->
+          <!-- Quick Preset Pills (Starting from ₹250) with Horizontal Touch Slider -->
           <div style="width: 100%; text-align: left;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
               <label class="form-label" style="font-weight: 800; font-size: 13px; margin: 0;">
-                <span>Choose or Enter Deposit Amount (Min ₹50)</span>
+                <span>Choose or Enter Deposit Amount</span>
               </label>
               <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Swipe for more →</span>
             </div>
 
             <!-- Horizontal Scrollable Preset Slider -->
             <div class="deposit-presets-slider" style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-              <button type="button" class="btn btn-sm preset-pill" data-val="50" onclick="CustomerApp.setDepositAmount(50)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹50</button>
-              <button type="button" class="btn btn-sm preset-pill active" data-val="100" onclick="CustomerApp.setDepositAmount(100)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--primary); color: #ffffff; border: 1px solid var(--primary);">₹100</button>
-              <button type="button" class="btn btn-sm preset-pill" data-val="250" onclick="CustomerApp.setDepositAmount(250)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹250</button>
+              <button type="button" class="btn btn-sm preset-pill active" data-val="250" onclick="CustomerApp.setDepositAmount(250)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--primary); color: #ffffff; border: 1px solid var(--primary);">₹250</button>
               <button type="button" class="btn btn-sm preset-pill" data-val="500" onclick="CustomerApp.setDepositAmount(500)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹500</button>
               <button type="button" class="btn btn-sm preset-pill" data-val="1000" onclick="CustomerApp.setDepositAmount(1000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹1,000</button>
               <button type="button" class="btn btn-sm preset-pill" data-val="2500" onclick="CustomerApp.setDepositAmount(2500)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹2,500</button>
               <button type="button" class="btn btn-sm preset-pill" data-val="5000" onclick="CustomerApp.setDepositAmount(5000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹5,000</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="10000" onclick="CustomerApp.setDepositAmount(10000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹10,000</button>
             </div>
 
             <div class="form-group" style="margin-bottom: 16px;">
-              <input type="number" class="form-input" id="add-funds-amount-input" value="100" min="50" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (min 50)" oninput="CustomerApp.onDepositAmountInput(event)" />
+              <input type="number" class="form-input" id="add-funds-amount-input" value="250" min="1" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (e.g. 250)" oninput="CustomerApp.onDepositAmountInput(event)" />
             </div>
 
             <!-- Instant Dynamic QR Action Button (High Converting) -->
             <button class="btn btn-primary btn-block btn-lg btn-refraction" id="btn-create-deposit" onclick="CustomerApp.handleDynamicDeposit()" style="height: 54px; font-size: 15.5px; border-radius: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 8px 24px rgba(108, 92, 231, 0.35);">
-              <span>Add ₹<span id="display-deposit-amount">100</span> to Wallet • Instant Credit →</span>
+              <span>Add ₹<span id="display-deposit-amount">250</span> to Wallet • Instant Credit →</span>
             </button>
           </div>
 

@@ -30,8 +30,8 @@ export default async function handler(req, res) {
   const userEmail = String(body.email || 'customer@likex.in').trim().toLowerCase();
   const userId = Number(body.userId || 1);
 
-  if (!amountNum || amountNum < 10) {
-    return res.status(400).json({ error: 'Minimum deposit amount is ₹10.' });
+  if (!amountNum || amountNum < 1) {
+    return res.status(400).json({ error: 'Minimum deposit amount is ₹1.' });
   }
 
   if (amountNum > 100000) {
