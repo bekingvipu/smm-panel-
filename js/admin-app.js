@@ -2536,7 +2536,7 @@ const AdminApp = {
 
   getOrderServiceId(order) {
     if (!order) return 'N/A';
-    if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '' && String(order.rawServiceId) !== '2868') {
+    if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '') {
       return String(order.rawServiceId).replace(/^wos-/, '').replace(/^jap-/, '');
     }
     // Check in customerServices catalog
@@ -2549,13 +2549,10 @@ const AdminApp = {
     if (japSvc) {
       return String(japSvc.rawId || japSvc.id).replace(/^wos-/, '').replace(/^jap-/, '');
     }
-    if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined' && String(order.serviceId).trim() !== '' && String(order.serviceId) !== 'wos-2868') {
+    if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined') {
       return String(order.serviceId).replace(/^wos-/, '').replace(/^jap-/, '');
     }
-    if (order.rawServiceId && String(order.rawServiceId).trim() !== '') {
-      return String(order.rawServiceId).replace(/^wos-/, '').replace(/^jap-/, '');
-    }
-    return 'N/A';
+    return '2868';
   },
 
   handleAdminOrdersSearch(val) {
@@ -2568,7 +2565,7 @@ const AdminApp = {
     this.updateAdminOrdersTableView();
   },
 
-  async handleAdminRefund(orderId) {
+  handleAdminRefund(orderId) {
     const store = window.store;
     if (!store) return;
     const allOrders = store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders;
@@ -2578,49 +2575,13 @@ const AdminApp = {
       return;
     }
 
-    if (String(order.status).toLowerCase() === 'refunded') {
-      alert(`Order #${orderId} has already been refunded to the customer.`);
-      return;
-    }
-
-    const isPartial = String(order.status).toLowerCase() === 'partial';
-    const totalPaid = Number(order.amount) || Number(order.charge) || 0;
-    const totalQty = Number(order.quantity) || 1000;
-    const remainsQty = (order.remains !== undefined && order.remains !== null) ? Number(order.remains) : totalQty;
-    const deliveredQty = Math.max(0, totalQty - remainsQty);
-
-    let refundAmount = totalPaid;
-    let message = '';
+    const exactAmount = Number(order.amount) || Number(order.charge) || 0;
+    const formattedAmount = store.formatMoney(exactAmount);
     const custEmail = order.userEmail || order.customerEmail || 'Customer';
 
-    if (isPartial && remainsQty < totalQty && totalQty > 0) {
-      refundAmount = Number(((totalPaid / totalQty) * remainsQty).toFixed(4));
-      const formattedRefund = store.formatMoney(refundAmount);
-      const formattedPaid = store.formatMoney(totalPaid);
-      message = `⚡ PARTIAL ORDER PROPORTIONAL REFUND (Order #${order.id})\n\n` +
-        `• Customer: ${custEmail}\n` +
-        `• Total Paid: ${formattedPaid} (${totalQty.toLocaleString()} Qty)\n` +
-        `• Delivered: ${deliveredQty.toLocaleString()} Qty\n` +
-        `• Undelivered Remains: ${remainsQty.toLocaleString()} Qty\n\n` +
-        `Customer ko bache huye ${remainsQty.toLocaleString()} units ka proportionate refund ${formattedRefund} LikeX wallet me bhejna hai?\n\n(Aapka profit deliver huye units par surakshit rahega!)`;
-    } else {
-      const formattedRefund = store.formatMoney(totalPaid);
-      message = `💸 QUEUED / UNFULFILLED ORDER REFUND (Order #${order.id})\n\n` +
-        `Are you sure you want to refund ${formattedRefund} to customer (${custEmail})?\n\n` +
-        `This will credit ${formattedRefund} back to the customer's LikeX wallet.`;
-    }
-
-    const confirmed = confirm(message);
+    const confirmed = confirm(`Are you sure you want to refund ${formattedAmount} to customer (${custEmail}) for Order #${order.id}?\n\nThis will add exactly ${formattedAmount} back to the customer's LikeX wallet balance.`);
     if (confirmed) {
-      // Find button and immediately disable to prevent duplicate clicks
-      const btn = document.querySelector(`button[onclick*="handleAdminRefund('${orderId}')"]`);
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '⏳ Processing...';
-        btn.style.opacity = '0.5';
-        btn.style.pointerEvents = 'none';
-      }
-      await store.adminRefundOrder(orderId, isPartial ? `Partial refund for ${remainsQty.toLocaleString()} undelivered units` : 'Refunded by Admin from Master Orders Table');
+      store.adminRefundOrder(orderId, 'Refunded by Admin from Master Orders Table');
       this.updateAdminOrdersTableView();
     }
   },
@@ -2654,10 +2615,7 @@ const AdminApp = {
       if (filter === 'partial') {
         filtered = filtered.filter(o => {
           const st = (o.status || '').toLowerCase();
-          const is5to6Digit = String(o.id).length >= 4 && String(o.id).length <= 6;
-          const isProviderPartial = st === 'partial';
-          const isQueued = st === 'queued' || st === 'pending' || o.isQueued || o.isLowBalance;
-          return (isProviderPartial || isQueued || is5to6Digit) && st !== 'completed' && st !== 'refunded';
+          return st === 'partial' || st === 'queued' || st === 'pending' || o.isQueued || o.isLowBalance || (String(o.id).length <= 5 && st !== 'completed' && st !== 'refunded');
         });
       } else if (filter === 'refunded') {
         filtered = filtered.filter(o => {
@@ -2750,28 +2708,20 @@ const AdminApp = {
       const dateStr = o.date || (o.createdAt ? store.formatRealDate(o.createdAt) : 'Recently');
       const relativeBadge = store.formatOrderDisplayDate ? store.formatOrderDisplayDate(o) : '';
 
-      let svcDisplayName = (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined') && o.serviceName !== 'Instagram HQ Followers / Likes / Views [Instant]') ? o.serviceName : '';
+      let svcDisplayName = (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : '';
       if (!svcDisplayName || svcDisplayName.startsWith('Service #')) {
         const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
         const matched = activeServices.find(s => String(s.id) === String(o.serviceId) || String(s.rawId) === String(o.serviceId) || String(s.rawId) === String(svcId));
         if (matched) {
           svcDisplayName = matched.customerName || matched.name;
-        } else if (o.serviceName && o.serviceName !== 'Instagram HQ Followers / Likes / Views [Instant]') {
-          svcDisplayName = o.serviceName;
         } else {
           const targetLower = String(o.target || '').toLowerCase();
-          const qty = Number(o.quantity) || 1000;
-          const chg = Number(o.amount || o.charge) || 0;
           if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-            if (qty >= 10000 && chg <= 50) svcDisplayName = 'Instagram Views [High Speed HQ]';
-            else if (chg >= 50) svcDisplayName = 'Instagram Followers [Refill Guarantee]';
-            else svcDisplayName = 'Instagram Growth Service';
+            svcDisplayName = 'Instagram HQ Followers / Likes / Views [Instant]';
           } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
             svcDisplayName = 'YouTube Video Views & Engagement [HQ]';
-          } else if (targetLower.includes('tiktok.com')) {
-            svcDisplayName = 'TikTok Growth Package [Instant Start]';
           } else {
-            svcDisplayName = (svcId && svcId !== 'N/A' && svcId !== '2868') ? `Social Growth Service #${svcId}` : 'Social Growth Package';
+            svcDisplayName = `Social Growth Service #${svcId}`;
           }
         }
       }
@@ -2902,7 +2852,7 @@ const AdminApp = {
                   💸 Refund
                 </button>
               </div>
-            ` : (String(o.status).toLowerCase() === 'queued' || o.isQueued || (String(o.id).length <= 6 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && String(o.status).toLowerCase() !== 'partial' && !String(o.status).toLowerCase().includes('progress'))) ? `
+            ` : (String(o.status).toLowerCase() === 'queued' || o.isQueued || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
               <div style="display: flex; flex-direction: column; gap: 4px;">
                 <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
                   ⚡ Queued (Action Needed)
@@ -2918,16 +2868,9 @@ const AdminApp = {
                 </div>
               </div>
             ` : (String(o.status).toLowerCase() === 'partial') ? `
-              <div style="display: flex; flex-direction: column; gap: 4px;">
-                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
-                  ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
-                </span>
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <button type="button" class="btn btn-xs" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleAdminRefund('${o.id}')" title="Refund remaining amount to customer wallet">
-                    💸 Refund Remains
-                  </button>
-                </div>
-              </div>
+              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800;">
+                ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
+              </span>
             ` : (String(o.status).toLowerCase() === 'completed') ? `
               <span class="badge badge-success" style="font-weight: 800;">Completed</span>
             ` : (String(o.status).toLowerCase() === 'in_progress' || String(o.status).toLowerCase() === 'in progress') ? `
@@ -2960,22 +2903,10 @@ const AdminApp = {
       return;
     }
 
-    const tableWrap = tbody.closest('.table-responsive') || document.querySelector('.admin-orders-table-wrapper') || tbody.parentElement;
-    const prevScrollLeft = tableWrap ? tableWrap.scrollLeft : 0;
-    const prevScrollTop = tableWrap ? tableWrap.scrollTop : 0;
-    const winScrollX = window.scrollX;
-    const winScrollY = window.scrollY;
-
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const filtered = this.getFilteredOrders(store);
 
     tbody.innerHTML = this.renderAdminOrderRows(filtered, store);
-
-    if (tableWrap) {
-      tableWrap.scrollLeft = prevScrollLeft;
-      tableWrap.scrollTop = prevScrollTop;
-    }
-    window.scrollTo(winScrollX, winScrollY);
 
     if (countEl) {
       countEl.innerText = `Showing ${filtered.length} of ${allOrders.length} Orders`;

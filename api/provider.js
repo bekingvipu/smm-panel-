@@ -53,19 +53,19 @@ export default async function handler(req, res) {
     if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-    // 4.5-second timeout for ultra-fast, snappy execution
+    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / JAP) to process and return live order ID
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 4500);
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
 
     let response;
     try {
       response = await fetch(providerConfig.url, {
         method: 'POST',
-        body: formData.toString(),
+        body: formData,
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+          'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
         }
       });
     } finally {
@@ -100,10 +100,8 @@ export default async function handler(req, res) {
         ? parseInt(data.order, 10) 
         : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
 
-      const rawSvcIdStr = paramsObj.service ? String(paramsObj.service).trim() : '';
-      const orderErrorNote = data && data.error 
-        ? `Error: ${String(data.error).slice(0, 25)} | svc:${rawSvcIdStr}`.slice(0, 48)
-        : (rawSvcIdStr ? `svc:${rawSvcIdStr}` : null);
+      const orderStatus = isSuccess ? 'Processing' : 'Queued';
+      const orderErrorNote = data && data.error ? `Error: ${String(data.error).slice(0, 42)}` : null;
 
       fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
         method: 'POST',
@@ -163,14 +161,14 @@ export default async function handler(req, res) {
           assigned_provider_id: requestedProvider === 'jap' ? 1 : 2,
           status: 'Queued',
           remains: Number(paramsObj.quantity) || 1000,
-          refill_status: `Timeout: ${error.message.slice(0, 25)} | svc:${paramsObj.service ? String(paramsObj.service).trim() : ''}`.slice(0, 48),
+          refill_status: `Timeout: ${error.message.slice(0, 40)}`,
           created_at: new Date().toISOString()
         })
       }).catch(() => {});
     }
 
     return res.status(500).json({ 
-      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (4.5s)' : error.message),
+      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (15s)' : error.message),
       provider: requestedProvider 
     });
   }
