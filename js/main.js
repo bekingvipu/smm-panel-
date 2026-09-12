@@ -64,7 +64,11 @@ document.addEventListener('DOMContentLoaded', () => {
       syncRoute();
       if (store.persona === 'admin') {
         document.title = 'Admin Console — LikeX System Management';
-        AdminApp.render(screenContainer);
+        if (!immediate && document.getElementById('admin-orders-table-body') && store.adminTab === 'orders' && window.AdminApp) {
+          AdminApp.updateAdminOrdersTableView();
+        } else {
+          AdminApp.render(screenContainer);
+        }
       } else {
         document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
         CustomerApp.render(screenContainer);

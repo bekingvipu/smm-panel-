@@ -1187,7 +1187,13 @@ class SmmStateStore {
           ? existing.serviceId
           : (o.serviceId && String(o.serviceId) !== 'wos-2868' && String(o.serviceId) !== 'N/A' ? o.serviceId : (existing.serviceId || o.serviceId || 'N/A'));
 
-        const bestStatus = (o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing');
+        const isAnyRefunded = String(existing.status).toLowerCase() === 'refunded' || String(o.status).toLowerCase() === 'refunded';
+        const isAnyCompleted = String(existing.status).toLowerCase() === 'completed' || String(o.status).toLowerCase() === 'completed';
+        const bestStatus = isAnyRefunded 
+          ? 'Refunded' 
+          : (isAnyCompleted 
+              ? 'Completed' 
+              : ((o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing')));
         const bestRemains = (o.remains !== undefined && o.remains !== null) ? o.remains : existing.remains;
         const bestStartCount = (o.startCount !== undefined && o.startCount !== null) ? o.startCount : existing.startCount;
 
@@ -1918,13 +1924,13 @@ class SmmStateStore {
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
-    // Dispatch live order to upstream provider with 15s timeout
+    // Dispatch live order to upstream provider with 4s timeout for fast placement
     let liveOrderId = null;
     let upstreamError = null;
     let isQueued = false;
 
     const abortCtrl = new AbortController();
-    const timeoutTimer = setTimeout(() => abortCtrl.abort(), 15000);
+    const timeoutTimer = setTimeout(() => abortCtrl.abort(), 4000);
 
     try {
       const liveRes = await fetch('/api/provider', {
@@ -1958,7 +1964,7 @@ class SmmStateStore {
       }
     } catch (e) {
       clearTimeout(timeoutTimer);
-      upstreamError = e.name === 'AbortError' ? 'Provider connection timed out' : 'Network communication error';
+      upstreamError = e.name === 'AbortError' ? 'Provider queued (Fast dispatch)' : 'Network communication error';
     }
 
     // QUEUE LOGIC: If provider did not return immediate ID, safely queue
@@ -2112,7 +2118,7 @@ class SmmStateStore {
     return { success: true, orderId: finalOrderId, totalCost };
   }
 
-  // Live Status Synchronization from Upstream Provider
+  // Live Status Synchronization from Upstream Provider (Batch status lookups to prevent rate limiting)
   async syncOrdersStatus(silent = false) {
     const isMasterAdmin = (this.persona === 'admin' || window.location.pathname.includes('admin'));
     const allAdminOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : [];
@@ -2121,100 +2127,122 @@ class SmmStateStore {
 
     let updatedCount = 0;
 
+    // Group active orders by provider
+    const wosMap = new Map();
+    const japMap = new Map();
+
     for (const order of targetOrders) {
       if (order.status === 'Completed' || order.status === 'Canceled' || order.status === 'Refunded') {
         continue;
       }
 
-      // Check if order has a provider order ID (numeric, at least 6 digits, e.g. 59011968)
       const provOrderId = (order.providerOrderId && /^\d{6,}$/.test(order.providerOrderId))
-        ? order.providerOrderId
-        : (/^\d{6,}$/.test(order.id) ? order.id : null);
+        ? String(order.providerOrderId)
+        : (/^\d{6,}$/.test(order.id) ? String(order.id) : null);
 
       if (provOrderId) {
-        try {
-          const targetProvKey = order.provider || (String(provOrderId).startsWith('10') ? 'jap' : 'worldofsmm');
-          const res = await fetch('/api/provider', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              provider: targetProvKey,
-              action: 'status',
-              order: provOrderId
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status) {
-              const rawStat = String(data.status).trim();
-              const sLower = rawStat.toLowerCase();
-              let liveStatus = 'Processing';
-              if (sLower === 'partial') liveStatus = 'Partial';
-              else if (sLower === 'completed') liveStatus = 'Completed';
-              else if (sLower.includes('progress')) liveStatus = 'In Progress';
-              else if (sLower === 'canceled' || sLower === 'cancelled') liveStatus = 'Canceled';
-              else if (sLower === 'pending') liveStatus = 'Pending';
-              else liveStatus = rawStat;
-
-              order.status = liveStatus;
-              if (data.start_count !== undefined && data.start_count !== null) {
-                order.startCount = Number(data.start_count);
-              }
-              if (data.remains !== undefined && data.remains !== null) {
-                order.remains = Number(data.remains);
-              }
-              order.currentCount = (order.startCount || 0) + (order.quantity - (order.remains || 0));
-
-              // 1. Update in likex_master_orders
-              try {
-                const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
-                const mIdx = master.findIndex(m => String(m.id) === String(order.id) || String(m.providerOrderId) === String(provOrderId));
-                if (mIdx !== -1) {
-                  master[mIdx].status = liveStatus;
-                  if (order.remains !== undefined) master[mIdx].remains = order.remains;
-                  if (order.startCount !== undefined) master[mIdx].startCount = order.startCount;
-                  localStorage.setItem('likex_master_orders', JSON.stringify(master));
-                }
-              } catch (e) {}
-
-              // 2. Update in likex_supabase_orders
-              try {
-                const supaList = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
-                const sIdx = supaList.findIndex(s => String(s.id) === String(order.id) || String(s.providerOrderId) === String(provOrderId));
-                if (sIdx !== -1) {
-                  supaList[sIdx].status = liveStatus;
-                  if (order.remains !== undefined) supaList[sIdx].remains = order.remains;
-                  if (order.startCount !== undefined) supaList[sIdx].startCount = order.startCount;
-                  localStorage.setItem('likex_supabase_orders', JSON.stringify(supaList));
-                }
-              } catch (e) {}
-
-              // 3. Permanent update in Supabase PostgreSQL table
-              if (window.supabaseClient) {
-                try {
-                  const dbId = parseInt(order.id, 10);
-                  if (dbId) {
-                    const updateObj = { status: liveStatus };
-                    if (order.remains !== undefined && !isNaN(order.remains)) updateObj.remains = order.remains;
-                    if (order.startCount !== undefined && !isNaN(order.startCount)) updateObj.start_count = order.startCount;
-                    await window.supabaseClient
-                      .from('orders')
-                      .update(updateObj)
-                      .eq('id', dbId);
-                  }
-                } catch (dbErr) {
-                  console.warn('[LikeX Sync] Supabase status update notice:', dbErr);
-                }
-              }
-
-              updatedCount++;
-            }
-          }
-        } catch (e) {
-          console.warn('Status sync error for order', order.id, e);
+        const provKey = order.provider || (provOrderId.startsWith('10') ? 'jap' : 'worldofsmm');
+        if (provKey === 'jap') {
+          japMap.set(provOrderId, order);
+        } else {
+          wosMap.set(provOrderId, order);
         }
       }
     }
+
+    const processBatch = async (provKey, orderMap) => {
+      if (!orderMap || orderMap.size === 0) return;
+      const ids = Array.from(orderMap.keys());
+      try {
+        const res = await fetch('/api/provider', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: provKey,
+            action: 'status',
+            orders: ids.join(',')
+          })
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data || typeof data !== 'object') return;
+
+        for (const [pId, order] of orderMap.entries()) {
+          const item = data[pId] || (ids.length === 1 && data.status ? data : null);
+          if (!item || !item.status) continue;
+
+          const rawStat = String(item.status).trim();
+          const sLower = rawStat.toLowerCase();
+          let liveStatus = 'Processing';
+          if (sLower === 'partial') liveStatus = 'Partial';
+          else if (sLower === 'completed') liveStatus = 'Completed';
+          else if (sLower.includes('progress')) liveStatus = 'In Progress';
+          else if (sLower === 'canceled' || sLower === 'cancelled') liveStatus = 'Canceled';
+          else if (sLower === 'pending') liveStatus = 'Pending';
+          else liveStatus = rawStat;
+
+          order.status = liveStatus;
+          if (item.start_count !== undefined && item.start_count !== null) {
+            order.startCount = Number(item.start_count);
+          }
+          if (item.remains !== undefined && item.remains !== null) {
+            order.remains = Number(item.remains);
+          }
+          order.currentCount = (order.startCount || 0) + (order.quantity - (order.remains || 0));
+
+          // 1. Update in likex_master_orders
+          try {
+            const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
+            const mIdx = master.findIndex(m => String(m.id) === String(order.id) || String(m.providerOrderId) === String(pId));
+            if (mIdx !== -1) {
+              master[mIdx].status = liveStatus;
+              if (order.remains !== undefined) master[mIdx].remains = order.remains;
+              if (order.startCount !== undefined) master[mIdx].startCount = order.startCount;
+              localStorage.setItem('likex_master_orders', JSON.stringify(master));
+            }
+          } catch (e) {}
+
+          // 2. Update in likex_supabase_orders
+          try {
+            const supaList = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
+            const sIdx = supaList.findIndex(s => String(s.id) === String(order.id) || String(s.providerOrderId) === String(pId));
+            if (sIdx !== -1) {
+              supaList[sIdx].status = liveStatus;
+              if (order.remains !== undefined) supaList[sIdx].remains = order.remains;
+              if (order.startCount !== undefined) supaList[sIdx].startCount = order.startCount;
+              localStorage.setItem('likex_supabase_orders', JSON.stringify(supaList));
+            }
+          } catch (e) {}
+
+          // 3. Permanent update in Supabase PostgreSQL table
+          if (window.supabaseClient) {
+            try {
+              const dbId = parseInt(order.id, 10);
+              if (dbId) {
+                const updateObj = { status: liveStatus };
+                if (order.remains !== undefined && !isNaN(order.remains)) updateObj.remains = order.remains;
+                if (order.startCount !== undefined && !isNaN(order.startCount)) updateObj.start_count = order.startCount;
+                window.supabaseClient
+                  .from('orders')
+                  .update(updateObj)
+                  .eq('id', dbId)
+                  .then(() => {})
+                  .catch(() => {});
+              }
+            } catch (dbErr) {}
+          }
+
+          updatedCount++;
+        }
+      } catch (err) {
+        console.warn(`[LikeX Status Sync] Error checking ${provKey}:`, err);
+      }
+    };
+
+    await Promise.allSettled([
+      processBatch('worldofsmm', wosMap),
+      processBatch('jap', japMap)
+    ]);
 
     if (updatedCount > 0) {
       this.saveUserData();
@@ -2321,8 +2349,32 @@ class SmmStateStore {
       if (sIdx !== -1) {
         supa[sIdx].status = 'Refunded';
         supa[sIdx].isQueued = false;
-        supa[sIdx].refillReason = `Refunded: ${customReason}`;
+        supa[sIdx].refillReason = `Refunded: ${finalReason}`;
         localStorage.setItem('likex_supabase_orders', JSON.stringify(supa));
+      }
+    } catch (e) {}
+
+    // Update in all smm_user_*_orders in localStorage to lock refund status across devices
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('smm_user_') && key.endsWith('_orders')) {
+          const uOrders = JSON.parse(localStorage.getItem(key) || '[]');
+          if (Array.isArray(uOrders)) {
+            let modified = false;
+            uOrders.forEach(uo => {
+              if (String(uo.id) === String(orderId) || String(uo.providerOrderId) === String(orderId)) {
+                uo.status = 'Refunded';
+                uo.isQueued = false;
+                uo.refillReason = `Refunded: ${finalReason}`;
+                modified = true;
+              }
+            });
+            if (modified) {
+              localStorage.setItem(key, JSON.stringify(uOrders));
+            }
+          }
+        }
       }
     } catch (e) {}
 

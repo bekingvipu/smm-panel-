@@ -53,19 +53,19 @@ export default async function handler(req, res) {
     if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / JAP) to process and return live order ID
+    // 4.5-second timeout for ultra-fast, snappy execution
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 4500);
 
     let response;
     try {
       response = await fetch(providerConfig.url, {
         method: 'POST',
-        body: formData,
+        body: formData.toString(),
         signal: controller.signal,
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
         }
       });
     } finally {
@@ -170,7 +170,7 @@ export default async function handler(req, res) {
     }
 
     return res.status(500).json({ 
-      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (15s)' : error.message),
+      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (4.5s)' : error.message),
       provider: requestedProvider 
     });
   }

@@ -2568,13 +2568,18 @@ const AdminApp = {
     this.updateAdminOrdersTableView();
   },
 
-  handleAdminRefund(orderId) {
+  async handleAdminRefund(orderId) {
     const store = window.store;
     if (!store) return;
     const allOrders = store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders;
     const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.providerOrderId) === String(orderId));
     if (!order) {
       alert(`Order #${orderId} not found.`);
+      return;
+    }
+
+    if (String(order.status).toLowerCase() === 'refunded') {
+      alert(`Order #${orderId} has already been refunded to the customer.`);
       return;
     }
 
@@ -2607,7 +2612,15 @@ const AdminApp = {
 
     const confirmed = confirm(message);
     if (confirmed) {
-      store.adminRefundOrder(orderId, isPartial ? `Partial refund for ${remainsQty.toLocaleString()} undelivered units` : 'Refunded by Admin from Master Orders Table');
+      // Find button and immediately disable to prevent duplicate clicks
+      const btn = document.querySelector(`button[onclick*="handleAdminRefund('${orderId}')"]`);
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '⏳ Processing...';
+        btn.style.opacity = '0.5';
+        btn.style.pointerEvents = 'none';
+      }
+      await store.adminRefundOrder(orderId, isPartial ? `Partial refund for ${remainsQty.toLocaleString()} undelivered units` : 'Refunded by Admin from Master Orders Table');
       this.updateAdminOrdersTableView();
     }
   },
@@ -2644,7 +2657,7 @@ const AdminApp = {
           const is5to6Digit = String(o.id).length >= 4 && String(o.id).length <= 6;
           const isProviderPartial = st === 'partial';
           const isQueued = st === 'queued' || st === 'pending' || o.isQueued || o.isLowBalance;
-          return isProviderPartial || isQueued || (is5to6Digit && st !== 'completed' && st !== 'refunded');
+          return (isProviderPartial || isQueued || is5to6Digit) && st !== 'completed' && st !== 'refunded';
         });
       } else if (filter === 'refunded') {
         filtered = filtered.filter(o => {
@@ -2947,10 +2960,22 @@ const AdminApp = {
       return;
     }
 
+    const tableWrap = tbody.closest('.table-responsive') || document.querySelector('.admin-orders-table-wrapper') || tbody.parentElement;
+    const prevScrollLeft = tableWrap ? tableWrap.scrollLeft : 0;
+    const prevScrollTop = tableWrap ? tableWrap.scrollTop : 0;
+    const winScrollX = window.scrollX;
+    const winScrollY = window.scrollY;
+
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const filtered = this.getFilteredOrders(store);
 
     tbody.innerHTML = this.renderAdminOrderRows(filtered, store);
+
+    if (tableWrap) {
+      tableWrap.scrollLeft = prevScrollLeft;
+      tableWrap.scrollTop = prevScrollTop;
+    }
+    window.scrollTo(winScrollX, winScrollY);
 
     if (countEl) {
       countEl.innerText = `Showing ${filtered.length} of ${allOrders.length} Orders`;
