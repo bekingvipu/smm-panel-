@@ -93,11 +93,15 @@ export default async function handler(req, res) {
 
     const data = await callProvider(providerConfig);
 
-    // If order was placed, log to Supabase PostgreSQL orders table
-    if (action === 'add' && data && (data.order || !data.error)) {
-      const orderIdNum = data.order 
+    // If order was placed, log to Supabase PostgreSQL orders table (both successful 8-digit and queued 5-digit orders)
+    if (action === 'add') {
+      const isSuccess = Boolean(data && data.order);
+      const orderIdNum = isSuccess 
         ? parseInt(data.order, 10) 
         : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
+
+      const orderStatus = isSuccess ? 'Processing' : 'Queued';
+      const orderErrorNote = data && data.error ? `Error: ${String(data.error).slice(0, 42)}` : null;
 
       fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
         method: 'POST',
@@ -113,10 +117,11 @@ export default async function handler(req, res) {
           target_url: paramsObj.link || '',
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
-          provider_order_id: data.order ? String(data.order) : String(orderIdNum),
-          assigned_provider_id: null, // Null to avoid provider FK constraint
-          status: data.order ? 'Processing' : 'Pending',
+          provider_order_id: isSuccess ? String(data.order) : String(orderIdNum),
+          assigned_provider_id: providerKey === 'worldofsmm' ? 2 : 1,
+          status: orderStatus,
           remains: Number(paramsObj.quantity) || 1000,
+          refill_status: orderErrorNote,
           created_at: new Date().toISOString()
         })
       }).catch(dbErr => {
@@ -136,8 +141,34 @@ export default async function handler(req, res) {
       providerName: providerConfig.name
     });
   } catch (error) {
+    if (action === 'add' && paramsObj.likeXOrderId) {
+      const orderIdNum = parseInt(paramsObj.likeXOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
+      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify({
+          id: orderIdNum,
+          service_id: null,
+          target_url: paramsObj.link || '',
+          quantity: Number(paramsObj.quantity) || 1000,
+          charge: Number(paramsObj.charge) || 0,
+          provider_order_id: String(orderIdNum),
+          assigned_provider_id: requestedProvider === 'jap' ? 1 : 2,
+          status: 'Queued',
+          remains: Number(paramsObj.quantity) || 1000,
+          refill_status: `Timeout: ${error.message.slice(0, 40)}`,
+          created_at: new Date().toISOString()
+        })
+      }).catch(() => {});
+    }
+
     return res.status(500).json({ 
-      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (4.5s)' : error.message),
+      error: 'Upstream provider connection error: ' + (error.name === 'AbortError' ? 'Provider timeout (15s)' : error.message),
       provider: requestedProvider 
     });
   }

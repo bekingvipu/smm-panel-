@@ -2565,6 +2565,44 @@ const AdminApp = {
     this.updateAdminOrdersTableView();
   },
 
+  handleAdminRefund(orderId) {
+    const store = window.store;
+    if (!store) return;
+    const allOrders = store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders;
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.providerOrderId) === String(orderId));
+    if (!order) {
+      alert(`Order #${orderId} not found.`);
+      return;
+    }
+
+    const exactAmount = Number(order.amount) || Number(order.charge) || 0;
+    const formattedAmount = store.formatMoney(exactAmount);
+    const custEmail = order.userEmail || order.customerEmail || 'Customer';
+
+    const confirmed = confirm(`Are you sure you want to refund ${formattedAmount} to customer (${custEmail}) for Order #${order.id}?\n\nThis will add exactly ${formattedAmount} back to the customer's LikeX wallet balance.`);
+    if (confirmed) {
+      store.adminRefundOrder(orderId, 'Refunded by Admin from Master Orders Table');
+      this.updateAdminOrdersTableView();
+    }
+  },
+
+  async handleRetryOrder(orderId) {
+    const store = window.store;
+    if (!store) return;
+    const allOrders = store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders;
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.providerOrderId) === String(orderId));
+    if (!order) {
+      alert(`Order #${orderId} not found.`);
+      return;
+    }
+
+    const confirmed = confirm(`Retry dispatching Order #${order.id} (${order.serviceName || 'Service'}) to ${order.providerDisplayName || 'Provider'}?`);
+    if (confirmed) {
+      await store.adminRetryOrder(orderId);
+      this.updateAdminOrdersTableView();
+    }
+  },
+
   getFilteredOrders(store) {
     const s = store || window.store;
     const allOrders = (s && s.getAllAdminOrders ? s.getAllAdminOrders() : s?.data?.orders) || [];
@@ -2574,7 +2612,19 @@ const AdminApp = {
 
     let filtered = allOrders;
     if (filter !== 'all') {
-      filtered = filtered.filter(o => (o.status || '').toLowerCase().replace(/\s+/g, '_') === filter.toLowerCase());
+      if (filter === 'partial') {
+        filtered = filtered.filter(o => {
+          const st = (o.status || '').toLowerCase();
+          return st === 'partial' || st === 'queued' || st === 'pending' || o.isQueued || o.isLowBalance || (String(o.id).length <= 5 && st !== 'completed' && st !== 'refunded');
+        });
+      } else if (filter === 'refunded') {
+        filtered = filtered.filter(o => {
+          const st = (o.status || '').toLowerCase();
+          return st === 'refunded' || st === 'canceled';
+        });
+      } else {
+        filtered = filtered.filter(o => (o.status || '').toLowerCase().replace(/\s+/g, '_') === filter.toLowerCase());
+      }
     }
 
     if (query) {
@@ -2591,6 +2641,7 @@ const AdminApp = {
         const custNameStr = String(o.customerName || '').toLowerCase();
         const commentsStr = String(o.comments || '').toLowerCase();
         const dateStr = String(o.date || '').toLowerCase();
+        const errStr = String(o.errorReason || o.refillReason || '').toLowerCase();
 
         return idStr.includes(query) ||
                idStr.includes(cleanQuery) ||
@@ -2607,7 +2658,8 @@ const AdminApp = {
                emailStr.includes(query) ||
                custNameStr.includes(query) ||
                commentsStr.includes(query) ||
-               dateStr.includes(query);
+               dateStr.includes(query) ||
+               errStr.includes(query);
       });
     }
 
@@ -2795,6 +2847,26 @@ const AdminApp = {
               <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
                 ⚠️ Low Balance (Needs Top-up)
               </span>
+              <div style="display: flex; gap: 4px; margin-top: 4px;">
+                <button type="button" class="btn btn-xs" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleAdminRefund('${o.id}')" title="Refund exact amount to customer wallet">
+                  💸 Refund
+                </button>
+              </div>
+            ` : (String(o.status).toLowerCase() === 'queued' || o.isQueued || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
+              <div style="display: flex; flex-direction: column; gap: 4px;">
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
+                  ⚡ Queued (Action Needed)
+                </span>
+                ${o.errorReason ? `<span style="font-size: 10px; color: #DC2626; font-weight: 600; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.errorReason}">${o.errorReason}</span>` : ''}
+                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                  <button type="button" class="btn btn-xs" style="background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleRetryOrder('${o.id}')" title="Retry sending to upstream provider">
+                    🔄 Retry
+                  </button>
+                  <button type="button" class="btn btn-xs" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleAdminRefund('${o.id}')" title="Refund exact amount to customer wallet">
+                    💸 Refund
+                  </button>
+                </div>
+              </div>
             ` : (String(o.status).toLowerCase() === 'partial') ? `
               <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800;">
                 ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
@@ -2806,8 +2878,8 @@ const AdminApp = {
                 In Progress
               </span>
             ` : (String(o.status).toLowerCase() === 'refunded' || String(o.status).toLowerCase() === 'canceled') ? `
-              <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800;">
-                ${o.status}
+              <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800; border: 1px solid rgba(100, 116, 139, 0.3);">
+                ✓ Refunded
               </span>
             ` : `
               <span class="badge badge-primary" style="font-weight: 800;">${o.status || 'Processing'}</span>

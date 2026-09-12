@@ -1366,6 +1366,7 @@ class SmmStateStore {
           const finalProvider = isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 1 ? 'jap' : (orderIdStr.startsWith('10') ? 'jap' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
 
+          const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (String(so.id).length === 5 && so.status !== 'Completed' && so.status !== 'Refunded');
           return {
             id: String(so.id),
             serviceId: matchedSvc ? matchedSvc.id : (so.service_id ? `wos-${so.service_id}` : 'wos-2868'),
@@ -1378,6 +1379,8 @@ class SmmStateStore {
             quantity: Number(so.quantity) || 1000,
             amount: Number(so.charge) || 0,
             status: so.status || 'Completed',
+            isQueued: isQueuedOrder,
+            errorReason: so.refill_status || '',
             userEmail: matchedUser?.email || '',
             customerName: matchedUser?.username || (matchedUser?.email ? matchedUser.email.split('@')[0] : 'Customer'),
             createdAt: orderCreatedAt,
@@ -1969,20 +1972,21 @@ class SmmStateStore {
           const orderNum = parseInt(finalOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
           await window.supabaseClient
             .from('orders')
-            .insert([{
+            .upsert([{
               id: orderNum,
               user_id: null,
               service_id: null, // Null prevents foreign key constraint error with customer_services table
-              assigned_provider_id: null,
+              assigned_provider_id: targetProvider === 'worldofsmm' ? 2 : 1,
               target_url: cleanedTarget,
               quantity: Number(quantity),
               charge: totalCost,
               provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
               provider_order_id: liveOrderId || finalOrderId,
-              status: isQueued ? 'Pending' : 'Processing',
+              status: isQueued ? 'Queued' : 'Processing',
               remains: Number(quantity),
+              refill_status: isQueued ? `Queued: ${String(upstreamError || 'Pending dispatch').slice(0, 40)}` : null,
               created_at: new Date(now).toISOString()
-            }]);
+            }], { onConflict: 'id' });
         } catch (dbErr) {
           console.warn('[LikeX Supabase] Order insert notice:', dbErr);
         }
@@ -2128,6 +2132,199 @@ class SmmStateStore {
     this.showToast(`₹${refundAmt.toFixed(4)} refunded to your wallet for Order #${orderId}!`, 'success');
     this.notify();
     return true;
+  }
+
+  // Admin-initiated refund directly to customer's LikeX wallet balance (zero loss, exact amount)
+  async adminRefundOrder(orderId, customReason = 'Unfulfilled / Queued Order Refund') {
+    const allOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : (this.data.orders || []);
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.providerOrderId) === String(orderId));
+    if (!order) {
+      this.showToast(`Order #${orderId} not found in system.`, 'error');
+      return false;
+    }
+    if (order.status === 'Refunded') {
+      this.showToast(`Order #${orderId} is already refunded.`, 'warning');
+      return false;
+    }
+
+    // Exact refund amount (never rounds up, zero financial loss)
+    const exactRefundAmount = Number(order.amount) || Number(order.charge) || 0;
+    const custEmail = (order.userEmail || order.customerEmail || '').trim();
+
+    // 1. Mark order as Refunded locally
+    order.status = 'Refunded';
+    order.isQueued = false;
+    order.refillReason = `Refunded: ${customReason}`;
+
+    // Update in this.data.orders
+    const localOrder = (this.data.orders || []).find(o => String(o.id) === String(orderId));
+    if (localOrder) {
+      localOrder.status = 'Refunded';
+      localOrder.isQueued = false;
+      localOrder.refillReason = `Refunded: ${customReason}`;
+    }
+
+    // Update in likex_master_orders in localStorage
+    try {
+      const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
+      const mIdx = master.findIndex(o => String(o.id) === String(orderId));
+      if (mIdx !== -1) {
+        master[mIdx].status = 'Refunded';
+        master[mIdx].isQueued = false;
+        master[mIdx].refillReason = `Refunded: ${customReason}`;
+        localStorage.setItem('likex_master_orders', JSON.stringify(master));
+      }
+    } catch (e) {}
+
+    // Update in likex_supabase_orders in localStorage
+    try {
+      const supa = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
+      const sIdx = supa.findIndex(o => String(o.id) === String(orderId));
+      if (sIdx !== -1) {
+        supa[sIdx].status = 'Refunded';
+        supa[sIdx].isQueued = false;
+        supa[sIdx].refillReason = `Refunded: ${customReason}`;
+        localStorage.setItem('likex_supabase_orders', JSON.stringify(supa));
+      }
+    } catch (e) {}
+
+    // 2. Credit wallet in customer localStorage if customer exists on this device
+    if (custEmail) {
+      const balKey = this._getUserStorageKey(custEmail, 'balance');
+      const curBal = parseFloat(localStorage.getItem(balKey) || '0');
+      const newBal = Number((curBal + exactRefundAmount).toFixed(4));
+      localStorage.setItem(balKey, newBal.toFixed(4));
+
+      const txnsKey = this._getUserStorageKey(custEmail, 'txns');
+      const uTxns = JSON.parse(localStorage.getItem(txnsKey) || '[]');
+      uTxns.unshift({
+        id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+        type: 'Order Refund',
+        description: `Refund for Order #${orderId} (${customReason})`,
+        amount: exactRefundAmount,
+        balanceAfter: newBal,
+        status: 'Success',
+        createdAt: Date.now(),
+        date: this.formatRealDate(Date.now())
+      });
+      localStorage.setItem(txnsKey, JSON.stringify(uTxns));
+    }
+
+    // 3. Update Supabase Cloud Database (Orders, Transactions, and User Balance)
+    if (window.supabaseClient) {
+      try {
+        const orderNum = parseInt(orderId, 10);
+        if (orderNum) {
+          await window.supabaseClient
+            .from('orders')
+            .update({
+              status: 'Refunded',
+              refill_status: `Refunded: ${customReason}`
+            })
+            .eq('id', orderNum);
+        }
+
+        // Add refund transaction entry to wallet_transactions
+        await window.supabaseClient
+          .from('wallet_transactions')
+          .insert([{
+            id: `REF-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+            user_id: 1,
+            type: 'Refund',
+            description: `Order #${orderId} Refund by Admin [${custEmail || 'Customer'}]`,
+            amount: exactRefundAmount,
+            balance_after: 0,
+            status: 'Success',
+            created_at: new Date().toISOString()
+          }]);
+
+        // If customer exists in users table, credit their balance
+        if (custEmail) {
+          const { data: userData } = await window.supabaseClient
+            .from('users')
+            .select('id, balance')
+            .ilike('email', custEmail.toLowerCase().trim())
+            .limit(1);
+          if (userData && userData.length > 0) {
+            const u = userData[0];
+            const updatedBal = Number(((Number(u.balance) || 0) + exactRefundAmount).toFixed(4));
+            await window.supabaseClient
+              .from('users')
+              .update({ balance: updatedBal })
+              .eq('id', u.id);
+          }
+        }
+      } catch (err) {
+        console.warn('[LikeX Admin] Supabase cloud refund notice:', err);
+      }
+    }
+
+    this.showToast(`✓ Successfully refunded ${this.formatMoney(exactRefundAmount)} to customer wallet!`, 'success');
+    this.notify();
+    return true;
+  }
+
+  // Admin-initiated retry dispatch to upstream provider (WorldOfSMM / JAP)
+  async adminRetryOrder(orderId) {
+    const allOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : (this.data.orders || []);
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.providerOrderId) === String(orderId));
+    if (!order) {
+      this.showToast(`Order #${orderId} not found.`, 'error');
+      return false;
+    }
+
+    this.showToast(`Retrying dispatch for Order #${orderId}...`, 'info');
+
+    try {
+      const res = await fetch('/api/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: order.provider || 'worldofsmm',
+          action: 'add',
+          service: String(order.rawServiceId || order.serviceId || '2868').replace('wos-', '').replace('jap-', ''),
+          link: order.target,
+          quantity: order.quantity,
+          charge: order.amount,
+          likeXOrderId: orderId
+        })
+      });
+
+      const data = await res.json();
+      if (data && data.order) {
+        const liveProvId = String(data.order);
+        order.providerOrderId = liveProvId;
+        order.status = 'Processing';
+        order.isQueued = false;
+        order.refillReason = `Dispatched live (Prov ID #${liveProvId})`;
+
+        // Update Supabase
+        if (window.supabaseClient) {
+          const orderNum = parseInt(orderId, 10);
+          if (orderNum) {
+            await window.supabaseClient
+              .from('orders')
+              .update({
+                provider_order_id: liveProvId,
+                status: 'Processing',
+                refill_status: `Live dispatched to ${order.providerDisplayName || 'Provider'}`
+              })
+              .eq('id', orderNum);
+          }
+        }
+
+        this.showToast(`✓ Order #${orderId} successfully dispatched! Provider Order ID: #${liveProvId}`, 'success');
+        this.notify();
+        return true;
+      } else {
+        const err = data?.error || 'Provider rejected request (Check provider balance or target link)';
+        this.showToast(`Dispatch failed: ${err}`, 'error');
+        return false;
+      }
+    } catch (e) {
+      this.showToast(`Connection error while contacting provider: ${e.message}`, 'error');
+      return false;
+    }
   }
 
   // Auto-reconcile old failed mock test orders (like #48452, #48609)
