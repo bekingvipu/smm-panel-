@@ -1071,7 +1071,7 @@ class SmmStateStore {
 
     // Helper to resolve clean service title
     const resolveServiceTitle = (order) => {
-      if (order.serviceName && !order.serviceName.includes('null') && !order.serviceName.includes('undefined') && !order.serviceName.startsWith('Service #') && order.serviceName !== 'Social Growth Package') {
+      if (order.serviceName && !order.serviceName.includes('null') && !order.serviceName.includes('undefined') && !order.serviceName.startsWith('Service #') && order.serviceName !== 'Social Growth Package' && order.serviceName !== 'Instagram HQ Followers / Likes / Views [Instant]') {
         return order.serviceName;
       }
       const matched = activeServices.find(s => 
@@ -1079,16 +1079,24 @@ class SmmStateStore {
         (order.rawServiceId && String(s.rawId) === String(order.rawServiceId))
       );
       if (matched) return matched.customerName || matched.name;
+      if (order.serviceName && order.serviceName !== 'Instagram HQ Followers / Likes / Views [Instant]') {
+        return order.serviceName;
+      }
       
       const targetStr = String(order.target || '').toLowerCase();
+      const qty = Number(order.quantity) || 1000;
+      const chg = Number(order.amount || order.charge) || 0;
       if (targetStr.includes('instagram.com') || targetStr.includes('instagr.am')) {
-        return 'Instagram HQ Followers / Likes / Views [Instant]';
+        if (qty >= 10000 && chg <= 50) return 'Instagram Views [High Speed HQ]';
+        if (chg >= 50) return 'Instagram Followers [Refill Guarantee]';
+        return 'Instagram Growth Service';
       } else if (targetStr.includes('youtube.com') || targetStr.includes('youtu.be')) {
         return 'YouTube Video Views & Engagement [HQ]';
       } else if (targetStr.includes('tiktok.com')) {
         return 'TikTok Growth Package [Instant Start]';
       }
-      return order.serviceId ? `Service #${String(order.serviceId).replace(/^wos-/, '')}` : 'Social Growth Package';
+      const sId = order.rawServiceId || order.serviceId;
+      return (sId && sId !== 'N/A' && sId !== '2868') ? `Social Growth Service #${String(sId).replace(/^wos-/, '')}` : 'Social Growth Package';
     };
 
     // Helper to resolve accurate provider
@@ -1171,11 +1179,25 @@ class SmmStateStore {
         const bestAmount = amountVal > 0 ? amountVal : (Number(existing.amount || existing.charge || 0));
         const mergedProv = resolveProvider({ ...existing, ...o, provider: accurateProv });
 
+        const bestRawId = (existing.rawServiceId && String(existing.rawServiceId) !== '2868' && String(existing.rawServiceId) !== 'N/A')
+          ? existing.rawServiceId
+          : (o.rawServiceId && String(o.rawServiceId) !== '2868' && String(o.rawServiceId) !== 'N/A' ? o.rawServiceId : (existing.rawServiceId || o.rawServiceId || 'N/A'));
+        
+        const bestSvcId = (existing.serviceId && String(existing.serviceId) !== 'wos-2868' && String(existing.serviceId) !== 'N/A')
+          ? existing.serviceId
+          : (o.serviceId && String(o.serviceId) !== 'wos-2868' && String(o.serviceId) !== 'N/A' ? o.serviceId : (existing.serviceId || o.serviceId || 'N/A'));
+
+        const bestStatus = (o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing');
+        const bestRemains = (o.remains !== undefined && o.remains !== null) ? o.remains : existing.remains;
+        const bestStartCount = (o.startCount !== undefined && o.startCount !== null) ? o.startCount : existing.startCount;
+
         ordersList[existingIdx] = {
           ...existing,
           ...o,
           id: bestId,
           providerOrderId: bestProvId || bestId,
+          serviceId: bestSvcId,
+          rawServiceId: bestRawId,
           serviceName: bestName,
           userEmail: bestEmail,
           customerName: bestCustName,
@@ -1187,7 +1209,9 @@ class SmmStateStore {
           date: o.date || existing.date || this.formatRealDate(createdTs),
           amount: bestAmount,
           quantity: qtyVal || existing.quantity || 1000,
-          status: (o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing')
+          remains: bestRemains,
+          startCount: bestStartCount,
+          status: bestStatus
         };
       }
     };
@@ -1332,30 +1356,79 @@ class SmmStateStore {
 
       if (supaOrders && supaOrders.length > 0) {
         const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+        
+        // Cache master orders from local to preserve original customer selections
+        let localMasterList = [];
+        try {
+          localMasterList = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
+        } catch (e) {}
+
         const mapped = supaOrders.map(so => {
           const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : null;
-          const matchedSvc = activeServices.find(s => 
-            String(s.id) === String(so.service_id) || 
-            String(s.rawId) === String(so.service_id) || 
-            String(s.japId) === String(so.service_id)
+          
+          const localMasterOrder = localMasterList.find(m => 
+            String(m.id) === String(so.id) || 
+            String(m.providerOrderId) === String(so.id) || 
+            (so.provider_order_id && String(m.providerOrderId) === String(so.provider_order_id))
           );
 
-          let svcTitle = matchedSvc 
-            ? (matchedSvc.customerName || matchedSvc.name) 
-            : null;
+          // Extract real raw service ID from multiple possible sources
+          let extractedRawId = so.raw_service_id || so.service_id;
+          if (!extractedRawId && localMasterOrder?.rawServiceId && String(localMasterOrder.rawServiceId) !== '2868' && String(localMasterOrder.rawServiceId) !== 'N/A') {
+            extractedRawId = localMasterOrder.rawServiceId;
+          }
+          if (!extractedRawId && so.refill_status) {
+            const m = String(so.refill_status).match(/svc:([0-9a-zA-Z_-]+)/);
+            if (m) extractedRawId = m[1];
+          }
+
+          let matchedSvc = null;
+          if (extractedRawId && extractedRawId !== 'N/A') {
+            matchedSvc = activeServices.find(s => 
+              String(s.rawId) === String(extractedRawId) || 
+              String(s.id) === String(extractedRawId) || 
+              String(s.japId) === String(extractedRawId)
+            );
+          }
+
+          // Determine service title
+          let svcTitle = (localMasterOrder && localMasterOrder.serviceName && !localMasterOrder.serviceName.includes('null') && !localMasterOrder.serviceName.includes('undefined') && localMasterOrder.serviceName !== 'Instagram HQ Followers / Likes / Views [Instant]')
+            ? localMasterOrder.serviceName
+            : (matchedSvc ? (matchedSvc.customerName || matchedSvc.name) : null);
 
           if (!svcTitle) {
-            const targetLower = String(so.target_url || '').toLowerCase();
-            if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-              svcTitle = 'Instagram HQ Followers / Likes / Views [Instant]';
-            } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
-              svcTitle = 'YouTube Video Views & Engagement [HQ]';
-            } else if (targetLower.includes('tiktok.com')) {
-              svcTitle = 'TikTok Growth Package [Instant Start]';
+            if (extractedRawId && extractedRawId !== 'N/A') {
+              svcTitle = `Social Growth Service #${extractedRawId}`;
             } else {
-              svcTitle = so.service_id ? `Social Growth Service #${so.service_id}` : 'Social Growth Package';
+              const targetLower = String(so.target_url || '').toLowerCase();
+              const chargeVal = Number(so.charge) || 0;
+              const qtyVal = Number(so.quantity) || 1000;
+              if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
+                if (qtyVal >= 10000 && chargeVal <= 50) {
+                  svcTitle = 'Instagram Views [High Speed HQ]';
+                  extractedRawId = '6288';
+                } else if (chargeVal >= 50) {
+                  svcTitle = 'Instagram Followers [Refill Guarantee]';
+                  extractedRawId = '6939';
+                } else {
+                  svcTitle = 'Instagram Engagement Service';
+                  extractedRawId = 'IG-Service';
+                }
+              } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
+                svcTitle = 'YouTube Video Views & Engagement [HQ]';
+                extractedRawId = 'YT-Service';
+              } else if (targetLower.includes('tiktok.com')) {
+                svcTitle = 'TikTok Growth Package [Instant Start]';
+                extractedRawId = 'TT-Service';
+              } else {
+                svcTitle = 'Social Growth Package';
+                extractedRawId = 'Growth';
+              }
             }
           }
+
+          const finalRawId = matchedSvc?.rawId || extractedRawId || (so.service_id ? String(so.service_id) : 'N/A');
+          const finalServiceId = matchedSvc ? matchedSvc.id : (finalRawId !== 'N/A' ? `wos-${finalRawId}` : 'N/A');
 
           const orderIdStr = String(so.provider_order_id || so.id || '');
           const isWosOrder = so.assigned_provider_id === 2 || 
@@ -1366,11 +1439,11 @@ class SmmStateStore {
           const finalProvider = isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 1 ? 'jap' : (orderIdStr.startsWith('10') ? 'jap' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
 
-          const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (String(so.id).length === 5 && so.status !== 'Completed' && so.status !== 'Refunded');
+          const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (String(so.id).length <= 6 && so.status !== 'Completed' && so.status !== 'Refunded');
           return {
             id: String(so.id),
-            serviceId: matchedSvc ? matchedSvc.id : (so.service_id ? `wos-${so.service_id}` : 'wos-2868'),
-            rawServiceId: matchedSvc?.rawId || so.service_id || '2868',
+            serviceId: finalServiceId,
+            rawServiceId: finalRawId,
             serviceName: svcTitle,
             provider: finalProvider,
             providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
@@ -1378,7 +1451,7 @@ class SmmStateStore {
             target: so.target_url || '',
             quantity: Number(so.quantity) || 1000,
             amount: Number(so.charge) || 0,
-            status: so.status || 'Completed',
+            status: so.status || 'Processing',
             isQueued: isQueuedOrder,
             errorReason: so.refill_status || '',
             userEmail: matchedUser?.email || '',
@@ -1984,7 +2057,9 @@ class SmmStateStore {
               provider_order_id: liveOrderId || finalOrderId,
               status: isQueued ? 'Queued' : 'Processing',
               remains: Number(quantity),
-              refill_status: isQueued ? `Queued: ${String(upstreamError || 'Pending dispatch').slice(0, 40)}` : null,
+              refill_status: isQueued 
+                ? `Queued: ${String(upstreamError || 'Pending dispatch').slice(0, 25)} | svc:${rawServiceId}`.slice(0, 48) 
+                : (rawServiceId ? `svc:${rawServiceId}`.slice(0, 48) : null),
               created_at: new Date(now).toISOString()
             }], { onConflict: 'id' });
         } catch (dbErr) {
@@ -2039,26 +2114,31 @@ class SmmStateStore {
 
   // Live Status Synchronization from Upstream Provider
   async syncOrdersStatus(silent = false) {
-    if (!this.data.orders || this.data.orders.length === 0) return 0;
+    const isMasterAdmin = (this.persona === 'admin' || window.location.pathname.includes('admin'));
+    const allAdminOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : [];
+    const targetOrders = isMasterAdmin && allAdminOrders.length > 0 ? allAdminOrders : (this.data.orders || []);
+    if (!targetOrders || targetOrders.length === 0) return 0;
 
     let updatedCount = 0;
-    for (const order of this.data.orders) {
+
+    for (const order of targetOrders) {
       if (order.status === 'Completed' || order.status === 'Canceled' || order.status === 'Refunded') {
         continue;
       }
 
-      // Check if order has a provider order ID
-      const provOrderId = (order.providerOrderId && /^\d+$/.test(order.providerOrderId))
+      // Check if order has a provider order ID (numeric, at least 6 digits, e.g. 59011968)
+      const provOrderId = (order.providerOrderId && /^\d{6,}$/.test(order.providerOrderId))
         ? order.providerOrderId
         : (/^\d{6,}$/.test(order.id) ? order.id : null);
 
       if (provOrderId) {
         try {
+          const targetProvKey = order.provider || (String(provOrderId).startsWith('10') ? 'jap' : 'worldofsmm');
           const res = await fetch('/api/provider', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              provider: order.provider || 'worldofsmm',
+              provider: targetProvKey,
               action: 'status',
               order: provOrderId
             })
@@ -2067,9 +2147,15 @@ class SmmStateStore {
             const data = await res.json();
             if (data.status) {
               const rawStat = String(data.status).trim();
-              const liveStatus = rawStat.toLowerCase() === 'in progress' 
-                ? 'In Progress' 
-                : (rawStat.toLowerCase() === 'partial' ? 'Partial' : rawStat);
+              const sLower = rawStat.toLowerCase();
+              let liveStatus = 'Processing';
+              if (sLower === 'partial') liveStatus = 'Partial';
+              else if (sLower === 'completed') liveStatus = 'Completed';
+              else if (sLower.includes('progress')) liveStatus = 'In Progress';
+              else if (sLower === 'canceled' || sLower === 'cancelled') liveStatus = 'Canceled';
+              else if (sLower === 'pending') liveStatus = 'Pending';
+              else liveStatus = rawStat;
+
               order.status = liveStatus;
               if (data.start_count !== undefined && data.start_count !== null) {
                 order.startCount = Number(data.start_count);
@@ -2078,6 +2164,49 @@ class SmmStateStore {
                 order.remains = Number(data.remains);
               }
               order.currentCount = (order.startCount || 0) + (order.quantity - (order.remains || 0));
+
+              // 1. Update in likex_master_orders
+              try {
+                const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
+                const mIdx = master.findIndex(m => String(m.id) === String(order.id) || String(m.providerOrderId) === String(provOrderId));
+                if (mIdx !== -1) {
+                  master[mIdx].status = liveStatus;
+                  if (order.remains !== undefined) master[mIdx].remains = order.remains;
+                  if (order.startCount !== undefined) master[mIdx].startCount = order.startCount;
+                  localStorage.setItem('likex_master_orders', JSON.stringify(master));
+                }
+              } catch (e) {}
+
+              // 2. Update in likex_supabase_orders
+              try {
+                const supaList = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
+                const sIdx = supaList.findIndex(s => String(s.id) === String(order.id) || String(s.providerOrderId) === String(provOrderId));
+                if (sIdx !== -1) {
+                  supaList[sIdx].status = liveStatus;
+                  if (order.remains !== undefined) supaList[sIdx].remains = order.remains;
+                  if (order.startCount !== undefined) supaList[sIdx].startCount = order.startCount;
+                  localStorage.setItem('likex_supabase_orders', JSON.stringify(supaList));
+                }
+              } catch (e) {}
+
+              // 3. Permanent update in Supabase PostgreSQL table
+              if (window.supabaseClient) {
+                try {
+                  const dbId = parseInt(order.id, 10);
+                  if (dbId) {
+                    const updateObj = { status: liveStatus };
+                    if (order.remains !== undefined && !isNaN(order.remains)) updateObj.remains = order.remains;
+                    if (order.startCount !== undefined && !isNaN(order.startCount)) updateObj.start_count = order.startCount;
+                    await window.supabaseClient
+                      .from('orders')
+                      .update(updateObj)
+                      .eq('id', dbId);
+                  }
+                } catch (dbErr) {
+                  console.warn('[LikeX Sync] Supabase status update notice:', dbErr);
+                }
+              }
+
               updatedCount++;
             }
           }
@@ -2087,13 +2216,9 @@ class SmmStateStore {
       }
     }
 
-    // Also refresh admin orders from Supabase cloud
-    try {
-      this.syncSupabaseDataForAdmin();
-    } catch (e) {}
-
     if (updatedCount > 0) {
       this.saveUserData();
+      this.recalculateAdminStats();
       this.notify();
       if (!silent) {
         this.showToast(`🔄 Synchronized ${updatedCount} orders with live server!`, 'success');
@@ -2147,14 +2272,27 @@ class SmmStateStore {
       return false;
     }
 
-    // Exact refund amount (never rounds up, zero financial loss)
-    const exactRefundAmount = Number(order.amount) || Number(order.charge) || 0;
+    const isPartial = String(order.status).toLowerCase() === 'partial';
+    const totalPaid = Number(order.amount) || Number(order.charge) || 0;
+    const totalQty = Number(order.quantity) || 1000;
+    const remainsQty = (order.remains !== undefined && order.remains !== null) ? Number(order.remains) : totalQty;
+
+    // Exact refund amount: if partial, proportional to undelivered remains based on LikeX retail price (zero loss):
+    let exactRefundAmount = totalPaid;
+    if (isPartial && remainsQty < totalQty && totalQty > 0) {
+      exactRefundAmount = Number(((totalPaid / totalQty) * remainsQty).toFixed(4));
+    }
+
+    const finalReason = (customReason && customReason !== 'Unfulfilled / Queued Order Refund') 
+      ? customReason 
+      : (isPartial ? `Partial refund for ${remainsQty.toLocaleString()} remaining units` : 'Unfulfilled / Queued Order Refund');
+
     const custEmail = (order.userEmail || order.customerEmail || '').trim();
 
     // 1. Mark order as Refunded locally
     order.status = 'Refunded';
     order.isQueued = false;
-    order.refillReason = `Refunded: ${customReason}`;
+    order.refillReason = `Refunded: ${finalReason}`;
 
     // Update in this.data.orders
     const localOrder = (this.data.orders || []).find(o => String(o.id) === String(orderId));

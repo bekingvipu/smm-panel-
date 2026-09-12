@@ -100,8 +100,10 @@ export default async function handler(req, res) {
         ? parseInt(data.order, 10) 
         : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
 
-      const orderStatus = isSuccess ? 'Processing' : 'Queued';
-      const orderErrorNote = data && data.error ? `Error: ${String(data.error).slice(0, 42)}` : null;
+      const rawSvcIdStr = paramsObj.service ? String(paramsObj.service).trim() : '';
+      const orderErrorNote = data && data.error 
+        ? `Error: ${String(data.error).slice(0, 25)} | svc:${rawSvcIdStr}`.slice(0, 48)
+        : (rawSvcIdStr ? `svc:${rawSvcIdStr}` : null);
 
       fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
         method: 'POST',
@@ -161,7 +163,7 @@ export default async function handler(req, res) {
           assigned_provider_id: requestedProvider === 'jap' ? 1 : 2,
           status: 'Queued',
           remains: Number(paramsObj.quantity) || 1000,
-          refill_status: `Timeout: ${error.message.slice(0, 40)}`,
+          refill_status: `Timeout: ${error.message.slice(0, 25)} | svc:${paramsObj.service ? String(paramsObj.service).trim() : ''}`.slice(0, 48),
           created_at: new Date().toISOString()
         })
       }).catch(() => {});
