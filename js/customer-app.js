@@ -3199,7 +3199,7 @@ const CustomerApp = {
                   <span>VIDEO GUIDE</span>
                 </div>
                 <h3 class="wallet-video-title">${tutorial.title || 'How to Add Funds to LikeX Wallet'}</h3>
-                <p class="wallet-video-subtitle">${tutorial.description || 'Watch 1-minute step-by-step tutorial to scan QR, pay via UPI, and paste 12-digit UTR.'}</p>
+                <p class="wallet-video-subtitle">${tutorial.description || 'Watch 1-minute tutorial to add funds instantly with automated Paytm Dynamic UPI.'}</p>
               </div>
 
               ${embedUrl ? `
@@ -3220,7 +3220,7 @@ const CustomerApp = {
                   </a>
                 </div>
               ` : `
-                <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Scan the QR above, pay via UPI, and paste the 12-digit UTR to get instant funds!', 'info')">
+                <div class="wallet-video-placeholder" onclick="window.store.showToast('💡 Enter amount, tap Add to Wallet, scan QR & pay for instant automated credit!', 'info')">
                   <div class="wallet-video-play-btn">
                     <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                   </div>
@@ -3228,7 +3228,7 @@ const CustomerApp = {
                     Step-by-Step UPI Deposit Guide
                   </div>
                   <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; max-width: 420px;">
-                    Scan the QR above ➔ Pay any amount (Min ₹10) ➔ Copy 12-digit UTR ➔ Paste in box & click Verify.
+                    Enter Amount ➔ Tap Add to Wallet ➔ Scan Dynamic QR & Pay ➔ Instant 30s Auto-Credit.
                   </div>
                 </div>
               `}
@@ -3237,19 +3237,19 @@ const CustomerApp = {
               <div class="wallet-quick-steps-grid">
                 <div class="wallet-step-item">
                   <div class="wallet-step-num">1</div>
-                  <div class="wallet-step-text">Scan Razorpay / UPI QR above with any UPI app</div>
+                  <div class="wallet-step-text">Enter or choose deposit amount (Min ₹1)</div>
                 </div>
                 <div class="wallet-step-item">
                   <div class="wallet-step-num">2</div>
-                  <div class="wallet-step-text">Pay desired amount (Min ₹10, Zero fee)</div>
+                  <div class="wallet-step-text">Click "Add to Wallet" to generate Dynamic QR</div>
                 </div>
                 <div class="wallet-step-item">
                   <div class="wallet-step-num">3</div>
-                  <div class="wallet-step-text">Copy 12-Digit UPI UTR from payment receipt</div>
+                  <div class="wallet-step-text">Scan & pay with PhonePe, GPay, Paytm or any UPI</div>
                 </div>
                 <div class="wallet-step-item">
                   <div class="wallet-step-num">4</div>
-                  <div class="wallet-step-text">Paste UTR in box & click Verify for instant credit</div>
+                  <div class="wallet-step-text">Instant Auto-Credit in 30 seconds (No UTR needed!)</div>
                 </div>
               </div>
             </div>
