@@ -1029,6 +1029,17 @@ const CustomerApp = {
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
+    } else if (this.currentCategory === 'Instagram Custom Comment — Non Drop' && activePackages.length > 0) {
+      // Flagship WorldOfSMM ID 6433
+      const order = ['6433'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
     } else if (this.currentCategory === 'Instagram All Service') {
       // Keep natural order where SocialFans 'Instagram Best Services' are featured at top
     } else if (activePackages.length > 0) {

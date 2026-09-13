@@ -63,9 +63,12 @@ class SmmStateStore {
       this.data.transactions = [];
     }
 
-    // Initialize dynamic catalog customization (Admin Add/Remove services)
+    // Initialize dynamic catalog customization (Admin Add/Remove services) (v4)
     try {
-      const savedCustom = localStorage.getItem('likex_catalog_customizations');
+      localStorage.removeItem('likex_catalog_customizations');
+      localStorage.removeItem('likex_catalog_customizations_v2');
+      localStorage.removeItem('likex_catalog_customizations_v3');
+      const savedCustom = localStorage.getItem('likex_catalog_customizations_v4');
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
         this.catalogCustomizations = {
@@ -77,6 +80,12 @@ class SmmStateStore {
       }
     } catch (e) {
       this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
+    }
+
+    // Ensure official core services (e.g. World of SMM 6433) are never suppressed by stale localStorage
+    if (this.catalogCustomizations && this.catalogCustomizations.disabledServiceIds) {
+      this.catalogCustomizations.disabledServiceIds.delete('6433');
+      this.catalogCustomizations.disabledServiceIds.delete('wos-6433');
     }
 
     // Initialize Live Announcement Ticker
@@ -589,7 +598,7 @@ class SmmStateStore {
         addedServices: this.catalogCustomizations.addedServices,
         disabledServiceIds: Array.from(this.catalogCustomizations.disabledServiceIds)
       };
-      localStorage.setItem('likex_catalog_customizations', JSON.stringify(payload));
+      localStorage.setItem('likex_catalog_customizations_v4', JSON.stringify(payload));
     } catch (e) {}
     this.notify();
   }
@@ -736,12 +745,13 @@ class SmmStateStore {
     const added = this.catalogCustomizations.addedServices;
 
     const activeMap = new Map();
-    // 1. Base services not disabled
+    // 1. Base services not disabled (core categories like Custom Comment & LikeX Special are protected)
     for (const s of base) {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
       const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
-      if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
+      const isProtectedCat = s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
+      if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
         const liveInfo = this.getLiveRateInfo(sId, rId, prov);
         const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
         activeMap.set(sId, {
@@ -760,7 +770,8 @@ class SmmStateStore {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
       const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
-      if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
+      const isProtectedCat = s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
+      if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
         const liveInfo = this.getLiveRateInfo(sId, rId, prov);
         const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
         activeMap.set(sId, {
