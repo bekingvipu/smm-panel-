@@ -860,8 +860,10 @@ const AdminApp = {
     const alertConfig = store.getAlertConfig();
     const japProv = (store.data.providers || []).find(p => p.id === 'p1');
     const wosProv = (store.data.providers || []).find(p => p.id === 'p2');
+    const sfProv = (store.data.providers || []).find(p => p.id === 'p3');
     const japBal = Number(japProv?.balance || 0);
     const wosBal = Number(wosProv?.balance || 0);
+    const sfBal = Number(sfProv?.balance || 0);
 
     return `
       <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1000px;">
@@ -878,7 +880,7 @@ const AdminApp = {
                 Low Balance & Queued Order Alert Gateway
               </h2>
               <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
-                Whenever JAP or WorldOfSMM balance drops below ₹${alertConfig.threshold || 100}, or a customer places an order requiring top-up, you receive instant alerts on WhatsApp & Gmail.
+                Whenever JAP, WorldOfSMM, or SocialFans balance drops below ₹${alertConfig.threshold || 100}, or a customer places an order requiring top-up, you receive instant alerts on WhatsApp & Gmail.
               </p>
             </div>
 
@@ -917,6 +919,21 @@ const AdminApp = {
             </div>
             <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
               Approx: <strong>₹${(wosBal * 85).toFixed(2)} INR</strong> • Threshold: ₹${alertConfig.threshold || 100}
+            </div>
+          </div>
+
+          <div class="card" style="padding: 20px; border: 1.5px solid var(--border-color); border-radius: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">🔥 SocialFans (Direct API)</span>
+              <span class="badge ${sfBal > Number(alertConfig.threshold || 100) ? 'badge-success' : 'badge-danger'}">
+                ${sfBal > Number(alertConfig.threshold || 100) ? '✓ Funded' : '⚠️ Low Balance'}
+              </span>
+            </div>
+            <div style="font-size: 28px; font-weight: 900; color: #F59E0B; font-family: monospace;">
+              ₹${sfBal.toFixed(2)} INR
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
+              Direct INR Balance • Threshold: ₹${alertConfig.threshold || 100}
             </div>
           </div>
         </div>
@@ -2055,7 +2072,8 @@ const AdminApp = {
         const data = await res.json();
         if (Array.isArray(data)) {
           this.providerServicesCache[provider] = data;
-          window.store.showToast(`Fetched ${data.length} live services from ${provider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel'}!`, 'success');
+          const provLabel = provider === 'worldofsmm' ? 'WorldOfSMM' : (provider === 'socialfans' ? 'SocialFans' : 'JustAnotherPanel');
+          window.store.showToast(`Fetched ${data.length} live services from ${provLabel}!`, 'success');
         }
       }
     } catch (e) {
@@ -2170,11 +2188,13 @@ const AdminApp = {
 
     const normalized = allServices.map(s => {
       const sId = String(s.service || s.id);
-      const rawId = String(s.rawId || s.service || sId.replace('wos-', ''));
-      const costUsd = parseFloat(s.rate || s.cost || 0.1);
+      const rawId = String(s.rawId || s.service || sId.replace('wos-', '').replace('sf-', '').replace('jap-', ''));
+      const costUsd = prov === 'socialfans'
+        ? (parseFloat(s.rate || s.cost || 0) / (store.data.exchangeRate || 95.385))
+        : parseFloat(s.rate || s.cost || 0.1);
       return {
         ...s,
-        id: sId,
+        id: prov === 'socialfans' ? (sId.startsWith('sf-') ? sId : `sf-${sId}`) : sId,
         rawId: rawId,
         provider: prov,
         cost: costUsd,
@@ -2231,13 +2251,17 @@ const AdminApp = {
 
         <!-- Provider Switcher Tabs -->
         <div class="provider-selector-tabs">
-          <button class="provider-tab-btn ${isWos ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('worldofsmm')">
+          <button class="provider-tab-btn ${prov === 'worldofsmm' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('worldofsmm')">
             <span>🇮🇳 WorldOfSMM (Funded $0.10)</span>
-            <span class="badge ${isWos ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">1,685 Live Services</span>
+            <span class="badge ${prov === 'worldofsmm' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">1,685 Live Services</span>
           </button>
-          <button class="provider-tab-btn ${!isWos ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('jap')">
+          <button class="provider-tab-btn ${prov === 'socialfans' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('socialfans')">
+            <span>🔥 SocialFans (Direct API)</span>
+            <span class="badge ${prov === 'socialfans' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">460 Live Services</span>
+          </button>
+          <button class="provider-tab-btn ${prov === 'jap' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('jap')">
             <span>❖ JustAnotherPanel (JAP)</span>
-            <span class="badge ${!isWos ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">5,803 Services</span>
+            <span class="badge ${prov === 'jap' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">5,803 Services</span>
           </button>
         </div>
 
@@ -2425,20 +2449,26 @@ const AdminApp = {
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 style="font-size: 24px; font-weight: 800;">Provider Management</h2>
-          <p style="font-size: 13.5px;">Manage and monitor your dual upstream SMM API connections (JAP + WorldOfSMM).</p>
+          <p style="font-size: 13.5px;">Manage and monitor your upstream SMM API connections (WorldOfSMM + SocialFans + JAP).</p>
         </div>
       </div>
 
       <div class="provider-cards-grid">
         ${providers.map(p => {
           const isZeroBalance = !p.balance || p.balance <= 0.001;
-          const inrApprox = ((p.balance || 0) * 87).toFixed(0);
+          const isINR = p.currency === 'INR';
+          const inrApprox = isINR ? ((p.balance || 0)).toFixed(0) : ((p.balance || 0) * 87).toFixed(0);
+          const avatarIcon = p.id === 'p3' ? '🔥' : (p.id === 'p2' ? '🇮🇳' : '❖');
+          const balanceFormatted = isINR 
+            ? `₹${p.balance !== null ? p.balance.toFixed(2) : '0.00'} INR`
+            : `$${p.balance !== null ? p.balance.toFixed(2) : '0.00'} USD`;
+          const subText = p.id === 'p3' ? 'Direct API (India/Global)' : (p.id === 'p2' ? 'Zero Duplicates (Indian)' : 'Global Wholesale');
 
           return `
           <div class="provider-card status-active" style="${isZeroBalance ? 'border-color: rgba(245, 158, 11, 0.4);' : ''}">
             <div class="provider-card-header">
               <div class="provider-identity">
-                <div class="provider-avatar-box">${p.id === 'p2' ? '🇮🇳' : '❖'}</div>
+                <div class="provider-avatar-box">${avatarIcon}</div>
                 <div class="provider-title-box">
                   <h3>${p.displayName}</h3>
                   <div style="display: flex; align-items: center; gap: 6px; margin-top: 2px;">
@@ -2456,21 +2486,21 @@ const AdminApp = {
               <div class="provider-stat-col">
                 <span class="provider-stat-label">Account Balance</span>
                 <span class="provider-stat-val" style="color: ${isZeroBalance ? '#DC2626' : 'var(--success)'}; font-weight: 800;">
-                  $${p.balance !== null ? p.balance.toFixed(2) : '0.00'} USD
+                  ${balanceFormatted}
                 </span>
-                <span style="font-size: 11px; color: var(--text-muted);">≈ ₹${inrApprox} INR</span>
+                ${!isINR ? `<span style="font-size: 11px; color: var(--text-muted);">≈ ₹${inrApprox} INR</span>` : ''}
               </div>
               <div class="provider-stat-col">
                 <span class="provider-stat-label">Curated Services</span>
                 <span class="provider-stat-val">${p.activeServices}</span>
-                <span style="font-size: 11px; color: var(--text-muted);">${p.id === 'p2' ? 'Zero Duplicates (Indian)' : 'Global Wholesale'}</span>
+                <span style="font-size: 11px; color: var(--text-muted);">${subText}</span>
               </div>
             </div>
 
             ${isZeroBalance ? `
               <div style="margin: 10px 0; padding: 8px 12px; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.3); border-radius: 8px; font-size: 12px; color: #B45309; display: flex; align-items: center; gap: 6px;">
                 <span>⚠️</span>
-                <span><strong>Zero Balance:</strong> Top up on ${p.name} ${p.id === 'p2' ? 'via UPI/Paytm' : 'via Crypto'} to fulfill live orders.</span>
+                <span><strong>Zero Balance:</strong> Top up on ${p.name} ${p.id === 'p1' ? 'via Crypto' : 'via UPI/Paytm'} to fulfill live orders.</span>
               </div>
             ` : ''}
 

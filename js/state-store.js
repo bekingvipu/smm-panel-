@@ -894,6 +894,14 @@ class SmmStateStore {
               wosProv.lastSync = 'Live Sync (WorldOfSMM API)';
             }
           }
+          if (balData.socialfans && balData.socialfans.balance !== undefined) {
+            const sfBal = parseFloat(balData.socialfans.balance) || 0.00;
+            const sfProv = this.data.providers.find(p => p.id === 'p3');
+            if (sfProv) {
+              sfProv.balance = sfBal;
+              sfProv.lastSync = 'Live Sync (SocialFans API)';
+            }
+          }
           if (this.persona === 'admin') {
             this.notify();
           }
@@ -922,6 +930,15 @@ class SmmStateStore {
                 providerName: 'WorldOfSMM',
                 providerKey: 'worldofsmm',
                 balance: (parseFloat(balData.worldofsmm.balance) * 85).toFixed(2),
+                threshold: thresholdINR.toFixed(2)
+              });
+            } else if (balData.socialfans && balData.socialfans.balance !== undefined && parseFloat(balData.socialfans.balance) < thresholdINR) {
+              localStorage.setItem('likex_last_low_bal_alert', String(now));
+              this.triggerAlert({
+                type: 'low_balance',
+                providerName: 'SocialFans',
+                providerKey: 'socialfans',
+                balance: parseFloat(balData.socialfans.balance).toFixed(2),
                 threshold: thresholdINR.toFixed(2)
               });
             }
@@ -2621,7 +2638,7 @@ class SmmStateStore {
 
     this.showToast(`Pinging ${provider.displayName} API endpoint...`, 'info');
 
-    const providerParam = provider.id === 'p2' ? 'worldofsmm' : 'jap';
+    const providerParam = provider.id === 'p3' ? 'socialfans' : (provider.id === 'p2' ? 'worldofsmm' : 'jap');
     try {
       const res = await fetch(`/api/provider?action=balance&provider=${providerParam}`);
       if (res.ok) {
@@ -2629,7 +2646,8 @@ class SmmStateStore {
         if (json.balance !== undefined) {
           provider.balance = parseFloat(json.balance);
           provider.lastSync = 'Just now (Live API)';
-          this.showToast(`Connected to ${provider.displayName}! Live Balance: $${json.balance} ${json.currency || 'USD'}`, 'success');
+          const currSymbol = json.currency === 'INR' ? '₹' : '$';
+          this.showToast(`Connected to ${provider.displayName}! Live Balance: ${currSymbol}${json.balance} ${json.currency || 'USD'}`, 'success');
           this.notify();
           return;
         }
@@ -2637,7 +2655,8 @@ class SmmStateStore {
     } catch (e) {}
 
     setTimeout(() => {
-      this.showToast(`Connection to ${provider.displayName} verified! Ping 84ms, Balance $${provider.balance.toFixed(2)}`, 'success');
+      const sym = provider.currency === 'INR' ? '₹' : '$';
+      this.showToast(`Connection to ${provider.displayName} verified! Ping 84ms, Balance ${sym}${provider.balance.toFixed(2)}`, 'success');
     }, 800);
   }
 

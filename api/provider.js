@@ -21,6 +21,11 @@ export default async function handler(req, res) {
       name: 'WorldOfSMM',
       url: 'https://worldofsmm.com/api/v2',
       key: '46b91da29d8e95bad51d3aa3eb8c3a1a'
+    },
+    socialfans: {
+      name: 'SocialFans',
+      url: 'https://socialfanss.com/api/v2',
+      key: '05c0ebb98cacaa582a71636d72efc2f75cef4cce'
     }
   };
 
@@ -53,7 +58,7 @@ export default async function handler(req, res) {
     if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / JAP) to process and return live order ID
+    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / JAP / SocialFans) to process and return live order ID
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -77,14 +82,16 @@ export default async function handler(req, res) {
   try {
     // Multi-balance check
     if (action === 'balance' && (requestedProvider === 'all' || requestedProvider === 'both')) {
-      const [japRes, wosRes] = await Promise.allSettled([
+      const [japRes, wosRes, sfRes] = await Promise.allSettled([
         callProvider(PROVIDERS.jap, { action: 'balance' }),
-        callProvider(PROVIDERS.worldofsmm, { action: 'balance' })
+        callProvider(PROVIDERS.worldofsmm, { action: 'balance' }),
+        callProvider(PROVIDERS.socialfans, { action: 'balance' })
       ]);
 
       return res.status(200).json({
         jap: japRes.status === 'fulfilled' ? japRes.value : { error: 'Failed to reach JAP' },
-        worldofsmm: wosRes.status === 'fulfilled' ? wosRes.value : { error: 'Failed to reach WorldOfSMM' }
+        worldofsmm: wosRes.status === 'fulfilled' ? wosRes.value : { error: 'Failed to reach WorldOfSMM' },
+        socialfans: sfRes.status === 'fulfilled' ? sfRes.value : { error: 'Failed to reach SocialFans' }
       });
     }
 
@@ -118,7 +125,7 @@ export default async function handler(req, res) {
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
           provider_order_id: isSuccess ? String(data.order) : String(orderIdNum),
-          assigned_provider_id: providerKey === 'worldofsmm' ? 2 : 1,
+          assigned_provider_id: providerKey === 'worldofsmm' ? 2 : (providerKey === 'socialfans' ? 3 : 1),
           status: orderStatus,
           remains: Number(paramsObj.quantity) || 1000,
           refill_status: orderErrorNote,
@@ -158,7 +165,7 @@ export default async function handler(req, res) {
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
           provider_order_id: String(orderIdNum),
-          assigned_provider_id: requestedProvider === 'jap' ? 1 : 2,
+          assigned_provider_id: requestedProvider === 'socialfans' ? 3 : (requestedProvider === 'worldofsmm' ? 2 : 1),
           status: 'Queued',
           remains: Number(paramsObj.quantity) || 1000,
           refill_status: `Timeout: ${error.message.slice(0, 40)}`,

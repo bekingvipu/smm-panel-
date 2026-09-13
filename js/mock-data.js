@@ -132,6 +132,18 @@ window.SMM_MOCK = {
       lastSync: 'Live Connected',
       apiUrl: 'https://worldofsmm.com/api/v2',
       apiKeyMasked: '46b91d••••••••3a1a'
+    },
+    {
+      id: 'p3',
+      name: 'SocialFans',
+      displayName: 'SocialFans (Direct API)',
+      status: 'active',
+      balance: 0.00,
+      currency: 'INR',
+      activeServices: 460,
+      lastSync: 'Live Connected',
+      apiUrl: 'https://socialfanss.com/api/v2',
+      apiKeyMasked: '05c0eb••••••••4cce'
     }
   ],
 
