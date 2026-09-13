@@ -110,18 +110,6 @@ window.SMM_MOCK = {
 
   providers: [
     {
-      id: 'p1',
-      name: 'JustAnotherPanel',
-      displayName: 'JustAnotherPanel (JAP Wholesale)',
-      status: 'active',
-      balance: 0.00,
-      currency: 'USD',
-      activeServices: 5803,
-      lastSync: 'Live Connected',
-      apiUrl: 'https://justanotherpanel.com/api/v2',
-      apiKeyMasked: '30265a••••••••4a63'
-    },
-    {
       id: 'p2',
       name: 'WorldOfSMM',
       displayName: 'WorldOfSMM (India Local Provider 🇮🇳)',
@@ -150,7 +138,7 @@ window.SMM_MOCK = {
   // 2-Level Structured Services (Sub-Category -> Packages with tiered rates)
   customerServices: [
     // -------------------------------------------------------------
-    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (WOS 2868, JAP 5994 & WOS 6149)
+    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (WOS 2868 & WOS 6149)
     // -------------------------------------------------------------
     {
       id: 'wos-2868-likex',
@@ -169,25 +157,6 @@ window.SMM_MOCK = {
       wholesaleCost: 1.7228,
       markupPercent: 50,
       provider: 'worldofsmm'
-    },
-    {
-      id: 'jap-5994',
-      rawId: '5994',
-      platform: 'instagram',
-      subcategory: '🌟 LikeX Special Very Good [Followers, Likes, Views & Comments]',
-      customerName: '5994 - LikeX Special Instagram Views [Max: 10M] [Start Time: 0-1 Hour] [Speed: 200K/D]',
-      pricePer1k: 0.0014856,
-      min: 100,
-      max: 10000000,
-      deliverySpeed: '⚡ Instant (0 - 15m)',
-      startTime: '0 - 1 Hour',
-      refillSupported: false,
-      refillPeriod: 'None',
-      description: '🌟 LikeX Special Ultra-Fast Instagram Views connected directly via JustAnotherPanel (JAP). High speed up to 200K/Day.',
-      japId: '5994',
-      wholesaleCost: 0.0014856,
-      markupPercent: 50,
-      provider: 'jap'
     },
     {
       id: 'wos-6149',
@@ -209,145 +178,7 @@ window.SMM_MOCK = {
     },
 
     // -------------------------------------------------------------
-    // INSTAGRAM - GUARANTEED FOLLOWERS (WITH REFILL)
-    // -------------------------------------------------------------
-    {
-      id: 'ig-fol-1',
-      platform: 'instagram',
-      subcategory: 'Instagram Followers [Guaranteed / Refill 30D - 365D]',
-      customerName: 'Instagram Followers [Refill: 30D] - Basic Fast (₹79 me 1000)',
-      pricePer1k: 0.83, // ₹79.16
-      min: 50,
-      max: 200000,
-      deliverySpeed: '10K - 20K / Day',
-      startTime: '0 - 1 Hour',
-      refillSupported: true,
-      refillPeriod: '30 Days',
-      description: 'Budget real followers with 30-Day auto-refill guarantee. Safe delivery for personal and business pages.',
-      japId: '10131',
-      wholesaleCost: 0.585, // ₹55.80 wholesale
-      markupPercent: 42
-    },
-    {
-      id: 'ig-fol-2',
-      platform: 'instagram',
-      subcategory: 'Instagram Followers [Guaranteed / Refill 30D - 365D]',
-      customerName: 'Instagram Followers [Refill: 30D] - High Quality Real (₹50 me 1000)',
-      pricePer1k: 0.60, // ₹50.00
-      min: 100,
-      max: 500000,
-      deliverySpeed: '30K - 50K / Day',
-      startTime: '0 - 30 Minutes',
-      refillSupported: true,
-      refillPeriod: '30 Days',
-      description: 'High quality profiles with posts, active stories, and profile pictures. Drop rate below 2%.',
-      japId: '10216',
-      wholesaleCost: 0.28, // ₹23.00 wholesale
-      markupPercent: 117
-    },
-    {
-      id: 'ig-fol-3',
-      platform: 'instagram',
-      subcategory: 'Instagram Followers [Guaranteed / Refill 30D - 365D]',
-      customerName: 'Instagram Followers [Refill: 365D VIP Lifetime Guarantee] (₹90 me 1000)',
-      pricePer1k: 1.08, // ₹90.00
-      min: 100,
-      max: 5000000,
-      deliverySpeed: 'Up to 200K / Day',
-      startTime: 'Instant (0 - 15 mins)',
-      refillSupported: true,
-      refillPeriod: '365 Days',
-      description: 'VIP non-drop followers with 1 Full Year (365 Days) refill warranty. Ideal for influencers, creators, and brands.',
-      japId: '10349',
-      wholesaleCost: 0.50, // ₹41.50 wholesale
-      markupPercent: 116
-    },
-
-    // -------------------------------------------------------------
-    // INSTAGRAM - NON-GUARANTEED / BUDGET FOLLOWERS
-    // -------------------------------------------------------------
-    {
-      id: 'ig-fol-budget-1',
-      platform: 'instagram',
-      subcategory: 'Instagram Followers [Budget / No Refill]',
-      customerName: 'Instagram Followers [Ultra Cheap / No Refill] (₹18 me 1000)',
-      pricePer1k: 0.22, // ₹18.00
-      min: 100,
-      max: 100000,
-      deliverySpeed: '50K / Day',
-      startTime: 'Instant',
-      refillSupported: false,
-      refillPeriod: 'None',
-      description: 'Super low cost instant followers. No refill warranty (drop may happen). Good for quick numbers.',
-      japId: '10140',
-      wholesaleCost: 0.09, // ₹7.50 wholesale
-      markupPercent: 140
-    },
-
-    // -------------------------------------------------------------
-    // INSTAGRAM - LIKES
-    // -------------------------------------------------------------
-    {
-      id: 'ig-like-1',
-      platform: 'instagram',
-      subcategory: 'Instagram Likes [Instant & High Quality]',
-      customerName: 'Instagram Likes [Instant Speed / Real Looking] (₹10 me 1000)',
-      pricePer1k: 0.12, // ₹10.00
-      min: 50,
-      max: 100000,
-      deliverySpeed: '50K / Day',
-      startTime: 'Instant (0 - 5 mins)',
-      refillSupported: true,
-      refillPeriod: '30 Days',
-      description: 'Instant delivery likes for posts, reels, and carousels. Real-looking profiles.',
-      japId: '10115',
-      wholesaleCost: 0.05, // ₹4.00 wholesale
-      markupPercent: 150
-    },
-    {
-      id: 'ig-like-2',
-      platform: 'instagram',
-      subcategory: 'Instagram Likes [Instant & High Quality]',
-      customerName: 'Instagram Likes [Indian / Active Targeted] (₹25 me 1000)',
-      pricePer1k: 0.30, // ₹25.00
-      min: 50,
-      max: 50000,
-      deliverySpeed: '10K / Day',
-      startTime: '10 - 30 Minutes',
-      refillSupported: true,
-      refillPeriod: '30 Days',
-      description: 'Active profiles with Indian usernames and bios. Best for local businesses and creators.',
-      japId: '10119',
-      wholesaleCost: 0.12, // ₹10.00 wholesale
-      markupPercent: 150
-    },
-
-    // -------------------------------------------------------------
-    // INSTAGRAM - REELS VIEWS
-    // -------------------------------------------------------------
-    {
-      id: 'ig-reel-1',
-      platform: 'instagram',
-      subcategory: 'Instagram Reels Views [Viral Algorithm Boost]',
-      customerName: 'Instagram Reels Views [Super Fast Speed] (₹3 me 1000)',
-      pricePer1k: 0.036, // ₹3.00
-      min: 100,
-      max: 10000000,
-      deliverySpeed: '1M / Day',
-      startTime: 'Instant',
-      refillSupported: false,
-      refillPeriod: 'None',
-      description: 'Super fast reel views. Helps boost reels onto the Instagram Explore & Audio page.',
-      japId: '10150',
-      wholesaleCost: 0.012, // ₹1.00 wholesale
-      markupPercent: 200
-    },
-
-    // -------------------------------------------------------------
-    // FACEBOOK
-    // -------------------------------------------------------------
-    // -------------------------------------------------------------
-    // FACEBOOK
+    // FACEBOOK (SocialFans Direct API)
     // -------------------------------------------------------------
     {
       id: 'sf-4085',

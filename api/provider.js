@@ -1,7 +1,7 @@
 const SUPABASE_PROJECT_URL = 'https://gxbrchcfpjbewnyeijnp.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_Sx-TMQ94jDZpfXB8lR-FXw_3l6cIWnE';
 
-// Vercel Serverless Function to proxy JustAnotherPanel (JAP) and WorldOfSMM APIs with CORS
+// Vercel Serverless Function to proxy WorldOfSMM and SocialFans APIs with CORS
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -12,11 +12,6 @@ export default async function handler(req, res) {
   }
 
   const PROVIDERS = {
-    jap: {
-      name: 'JustAnotherPanel',
-      url: 'https://justanotherpanel.com/api/v2',
-      key: '30265a24da9de364919a246b151c4a63'
-    },
     worldofsmm: {
       name: 'WorldOfSMM',
       url: 'https://worldofsmm.com/api/v2',
@@ -58,7 +53,7 @@ export default async function handler(req, res) {
     if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
     if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
 
-    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / JAP / SocialFans) to process and return live order ID
+    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 15000);
 
@@ -82,14 +77,12 @@ export default async function handler(req, res) {
   try {
     // Multi-balance check
     if (action === 'balance' && (requestedProvider === 'all' || requestedProvider === 'both')) {
-      const [japRes, wosRes, sfRes] = await Promise.allSettled([
-        callProvider(PROVIDERS.jap, { action: 'balance' }),
+      const [wosRes, sfRes] = await Promise.allSettled([
         callProvider(PROVIDERS.worldofsmm, { action: 'balance' }),
         callProvider(PROVIDERS.socialfans, { action: 'balance' })
       ]);
 
       return res.status(200).json({
-        jap: japRes.status === 'fulfilled' ? japRes.value : { error: 'Failed to reach JAP' },
         worldofsmm: wosRes.status === 'fulfilled' ? wosRes.value : { error: 'Failed to reach WorldOfSMM' },
         socialfans: sfRes.status === 'fulfilled' ? sfRes.value : { error: 'Failed to reach SocialFans' }
       });
@@ -125,7 +118,7 @@ export default async function handler(req, res) {
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
           provider_order_id: isSuccess ? String(data.order) : String(orderIdNum),
-          assigned_provider_id: providerKey === 'worldofsmm' ? 2 : (providerKey === 'socialfans' ? 3 : 1),
+          assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
           status: orderStatus,
           remains: Number(paramsObj.quantity) || 1000,
           refill_status: orderErrorNote,
@@ -165,7 +158,7 @@ export default async function handler(req, res) {
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
           provider_order_id: String(orderIdNum),
-          assigned_provider_id: requestedProvider === 'socialfans' ? 3 : (requestedProvider === 'worldofsmm' ? 2 : 1),
+          assigned_provider_id: requestedProvider === 'socialfans' ? 3 : 2,
           status: 'Queued',
           remains: Number(paramsObj.quantity) || 1000,
           refill_status: `Timeout: ${error.message.slice(0, 40)}`,

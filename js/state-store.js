@@ -614,8 +614,8 @@ class SmmStateStore {
     if (sId.startsWith('wos-') && this.liveRatesCache[sId.replace('wos-', '')]) {
       return this.liveRatesCache[sId.replace('wos-', '')];
     }
-    if (sId.startsWith('jap-') && this.liveRatesCache[sId.replace('jap-', '')]) {
-      return this.liveRatesCache[sId.replace('jap-', '')];
+    if (sId.startsWith('sf-') && this.liveRatesCache[sId.replace('sf-', '')]) {
+      return this.liveRatesCache[sId.replace('sf-', '')];
     }
     return null;
   }
@@ -877,15 +877,6 @@ class SmmStateStore {
       if (balanceRes.ok) {
         const balData = await balanceRes.json();
         if (balData) {
-          if (balData.jap && balData.jap.balance !== undefined) {
-            const japBal = parseFloat(balData.jap.balance) || 0.00;
-            const japProv = this.data.providers.find(p => p.id === 'p1');
-            if (japProv) {
-              japProv.balance = japBal;
-              japProv.lastSync = 'Live Sync (JAP API)';
-            }
-            this.data.adminStats.providerBalance = japBal;
-          }
           if (balData.worldofsmm && balData.worldofsmm.balance !== undefined) {
             const wosBal = parseFloat(balData.worldofsmm.balance) || 0.00;
             const wosProv = this.data.providers.find(p => p.id === 'p2');
@@ -893,6 +884,7 @@ class SmmStateStore {
               wosProv.balance = wosBal;
               wosProv.lastSync = 'Live Sync (WorldOfSMM API)';
             }
+            this.data.adminStats.providerBalance = wosBal;
           }
           if (balData.socialfans && balData.socialfans.balance !== undefined) {
             const sfBal = parseFloat(balData.socialfans.balance) || 0.00;
@@ -914,16 +906,7 @@ class SmmStateStore {
           const now = Date.now();
           const lastAlertTime = Number(localStorage.getItem('likex_last_low_bal_alert') || 0);
           if (now - lastAlertTime > 3 * 60 * 60 * 1000) { // 3-hour anti-spam cooldown
-            if (balData.jap && balData.jap.balance !== undefined && parseFloat(balData.jap.balance) < thresholdUSD) {
-              localStorage.setItem('likex_last_low_bal_alert', String(now));
-              this.triggerAlert({
-                type: 'low_balance',
-                providerName: 'JustAnotherPanel (JAP)',
-                providerKey: 'jap',
-                balance: (parseFloat(balData.jap.balance) * 85).toFixed(2),
-                threshold: thresholdINR.toFixed(2)
-              });
-            } else if (balData.worldofsmm && balData.worldofsmm.balance !== undefined && parseFloat(balData.worldofsmm.balance) < thresholdUSD) {
+            if (balData.worldofsmm && balData.worldofsmm.balance !== undefined && parseFloat(balData.worldofsmm.balance) < thresholdUSD) {
               localStorage.setItem('likex_last_low_bal_alert', String(now));
               this.triggerAlert({
                 type: 'low_balance',
@@ -1120,11 +1103,11 @@ class SmmStateStore {
       if (matched && matched.provider) {
         return matched.provider;
       }
-      if (sIdStr.startsWith('wos-') || pIdStr.startsWith('58') || pIdStr.startsWith('59') || (pIdStr.length >= 8 && !pIdStr.startsWith('10'))) {
-        return 'worldofsmm';
+      if (sIdStr.startsWith('sf-')) {
+        return 'socialfans';
       }
-      if (sIdStr.startsWith('jap-') || pIdStr.startsWith('10')) {
-        return 'jap';
+      if (sIdStr.startsWith('wos-') || pIdStr.startsWith('58') || pIdStr.startsWith('59')) {
+        return 'worldofsmm';
       }
       return order.provider || 'worldofsmm';
     };
@@ -1143,7 +1126,7 @@ class SmmStateStore {
         return eId === oId || 
                (oProvId && eProvId && oProvId === eProvId) ||
                (oProvId && eId === oProvId) ||
-               (eProvId && oId === eProvId);
+               (eProvId && oId === eId);
       });
 
       const amountVal = Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : 0));
@@ -1160,7 +1143,7 @@ class SmmStateStore {
           providerOrderId: oProvId || displayId,
           serviceName: accurateSvcName,
           provider: accurateProv,
-          providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
+          providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
           amount: amountVal,
           quantity: qtyVal,
           createdAt: createdTs,
@@ -1185,21 +1168,21 @@ class SmmStateStore {
             ? existing.customerName
             : (bestEmail ? bestEmail.split('@')[0] : (o.customerName || existing.customerName || 'Customer'));
 
-        const bestAmount = amountVal > 0 ? amountVal : (Number(existing.amount || existing.charge || 0));
-        const mergedProv = resolveProvider({ ...existing, ...o, provider: accurateProv });
+        const bestAmount = (o.amount !== undefined && o.amount > 0) ? amountVal : (existing.amount || amountVal);
+        const mergedProv = accurateProv || existing.provider || 'worldofsmm';
 
         ordersList[existingIdx] = {
           ...existing,
           ...o,
           id: bestId,
-          providerOrderId: bestProvId || bestId,
+          providerOrderId: bestProvId || existing.providerOrderId || bestId,
           serviceName: bestName,
           userEmail: bestEmail,
           customerName: bestCustName,
           target: o.target || existing.target || '',
           comments: o.comments || existing.comments || '',
           provider: mergedProv,
-          providerDisplayName: mergedProv === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
+          providerDisplayName: mergedProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
           createdAt: Math.min(Number(existing.createdAt) || createdTs, createdTs),
           date: o.date || existing.date || this.formatRealDate(createdTs),
           amount: bestAmount,
@@ -1354,7 +1337,8 @@ class SmmStateStore {
           const matchedSvc = activeServices.find(s => 
             String(s.id) === String(so.service_id) || 
             String(s.rawId) === String(so.service_id) || 
-            String(s.japId) === String(so.service_id)
+            String(s.sfId) === String(so.service_id) ||
+            String(s.wosId) === String(so.service_id)
           );
 
           let svcTitle = matchedSvc 
@@ -1375,22 +1359,24 @@ class SmmStateStore {
           }
 
           const orderIdStr = String(so.provider_order_id || so.id || '');
+          const isSfOrder = so.assigned_provider_id === 3 || 
+                            (matchedSvc && matchedSvc.provider === 'socialfans');
           const isWosOrder = so.assigned_provider_id === 2 || 
                              orderIdStr.startsWith('58') || 
                              orderIdStr.startsWith('59') ||
                              (matchedSvc && matchedSvc.provider === 'worldofsmm');
 
-          const finalProvider = isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 1 ? 'jap' : (orderIdStr.startsWith('10') ? 'jap' : 'worldofsmm'));
+          const finalProvider = isSfOrder ? 'socialfans' : (isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 3 ? 'socialfans' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
 
           const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (String(so.id).length === 5 && so.status !== 'Completed' && so.status !== 'Refunded');
           return {
             id: String(so.id),
-            serviceId: matchedSvc ? matchedSvc.id : (so.service_id ? `wos-${so.service_id}` : 'wos-2868'),
+            serviceId: matchedSvc ? matchedSvc.id : (so.service_id ? (isSfOrder ? `sf-${so.service_id}` : `wos-${so.service_id}`) : 'wos-2868'),
             rawServiceId: matchedSvc?.rawId || so.service_id || '2868',
             serviceName: svcTitle,
             provider: finalProvider,
-            providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)',
+            providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
             providerOrderId: so.provider_order_id || String(so.id),
             target: so.target_url || '',
             quantity: Number(so.quantity) || 1000,
@@ -1472,7 +1458,7 @@ class SmmStateStore {
         o.providerOrderId = String(o.id);
       }
       // White-label provider display name for customer privacy
-      if (o.providerName && (o.providerName.includes('JustAnotherPanel') || o.providerName.includes('WorldOfSMM') || o.providerName.includes('JAP'))) {
+      if (o.providerName && (o.providerName.includes('WorldOfSMM') || o.providerName.includes('SocialFans') || o.providerName.includes('JustAnotherPanel') || o.providerName.includes('JAP'))) {
         o.providerName = 'LikeX Automated Server';
       }
       return o;
@@ -1809,8 +1795,8 @@ class SmmStateStore {
     const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
     const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
     if (foundSvc) {
-      targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm'));
-      rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace('jap-', '').replace(/-likex$/, '');
+      targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+      rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace(/-likex$/, '');
       if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
         serviceName = foundSvc.customerName || foundSvc.name;
       }
@@ -1820,9 +1806,6 @@ class SmmStateStore {
     } else if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
       rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
-    } else if (String(serviceId).startsWith('jap-')) {
-      targetProvider = 'jap';
-      rawServiceId = String(serviceId).replace('jap-', '').replace(/-likex$/, '');
     }
 
     if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
@@ -1836,7 +1819,7 @@ class SmmStateStore {
       }
     }
 
-    const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : (targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API'));
+    const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
 
     // Dynamic Live Wholesale Rate Lookup to protect profit margin
     let targetWholesaleCost = wholesaleCost;
@@ -2302,7 +2285,7 @@ class SmmStateStore {
         body: JSON.stringify({
           provider: order.provider || 'worldofsmm',
           action: 'add',
-          service: String(order.rawServiceId || order.serviceId || '2868').replace('wos-', '').replace('jap-', ''),
+          service: String(order.rawServiceId || order.serviceId || '2868').replace('wos-', '').replace('sf-', ''),
           link: order.target,
           quantity: order.quantity,
           charge: order.amount,
@@ -2390,7 +2373,7 @@ class SmmStateStore {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          provider: order.provider || 'jap',
+          provider: order.provider || 'worldofsmm',
           action: 'refill', 
           order: order.providerOrderId || orderId 
         })
@@ -2411,7 +2394,7 @@ class SmmStateStore {
       dropCount: Math.max(0, (order.startCount + order.quantity) - order.currentCount),
       requestedAt: 'Just now',
       status: 'Pending',
-      provider: order.providerName || 'JustAnotherPanel'
+      provider: order.providerName || (order.provider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM')
     };
 
     this.data.refillQueue.unshift(refillItem);
@@ -2641,7 +2624,7 @@ class SmmStateStore {
 
     this.showToast(`Pinging ${provider.displayName} API endpoint...`, 'info');
 
-    const providerParam = provider.id === 'p3' ? 'socialfans' : (provider.id === 'p2' ? 'worldofsmm' : 'jap');
+    const providerParam = provider.id === 'p3' ? 'socialfans' : 'worldofsmm';
     try {
       const res = await fetch(`/api/provider?action=balance&provider=${providerParam}`);
       if (res.ok) {
@@ -2678,37 +2661,17 @@ class SmmStateStore {
   }
 
   saveAlertConfig(config) {
+    if (!config) return;
     try {
       localStorage.setItem('likex_alert_config', JSON.stringify(config));
+      this.showToast('✓ Alert gateway settings saved successfully!', 'success');
+      this.notify();
     } catch (e) {}
-    this.showToast('✅ Alert settings updated successfully!', 'success');
-    this.notify();
-  }
-
-  async triggerAlert(alertData) {
-    try {
-      const config = this.getAlertConfig();
-      const payload = {
-        ...alertData,
-        adminEmail: config.adminEmail,
-        telegramBotToken: config.telegramBotToken,
-        telegramChatId: config.telegramChatId,
-        threshold: config.threshold
-      };
-
-      await fetch('/api/alert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-    } catch (e) {
-      console.warn('[LikeX Alert] Alert trigger notice:', e);
-    }
   }
 
   async sendTestAlert() {
-    const config = this.getAlertConfig();
-    this.showToast(`📡 Sending live test alert to Telegram Bot and Gmail (${config.adminEmail})...`, 'info');
+    const cfg = this.getAlertConfig();
+    this.showToast('Sending live test notification via Telegram & Gmail...', 'info');
 
     try {
       const res = await fetch('/api/alert', {
@@ -2716,27 +2679,46 @@ class SmmStateStore {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type: 'test',
-          providerName: 'JustAnotherPanel (JAP)',
-          providerKey: 'jap',
-          balance: '45.00',
-          threshold: String(config.threshold || 100),
-          adminEmail: config.adminEmail,
-          telegramBotToken: config.telegramBotToken,
-          telegramChatId: config.telegramChatId
+          adminEmail: cfg.adminEmail,
+          telegramBotToken: cfg.telegramBotToken,
+          telegramChatId: cfg.telegramChatId,
+          threshold: cfg.threshold
         })
       });
+
       if (res.ok) {
-        this.showToast(`✅ Test alert successfully sent to Telegram Bot & ${config.adminEmail}!`, 'success');
+        const data = await res.json();
+        if (data.results?.telegram?.ok) {
+          this.showToast('✅ Test Alert received on Telegram Bot!', 'success');
+        } else {
+          this.showToast('⚠️ Alert server triggered (Check Telegram Bot chat).', 'warning');
+        }
       } else {
-        this.showToast('⚠️ Alert gateway responded with status ' + res.status, 'warning');
+        this.showToast('Could not reach alert notification service.', 'error');
       }
     } catch (e) {
-      this.showToast('❌ Failed to connect to alert gateway: ' + e.message, 'error');
+      this.showToast('Alert dispatch network error.', 'error');
     }
   }
 
-  // 1-Click Dispatch Queued Orders once Provider Balance is Refilled
-  async dispatchQueuedOrder(orderId) {
+  async triggerAlert(payload) {
+    const cfg = this.getAlertConfig();
+    try {
+      await fetch('/api/alert', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...payload,
+          adminEmail: cfg.adminEmail,
+          telegramBotToken: cfg.telegramBotToken,
+          telegramChatId: cfg.telegramChatId
+        })
+      });
+    } catch (e) {}
+  }
+
+  // Admin Single Order Manual Retry Dispatch (WorldOfSMM / SocialFans)
+  async retrySingleOrder(orderId) {
     const allOrders = this.getAllAdminOrders();
     const order = allOrders.find(o => String(o.id) === String(orderId));
     if (!order) {
@@ -2744,9 +2726,9 @@ class SmmStateStore {
       return { success: false };
     }
 
-    const prov = order.provider || (String(order.serviceId).startsWith('wos-') ? 'worldofsmm' : 'jap');
-    const rawId = order.rawServiceId || String(order.serviceId).replace('wos-', '');
-    const provName = prov === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)';
+    const prov = order.provider || (String(order.serviceId).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+    const rawId = order.rawServiceId || String(order.serviceId).replace('sf-', '').replace('wos-', '');
+    const provName = prov === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
 
     this.showToast(`⚡ Dispatching Order #${orderId} to ${provName}...`, 'info');
 

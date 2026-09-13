@@ -306,7 +306,7 @@ const AdminApp = {
               <button class="header-icon-btn" onclick="store.setTheme(store.theme === 'light' ? 'dark' : 'light')" title="Toggle Theme">
                 <span>${store.theme === 'light' ? '🌙' : '☀️'}</span>
               </button>
-              <button class="header-icon-btn" onclick="store.showToast('Upstream JAP API responding normally', 'info')">
+              <button class="header-icon-btn" onclick="store.showToast('Upstream APIs responding normally', 'info')">
                 <span>🔔</span>
               </button>
               <button class="btn btn-sm btn-secondary" onclick="window.navigateToRoute('/')">
@@ -858,10 +858,8 @@ const AdminApp = {
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
     const alertConfig = store.getAlertConfig();
-    const japProv = (store.data.providers || []).find(p => p.id === 'p1');
     const wosProv = (store.data.providers || []).find(p => p.id === 'p2');
     const sfProv = (store.data.providers || []).find(p => p.id === 'p3');
-    const japBal = Number(japProv?.balance || 0);
     const wosBal = Number(wosProv?.balance || 0);
     const sfBal = Number(sfProv?.balance || 0);
 
@@ -880,7 +878,7 @@ const AdminApp = {
                 Low Balance & Queued Order Alert Gateway
               </h2>
               <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
-                Whenever JAP, WorldOfSMM, or SocialFans balance drops below ₹${alertConfig.threshold || 100}, or a customer places an order requiring top-up, you receive instant alerts on WhatsApp & Gmail.
+                Whenever WorldOfSMM or SocialFans balance drops below ₹${alertConfig.threshold || 100}, or a customer places an order requiring top-up, you receive instant alerts on WhatsApp & Gmail.
               </p>
             </div>
 
@@ -892,20 +890,6 @@ const AdminApp = {
 
         <!-- Live Provider Balances Overview -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
-          <div class="card" style="padding: 20px; border: 1.5px solid var(--border-color); border-radius: 16px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">🏛️ JustAnotherPanel (JAP)</span>
-              <span class="badge ${japBal > 1.2 ? 'badge-success' : 'badge-danger'}">
-                ${japBal > 1.2 ? '✓ Funded' : '⚠️ Low Balance'}
-              </span>
-            </div>
-            <div style="font-size: 28px; font-weight: 900; color: var(--primary); font-family: monospace;">
-              $${japBal.toFixed(2)} USD
-            </div>
-            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 4px;">
-              Approx: <strong>₹${(japBal * 85).toFixed(2)} INR</strong> • Threshold: ₹${alertConfig.threshold || 100}
-            </div>
-          </div>
 
           <div class="card" style="padding: 20px; border: 1.5px solid var(--border-color); border-radius: 16px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -1190,7 +1174,7 @@ const AdminApp = {
               </thead>
               <tbody>
                 ${queuedOrders.map(qo => {
-                  const provName = qo.providerDisplayName || (qo.provider === 'worldofsmm' ? 'WorldOfSMM' : 'JustAnotherPanel (JAP)');
+                  const provName = qo.providerDisplayName || (qo.provider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM');
                   return `
                     <tr>
                       <td style="font-family: var(--font-mono); font-weight: 800; color: #6C5CE7;">#${qo.id}</td>
@@ -1263,7 +1247,7 @@ const AdminApp = {
             <div class="kpi-icon-box" style="background: var(--warning-light); color: var(--warning);">🏛️</div>
             <span class="badge badge-success">${stats.providerBalanceStatus}</span>
           </div>
-          <div class="kpi-label">JAP Wholesale Balance</div>
+          <div class="kpi-label">WorldOfSMM Balance</div>
           <div class="kpi-value">$${(Number(stats.providerBalance) || 0).toFixed(2)} USD</div>
         </div>
 
@@ -1985,7 +1969,7 @@ const AdminApp = {
                 <td>
                   <strong style="font-size: 14px;">${s.customerName}</strong>
                   <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 2px;">
-                    Subcategory: <em>${s.subcategory}</em> • JAP #${s.japId || '10131'}
+                    Subcategory: <em>${s.subcategory}</em> • ID #${s.rawId || s.id || 'N/A'}
                   </div>
                 </td>
                 <td>
@@ -2072,7 +2056,7 @@ const AdminApp = {
         const data = await res.json();
         if (Array.isArray(data)) {
           this.providerServicesCache[provider] = data;
-          const provLabel = provider === 'worldofsmm' ? 'WorldOfSMM' : (provider === 'socialfans' ? 'SocialFans' : 'JustAnotherPanel');
+          const provLabel = provider === 'worldofsmm' ? 'WorldOfSMM' : (provider === 'socialfans' ? 'SocialFans' : 'Provider');
           window.store.showToast(`Fetched ${data.length} live services from ${provLabel}!`, 'success');
         }
       }
@@ -2179,16 +2163,18 @@ const AdminApp = {
     let allServices = this.providerServicesCache[prov] || [];
     if (allServices.length === 0) {
       const catalog = window.JAP_SERVICES || [];
-      if (isWos) {
+      if (prov === 'worldofsmm') {
         allServices = catalog.filter(s => s.provider === 'worldofsmm' || String(s.id).startsWith('wos-'));
+      } else if (prov === 'socialfans') {
+        allServices = catalog.filter(s => s.provider === 'socialfans' || String(s.id).startsWith('sf-'));
       } else {
-        allServices = catalog.filter(s => s.provider !== 'worldofsmm' && !String(s.id).startsWith('wos-'));
+        allServices = catalog;
       }
     }
 
     const normalized = allServices.map(s => {
       const sId = String(s.service || s.id);
-      const rawId = String(s.rawId || s.service || sId.replace('wos-', '').replace('sf-', '').replace('jap-', ''));
+      const rawId = String(s.rawId || s.service || sId.replace('wos-', '').replace('sf-', ''));
       const costUsd = prov === 'socialfans'
         ? (parseFloat(s.rate || s.cost || 0) / (store.data.exchangeRate || 95.385))
         : parseFloat(s.rate || s.cost || 0.1);
@@ -2258,10 +2244,6 @@ const AdminApp = {
           <button class="provider-tab-btn ${prov === 'socialfans' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('socialfans')">
             <span>🔥 SocialFans (Direct API)</span>
             <span class="badge ${prov === 'socialfans' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">460 Live Services</span>
-          </button>
-          <button class="provider-tab-btn ${prov === 'jap' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('jap')">
-            <span>❖ JustAnotherPanel (JAP)</span>
-            <span class="badge ${prov === 'jap' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">5,803 Services</span>
           </button>
         </div>
 
@@ -2364,7 +2346,7 @@ const AdminApp = {
                       <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 700;">
                         #${sKey}
                       </span>
-                      <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${isWos ? 'WorldOfSMM' : 'JAP'}</div>
+                      <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${isWos ? 'WorldOfSMM' : (prov === 'socialfans' ? 'SocialFans' : prov)}</div>
                     </td>
                     <td>
                       <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); line-height: 1.3;">
@@ -2423,7 +2405,7 @@ const AdminApp = {
           <div class="floating-batch-bar">
             <div class="batch-info">
               <span style="font-size: 20px;">📌</span>
-              <span><strong>${selectedCount}</strong> services selected from ${isWos ? 'WorldOfSMM' : 'JAP'}</span>
+              <span><strong>${selectedCount}</strong> services selected from ${isWos ? 'WorldOfSMM' : (prov === 'socialfans' ? 'SocialFans' : prov)}</span>
             </div>
             <div class="batch-actions">
               <button class="btn btn-success btn-md" style="background: #10B981; border: none; font-weight: 700; color: #FFFFFF;" onclick="AdminApp.handleAddSelectedToCatalog()">
@@ -2449,7 +2431,7 @@ const AdminApp = {
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 style="font-size: 24px; font-weight: 800;">Provider Management</h2>
-          <p style="font-size: 13.5px;">Manage and monitor your upstream SMM API connections (WorldOfSMM + SocialFans + JAP).</p>
+          <p style="font-size: 13.5px;">Manage and monitor your upstream SMM API connections (WorldOfSMM + SocialFans).</p>
         </div>
       </div>
 
@@ -2458,11 +2440,11 @@ const AdminApp = {
           const isZeroBalance = !p.balance || p.balance <= 0.001;
           const isINR = p.currency === 'INR';
           const inrApprox = isINR ? ((p.balance || 0)).toFixed(0) : ((p.balance || 0) * 87).toFixed(0);
-          const avatarIcon = p.id === 'p3' ? '🔥' : (p.id === 'p2' ? '🇮🇳' : '❖');
+          const avatarIcon = p.id === 'p3' ? '🔥' : '🇮🇳';
           const balanceFormatted = isINR 
             ? `₹${p.balance !== null ? p.balance.toFixed(2) : '0.00'} INR`
             : `$${p.balance !== null ? p.balance.toFixed(2) : '0.00'} USD`;
-          const subText = p.id === 'p3' ? 'Direct API (India/Global)' : (p.id === 'p2' ? 'Zero Duplicates (Indian)' : 'Global Wholesale');
+          const subText = p.id === 'p3' ? 'Direct API (India/Global)' : 'Zero Duplicates (Indian)';
 
           return `
           <div class="provider-card status-active" style="${isZeroBalance ? 'border-color: rgba(245, 158, 11, 0.4);' : ''}">
@@ -2523,7 +2505,7 @@ const AdminApp = {
       <div style="display: flex; justify-content: space-between; align-items: flex-start;">
         <div>
           <h2 style="font-size: 24px; font-weight: 800;">Refill Requests Queue</h2>
-          <p style="font-size: 13.5px;">Monitor customer-initiated refills routed to JustAnotherPanel.</p>
+          <p style="font-size: 13.5px;">Monitor customer-initiated refills routed to upstream providers.</p>
         </div>
       </div>
 
@@ -2567,20 +2549,20 @@ const AdminApp = {
   getOrderServiceId(order) {
     if (!order) return 'N/A';
     if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '') {
-      return String(order.rawServiceId).replace(/^wos-/, '').replace(/^jap-/, '');
+      return String(order.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     // Check in customerServices catalog
     const custSvc = (window.mockData?.customerServices || []).find(s => String(s.id) === String(order.serviceId));
-    if (custSvc && custSvc.japId) {
-      return String(custSvc.japId);
+    if (custSvc && (custSvc.sfId || custSvc.wosId || custSvc.rawId)) {
+      return String(custSvc.sfId || custSvc.wosId || custSvc.rawId);
     }
     // Check in window.JAP_SERVICES
-    const japSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId));
-    if (japSvc) {
-      return String(japSvc.rawId || japSvc.id).replace(/^wos-/, '').replace(/^jap-/, '');
+    const matchedSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId));
+    if (matchedSvc) {
+      return String(matchedSvc.rawId || matchedSvc.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined') {
-      return String(order.serviceId).replace(/^wos-/, '').replace(/^jap-/, '');
+      return String(order.serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     return '2868';
   },
@@ -2722,13 +2704,16 @@ const AdminApp = {
       const provIdStr = String(o.providerOrderId || '');
       const sIdStr = String(o.serviceId || o.rawServiceId || '');
 
+      const isSf = o.provider === 'socialfans' ||
+                   sIdStr.startsWith('sf-') ||
+                   (o.providerDisplayName && o.providerDisplayName.includes('SocialFans'));
+
       const isWos = o.provider === 'worldofsmm' || 
                     sIdStr.startsWith('wos-') || 
                     idStr.startsWith('58') || 
                     idStr.startsWith('59') || 
                     provIdStr.startsWith('58') || 
-                    provIdStr.startsWith('59') ||
-                    (provIdStr.length >= 8 && !provIdStr.startsWith('10'));
+                    provIdStr.startsWith('59');
 
       const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
 
@@ -2836,15 +2821,19 @@ const AdminApp = {
 
           <!-- 4. PROVIDER ORIGIN -->
           <td>
-            ${isWos ? `
+            ${isSf ? `
+              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
+                🔥 SocialFans
+              </span>
+            ` : (isWos ? `
               <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
                 🇮🇳 WorldOfSMM
               </span>
             ` : `
-              <span class="badge" style="background: rgba(59, 130, 246, 0.15); color: #1D4ED8; font-weight: 800; border: 1px solid rgba(59, 130, 246, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
-                🌐 JAP
+              <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #4338CA; font-weight: 800; border: 1px solid rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
+                ⚡ Upstream API
               </span>
-            `}
+            `)}
             <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
               <span>${o.providerOrderId || 'Prov #' + o.id}</span>
               ${(o.providerOrderId || o.id) ? `

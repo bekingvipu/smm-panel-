@@ -24,8 +24,8 @@ export default async function handler(req, res) {
 
   const {
     type = 'low_balance', // 'low_balance' | 'queued_order' | 'test'
-    providerName = 'JustAnotherPanel', // 'JustAnotherPanel (JAP)' | 'WorldOfSMM'
-    providerKey = 'jap',
+    providerName = 'WorldOfSMM', // 'WorldOfSMM' | 'SocialFans'
+    providerKey = 'worldofsmm',
     balance = '0.00',
     threshold = '100.00',
     orderId = '',
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
       `✅ *Telegram Bot:* Connected & Active\n` +
       `📧 *Gmail Address:* ${adminEmail}\n` +
       `📉 *Alert Threshold:* ₹${threshold}\n` +
-      `🔌 *Monitored Providers:* JustAnotherPanel (JAP) & WorldOfSMM\n\n` +
+      `🔌 *Monitored Providers:* WorldOfSMM & SocialFans\n\n` +
       `⚡ You will receive instant sound alerts whenever top-up is needed!`;
   } else {
     alertTitle = `⚠️ [LikeX Alert] Low Provider Balance: ${providerName}`;

@@ -822,19 +822,18 @@ const CustomerApp = {
     }
   },
 
-  // Dynamic Live Average Time Parser for JAP & WorldOfSMM
+  // Dynamic Live Average Time Parser for Upstream Providers (WorldOfSMM & SocialFans)
   getServiceAverageTime(service) {
     if (!service) return '⚡ Instant (0 - 15m)';
     const idStr = String(service.id || '');
-    const rawId = String(service.rawId || service.service || idStr.replace('wos-', ''));
+    const rawId = String(service.rawId || service.service || idStr.replace('wos-', '').replace('sf-', ''));
     const name = (service.name || '').toLowerCase();
     const cat = (service.category || '').toLowerCase();
 
-    // 1. Exact JAP catalog live telemetry average times (Followers take gradual algorithmic delivery)
-    const JAP_AVERAGE_TIMES = {
+    // 1. Exact catalog live telemetry average times (Followers take gradual algorithmic delivery)
+    const PROVIDER_AVERAGE_TIMES = {
       '2868': '⏱️ 8 - 20 Hours',
       '6149': '⚡ Instant (0 - 15m)',
-      '5994': '⚡ Instant (0 - 15m)',
       '10147': '⏱️ 22h 52m',
       '10349': '⏱️ 8 - 20 Hours',
       '1810': '⏱️ 8 - 20 Hours',
@@ -867,15 +866,11 @@ const CustomerApp = {
       '5876': '⚡ 15 - 45 Mins'
     };
 
-    if (JAP_AVERAGE_TIMES[rawId]) {
-      return JAP_AVERAGE_TIMES[rawId];
+    if (PROVIDER_AVERAGE_TIMES[rawId]) {
+      return PROVIDER_AVERAGE_TIMES[rawId];
     }
 
     if (rawId === '6149' || idStr.includes('6149')) {
-      return '⚡ Instant (0 - 15m)';
-    }
-
-    if (rawId === '5994' || idStr.includes('5994')) {
       return '⚡ Instant (0 - 15m)';
     }
 
@@ -883,7 +878,7 @@ const CustomerApp = {
       return '⏱️ 6 - 8 Hours';
     }
 
-    // 2. Extract Duration & Speed Tags from Provider Service Title (WorldOfSMM & JAP)
+    // 2. Extract Duration & Speed Tags from Provider Service Title (WorldOfSMM & SocialFans)
     if (name.includes('0-1 min') || name.includes('0 - 1 min') || name.includes('0–1 min') || name.includes('0-1min') || name.includes('0-5 min') || name.includes('instant-start') || name.includes('instant start') || (name.includes('instant') && !name.includes('drop'))) {
       return '⚡ Instant (0 - 15m)';
     }
@@ -997,12 +992,12 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special') || (this.currentCategory || '').toLowerCase().includes('special very good');
 
     if (isLikeXSpecial) {
-      // User-defined Flagship Order: 1. Followers (2868), 2. Views (5994), 3. Custom Comments (6149)
+      // User-defined Flagship Order: 1. Followers (2868), 2. Views, 3. Custom Comments (6149)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
         const name = (s.name || '').toLowerCase();
         if (id === '2868' || (name.includes('follower') && (id.includes('2868') || name.includes('likex special') || name.includes('instagram hq')))) return 1;
-        if (id === '5994' || (name.includes('likex special') && name.includes('view'))) return 2;
+        if (name.includes('likex special') && name.includes('view')) return 2;
         if (id === '6149' || name.includes('comment')) return 3;
         return 4;
       };
@@ -1262,7 +1257,7 @@ const CustomerApp = {
           <div class="custom-dropdown-card" id="custom-service-trigger-card" onclick="CustomerApp.toggleServiceDropdown(event)">
             <div class="custom-dropdown-trigger">
               <div class="trigger-service-info">
-                <span class="service-id-pill" id="trigger-service-id-badge">${String(activeService.rawId || activeService.id || '6808').replace(/^wos-/, '').replace(/^jap-/, '').replace(/-likex$/, '')}</span>
+                <span class="service-id-pill" id="trigger-service-id-badge">${String(activeService.rawId || activeService.id || '6808').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '')}</span>
                 <span class="trigger-service-text" id="trigger-service-name-text">${activeService.name || 'Select Service Package'}</span>
               </div>
               <div class="trigger-right-badge">
@@ -1279,7 +1274,7 @@ const CustomerApp = {
                 const isSelected = String(s.id) === String(activeService.id);
                 const p = store.getSellingPrice(s.cost || 0.1);
                 const tags = this.getServiceTags(s);
-                const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+                const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
                 return `
                   <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackageItem(event, '${s.id}')">
                     <div class="service-row-top">
