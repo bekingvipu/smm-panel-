@@ -3659,11 +3659,11 @@ const CustomerApp = {
                   Prefer email? Send your question or dispute directly to our support mailbox.
                 </p>
                 <a 
-                  href="mailto:supporthubindia@gmail.com?subject=${encodeURIComponent('LikeX Support Query' + (userEmail ? ' - ' + userEmail : ''))}" 
+                  href="mailto:support@likex.in?subject=${encodeURIComponent('LikeX Support Query' + (userEmail ? ' - ' + userEmail : ''))}" 
                   class="btn"
                   style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12.5px; width: 100%; box-shadow: 0 3px 10px rgba(234, 67, 53, 0.3); border: none;"
                 >
-                  Write to supporthubindia@gmail.com →
+                  Write to support@likex.in →
                 </a>
               </div>
             </div>
@@ -3723,7 +3723,7 @@ const CustomerApp = {
 
           <!-- 4. Official Email Matte Glass Card -->
           <a 
-            href="mailto:supporthubindia@gmail.com" 
+            href="mailto:support@likex.in" 
             style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(234, 67, 53, 0.32); background: rgba(234, 67, 53, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
             <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(234, 67, 53, 0.18); border: 1px solid rgba(234, 67, 53, 0.3); color: #C5221F; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">

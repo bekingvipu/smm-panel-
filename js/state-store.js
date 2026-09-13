@@ -3356,7 +3356,7 @@ class SmmStateStore {
       if (saved) return JSON.parse(saved);
     } catch (e) {}
     return {
-      adminEmail: 'supporthubindia@gmail.com',
+      adminEmail: 'support@likex.in',
       telegramBotToken: '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
       telegramChatId: '2057136429',
       threshold: 100.00
