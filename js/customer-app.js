@@ -1349,12 +1349,12 @@ const CustomerApp = {
           </div>
           <div class="vip-spec-grid">
             <div class="spec-tile">
-              <span class="spec-tile-label">Wholesale Rate</span>
+              <span class="spec-tile-label">Rate / 1K</span>
               <span class="spec-tile-val" id="service-detail-rate" style="color: var(--primary); font-size: 15px;">${activeService ? `${store.formatMoney(sellingPrice)}/1K` : '—'}</span>
             </div>
             <div class="spec-tile">
               <span class="spec-tile-label">Service ID</span>
-              <span class="spec-tile-val" id="service-detail-id">${activeService ? `#${activeService.id}` : '—'}</span>
+              <span class="spec-tile-val" id="service-detail-id">${activeService ? `#${String(activeService.rawId || activeService.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/-c\d+$/, '')}` : '—'}</span>
             </div>
             <div class="spec-tile">
               <span class="spec-tile-label">Min Limit</span>
@@ -1736,10 +1736,11 @@ const CustomerApp = {
         if (minEl) minEl.textContent = min.toLocaleString();
         const timeEl = document.getElementById('service-detail-time');
         if (timeEl) timeEl.textContent = CustomerApp.getServiceAverageTime({ id, name, category: CustomerApp.currentCategory });
+        const cleanId = String(id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/-c\d+$/, '');
         const rateEl = document.getElementById('service-detail-rate');
-        if (rateEl) rateEl.textContent = store.formatMoney(sellingPrice);
+        if (rateEl) rateEl.textContent = store.formatMoney(sellingPrice) + '/1K';
         const idEl = document.getElementById('service-detail-id');
-        if (idEl) idEl.textContent = '#' + id;
+        if (idEl) idEl.textContent = '#' + cleanId;
 
         const badge = document.getElementById('service-detail-refill-badge');
         if (badge) {
@@ -1747,7 +1748,6 @@ const CustomerApp = {
           badge.textContent = refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty';
         }
 
-        const cleanId = String(id).replace(/^wos-/, '');
         const triggerBadge = document.getElementById('trigger-service-id-badge');
         if (triggerBadge) triggerBadge.textContent = cleanId;
         const triggerName = document.getElementById('trigger-service-name-text');
