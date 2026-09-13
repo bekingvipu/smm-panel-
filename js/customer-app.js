@@ -377,7 +377,7 @@ const CustomerApp = {
                 </div>
               </div>
               <div class="drawer-support-mascot-wrap">
-                <img src="assets/support-mascot.jpg" alt="LikeX 24/7 Support Desk" class="drawer-support-mascot-img" />
+                <img src="assets/pikachu-support.png" alt="LikeX 24/7 Telegram Support" class="drawer-support-mascot-img" />
               </div>
             </a>
           </div>
