@@ -1168,44 +1168,42 @@ class SmmStateStore {
     const ordersList = [];
     const activeServices = (this.getActiveServices ? this.getActiveServices() : window.JAP_SERVICES) || [];
 
-    // Helper to resolve clean service title
+    // Helper to resolve clean service title WITHOUT hardcoded generic fallback
     const resolveServiceTitle = (order) => {
-      if (order.serviceName && !order.serviceName.includes('null') && !order.serviceName.includes('undefined') && !order.serviceName.startsWith('Service #') && order.serviceName !== 'Social Growth Package') {
+      if (order.serviceSnapshot && order.serviceSnapshot.serviceName) {
+        return order.serviceSnapshot.serviceName;
+      }
+      if (order.serviceName && !order.serviceName.includes('null') && !order.serviceName.includes('undefined') && !order.serviceName.startsWith('Instagram HQ Followers / Likes / Views [Instant]') && order.serviceName !== 'Social Growth Package') {
         return order.serviceName;
       }
+      const rawId = order.providerServiceId || order.rawServiceId || (order.serviceId ? String(order.serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '') : null);
       const matched = activeServices.find(s => 
-        (order.serviceId && (String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId))) ||
-        (order.rawServiceId && String(s.rawId) === String(order.rawServiceId))
+        (rawId && (String(s.rawId) === String(rawId) || String(s.id) === String(rawId))) ||
+        (order.serviceId && (String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId)))
       );
       if (matched) return matched.customerName || matched.name;
-      
-      const targetStr = String(order.target || '').toLowerCase();
-      if (targetStr.includes('instagram.com') || targetStr.includes('instagr.am')) {
-        return 'Instagram HQ Followers / Likes / Views [Instant]';
-      } else if (targetStr.includes('youtube.com') || targetStr.includes('youtu.be')) {
-        return 'YouTube Video Views & Engagement [HQ]';
-      } else if (targetStr.includes('tiktok.com')) {
-        return 'TikTok Growth Package [Instant Start]';
+      if (rawId && rawId !== 'N/A' && rawId !== '2868') {
+        return `Service #${rawId}`;
       }
-      return order.serviceId ? `Service #${String(order.serviceId).replace(/^wos-/, '')}` : 'Social Growth Package';
+      return order.serviceName || 'Social Growth Service';
     };
 
-    // Helper to resolve accurate provider
+    // Helper to resolve accurate provider WITHOUT defaulting to worldofsmm for SocialFans
     const resolveProvider = (order) => {
-      const pIdStr = String(order.providerOrderId || order.id || '');
-      const sIdStr = String(order.serviceId || order.rawServiceId || '');
-      const matched = activeServices.find(s => 
-        (order.serviceId && (String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId))) ||
-        (order.rawServiceId && String(s.rawId) === String(order.rawServiceId))
-      );
-      
-      if (matched && matched.provider) {
-        return matched.provider;
+      if (order.serviceSnapshot && order.serviceSnapshot.provider) {
+        return order.serviceSnapshot.provider;
       }
-      if (sIdStr.startsWith('sf-')) {
+      const sIdStr = String(order.serviceId || order.rawServiceId || '').toLowerCase();
+      if (order.provider === 'socialfans' || sIdStr.startsWith('sf-')) {
         return 'socialfans';
       }
-      if (sIdStr.startsWith('wos-') || pIdStr.startsWith('58') || pIdStr.startsWith('59')) {
+      const rawId = order.providerServiceId || order.rawServiceId;
+      if (rawId) {
+        const matched = activeServices.find(s => String(s.rawId) === String(rawId) || String(s.id) === String(rawId));
+        if (matched && matched.provider) return matched.provider;
+      }
+      const pIdStr = String(order.providerOrderId || '');
+      if (pIdStr.startsWith('58') || pIdStr.startsWith('59')) {
         return 'worldofsmm';
       }
       return order.provider || 'worldofsmm';
@@ -1225,10 +1223,8 @@ class SmmStateStore {
         if (rawId.startsWith('LX') || rawId.startsWith('lx')) {
           likeXOrderId = this.formatLikeXOrderId(rawId);
         } else if (/^\d{5}$/.test(rawId)) {
-          // Exactly 5 digits = LikeX Order ID
           likeXOrderId = `LX${rawId}`;
         } else if (/^\d{6,}$/.test(rawId)) {
-          // Long digit string (e.g. 58662283) is an upstream Provider Order ID
           if (!providerOrderId) providerOrderId = rawId;
           likeXOrderId = `LX${rawId.slice(-5)}`;
         } else {
@@ -1238,11 +1234,9 @@ class SmmStateStore {
         likeXOrderId = this.formatLikeXOrderId(likeXOrderId);
       }
 
-      // Check if providerOrderId is valid or placeholder
       if (providerOrderId === 'null' || providerOrderId === 'undefined' || providerOrderId === 'N/A' || providerOrderId === '') {
         providerOrderId = null;
       } else if (providerOrderId === likeXOrderId || providerOrderId === rawId.replace(/^LX/i, '')) {
-        // Was mistakenly set to LikeX ID in earlier code
         if (!/^\d{6,}$/.test(providerOrderId)) {
           providerOrderId = null;
         }
@@ -1268,18 +1262,22 @@ class SmmStateStore {
       const accurateProv = resolveProvider(o);
       const accurateSvcName = resolveServiceTitle(o);
 
-      const matchedSvc = activeServices.find(s => 
-        (o.serviceId && (String(s.id) === String(o.serviceId) || String(s.rawId) === String(o.serviceId))) ||
-        (o.rawServiceId && String(s.rawId) === String(o.rawServiceId))
-      );
-      const rawSvcId = o.rawServiceId || (matchedSvc?.rawId) || (o.serviceId ? String(o.serviceId).replace(/^wos-/, '').replace(/^sf-/, '') : '2868');
+      // Clean raw provider service ID (NEVER default to '2868'!)
+      const rawSvcId = o.providerServiceId || 
+                       o.rawServiceId || 
+                       (o.serviceSnapshot && o.serviceSnapshot.rawServiceId) || 
+                       (o.serviceId ? String(o.serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '') : null) || 
+                       'N/A';
 
       // Wholesale & profit calculation
-      let providerCostVal = Number(o.providerCost !== undefined ? o.providerCost : 0);
+      let providerCostVal = Number(o.providerCost !== undefined ? o.providerCost : (o.cost !== undefined ? o.cost : 0));
       if (!providerCostVal || providerCostVal === 0) {
-        const liveInfo = this.getLiveRateInfo(o.serviceId, rawSvcId, accurateProv);
-        const unitWholesale = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : (matchedSvc?.cost || matchedSvc?.rate || 0.20);
-        providerCostVal = (unitWholesale / 1000) * qtyVal;
+        const liveInfo = (rawSvcId && rawSvcId !== 'N/A') ? this.getLiveRateInfo(o.serviceId, rawSvcId, accurateProv) : null;
+        if (liveInfo && liveInfo.rate > 0) {
+          providerCostVal = (liveInfo.rate / 1000) * qtyVal;
+        } else if (o.serviceSnapshot && o.serviceSnapshot.wholesaleCost) {
+          providerCostVal = (o.serviceSnapshot.wholesaleCost / 1000) * qtyVal;
+        }
       }
       const profitVal = Math.max(0, amountVal - providerCostVal);
       const marginPercentVal = amountVal > 0 ? (((amountVal - providerCostVal) / amountVal) * 100).toFixed(1) : '0.0';
@@ -1288,21 +1286,38 @@ class SmmStateStore {
       const timeStr = o.time || this.formatTimeOnly(createdTs);
       const fullDateStr = this.formatRealDate(createdTs);
 
+      // Preserve snapshot
+      const snapshot = o.serviceSnapshot || {
+        serviceId: o.serviceId || rawSvcId,
+        rawServiceId: rawSvcId,
+        providerServiceId: rawSvcId,
+        serviceName: accurateSvcName,
+        category: o.category || 'Social Growth',
+        platform: o.platform || (String(o.target || '').includes('instagram') ? 'instagram' : 'smm'),
+        provider: accurateProv,
+        providerDisplayName: accurateProv === 'socialfans' ? 'SocialFans' : 'WorldOfSMM',
+        wholesaleCost: qtyVal > 0 ? (providerCostVal / qtyVal) * 1000 : 0,
+        customerCharge: amountVal,
+        providerCost: providerCostVal
+      };
+
       if (existingIdx === -1) {
         ordersList.push({
           ...o,
           id: likeXOrderId,
           likeXOrderId: likeXOrderId,
           providerOrderId: providerOrderId,
-          serviceId: o.serviceId || `wos-${rawSvcId}`,
+          serviceId: o.serviceId || (accurateProv === 'socialfans' ? `sf-${rawSvcId}` : `wos-${rawSvcId}`),
           rawServiceId: rawSvcId,
           providerServiceId: rawSvcId,
           serviceName: accurateSvcName,
-          category: o.category || matchedSvc?.category || 'Social Growth',
-          platform: o.platform || matchedSvc?.platform || (String(o.target || '').includes('instagram') ? 'instagram' : 'smm'),
+          category: o.category || snapshot.category || 'Social Growth',
+          platform: o.platform || snapshot.platform || 'instagram',
           provider: accurateProv,
-          providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
+          providerDisplayName: accurateProv === 'socialfans' ? 'SocialFans' : 'WorldOfSMM',
+          serviceSnapshot: snapshot,
           amount: amountVal,
+          cost: providerCostVal,
           providerCost: providerCostVal,
           profit: profitVal,
           marginPercent: marginPercentVal,
@@ -1317,6 +1332,9 @@ class SmmStateStore {
           startCount: (o.startCount !== undefined && o.startCount !== null) ? Number(o.startCount) : null,
           currentCount: (o.currentCount !== undefined && o.currentCount !== null) ? Number(o.currentCount) : null,
           remains: (o.remains !== undefined && o.remains !== null) ? Number(o.remains) : qtyVal,
+          walletBalanceBeforeOrder: o.walletBalanceBeforeOrder !== undefined ? o.walletBalanceBeforeOrder : undefined,
+          walletBalanceAtOrder: o.walletBalanceAtOrder !== undefined ? o.walletBalanceAtOrder : (o.balanceAfter !== undefined ? o.balanceAfter : undefined),
+          customerUserId: o.customerUserId || o.user_id || null,
           providerResponse: o.providerResponse || null
         });
       } else {
@@ -1329,8 +1347,17 @@ class SmmStateStore {
             ? existing.customerName
             : (bestEmail ? bestEmail.split('@')[0] : (o.customerName || existing.customerName || 'Customer'));
 
+        // PROTECT existing authentic service information: do not let a generic Supabase record overwrite a real snapshot!
+        const existingHasRealSvc = existing.serviceSnapshot || (existing.rawServiceId && existing.rawServiceId !== '2868' && existing.rawServiceId !== 'N/A' && !existing.serviceName?.startsWith('Instagram HQ Followers / Likes / Views [Instant]'));
+        const incomingHasRealSvc = o.serviceSnapshot || (rawSvcId && rawSvcId !== '2868' && rawSvcId !== 'N/A' && !o.serviceName?.startsWith('Instagram HQ Followers / Likes / Views [Instant]'));
+
+        const bestSnapshot = (incomingHasRealSvc && o.serviceSnapshot) ? o.serviceSnapshot : (existing.serviceSnapshot || snapshot);
+        const bestRawSvcId = incomingHasRealSvc ? rawSvcId : (existingHasRealSvc ? existing.rawServiceId : rawSvcId);
+        const bestSvcName = incomingHasRealSvc ? accurateSvcName : (existingHasRealSvc ? existing.serviceName : accurateSvcName);
+        const bestProv = incomingHasRealSvc ? accurateProv : (existingHasRealSvc ? (existing.provider || accurateProv) : accurateProv);
+
         const bestAmount = (amountVal > 0) ? amountVal : (existing.amount || 0);
-        const bestCost = (providerCostVal > 0) ? providerCostVal : (existing.providerCost || 0);
+        const bestCost = (providerCostVal > 0) ? providerCostVal : (existing.providerCost || existing.cost || 0);
         const bestProfit = Math.max(0, bestAmount - bestCost);
         const bestMargin = bestAmount > 0 ? (((bestAmount - bestCost) / bestAmount) * 100).toFixed(1) : '0.0';
 
@@ -1343,15 +1370,17 @@ class SmmStateStore {
           id: existing.likeXOrderId || likeXOrderId,
           likeXOrderId: existing.likeXOrderId || likeXOrderId,
           providerOrderId: bestProvId,
-          serviceId: existing.serviceId || o.serviceId || `wos-${rawSvcId}`,
-          rawServiceId: rawSvcId,
-          providerServiceId: rawSvcId,
-          serviceName: accurateSvcName,
-          category: existing.category || o.category || matchedSvc?.category || 'Social Growth',
-          platform: existing.platform || o.platform || matchedSvc?.platform || (String(o.target || '').includes('instagram') ? 'instagram' : 'smm'),
-          provider: accurateProv,
-          providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
+          serviceId: bestSnapshot.serviceId || existing.serviceId || o.serviceId,
+          rawServiceId: bestRawSvcId,
+          providerServiceId: bestRawSvcId,
+          serviceName: bestSvcName,
+          category: bestSnapshot.category || existing.category || o.category || 'Social Growth',
+          platform: bestSnapshot.platform || existing.platform || o.platform || 'instagram',
+          provider: bestProv,
+          providerDisplayName: bestProv === 'socialfans' ? 'SocialFans' : 'WorldOfSMM',
+          serviceSnapshot: bestSnapshot,
           amount: bestAmount,
+          cost: bestCost,
           providerCost: bestCost,
           profit: bestProfit,
           marginPercent: bestMargin,
@@ -1365,6 +1394,9 @@ class SmmStateStore {
           startCount: (o.startCount !== undefined && o.startCount !== null) ? Number(o.startCount) : existing.startCount,
           currentCount: (o.currentCount !== undefined && o.currentCount !== null) ? Number(o.currentCount) : existing.currentCount,
           remains: (o.remains !== undefined && o.remains !== null) ? Number(o.remains) : existing.remains,
+          walletBalanceBeforeOrder: o.walletBalanceBeforeOrder !== undefined ? o.walletBalanceBeforeOrder : existing.walletBalanceBeforeOrder,
+          walletBalanceAtOrder: o.walletBalanceAtOrder !== undefined ? o.walletBalanceAtOrder : existing.walletBalanceAtOrder,
+          customerUserId: o.customerUserId || existing.customerUserId || o.user_id || existing.user_id || null,
           lastUpdatedAt: Math.max(Number(o.lastUpdatedAt) || 0, Number(existing.lastUpdatedAt) || 0, createdTs),
           providerResponse: o.providerResponse || existing.providerResponse || null
         };
@@ -1513,34 +1545,45 @@ class SmmStateStore {
         const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
         const mapped = supaOrders.map(so => {
           const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : null;
+
+          // 1. Check if refill_status contains encoded snapshot
+          let snapshot = null;
+          if (so.refill_status && String(so.refill_status).startsWith('SNAPSHOT:')) {
+            try {
+              snapshot = JSON.parse(String(so.refill_status).replace('SNAPSHOT:', ''));
+            } catch (e) {}
+          }
+
+          let rawServiceId = snapshot?.rawServiceId || (so.service_id ? String(so.service_id) : null);
+          let svcTitle = snapshot?.serviceName || null;
+          let prov = snapshot?.provider || null;
+
           const matchedSvc = activeServices.find(s => 
-            String(s.id) === String(so.service_id) || 
-            String(s.rawId) === String(so.service_id) || 
-            String(s.sfId) === String(so.service_id) ||
-            String(s.wosId) === String(so.service_id)
+            (rawServiceId && (String(s.rawId) === String(rawServiceId) || String(s.id) === String(rawServiceId))) ||
+            (so.service_id && (String(s.id) === String(so.service_id) || String(s.rawId) === String(so.service_id))) ||
+            (so.service_id && (String(s.sfId) === String(so.service_id) || String(s.wosId) === String(so.service_id)))
           );
 
-          let svcTitle = matchedSvc 
-            ? (matchedSvc.customerName || matchedSvc.name) 
-            : null;
+          if (!svcTitle && matchedSvc) {
+            svcTitle = matchedSvc.customerName || matchedSvc.name;
+          }
+          if (!rawServiceId && matchedSvc) {
+            rawServiceId = matchedSvc.rawId || String(matchedSvc.id).replace(/^wos-/, '').replace(/^sf-/, '');
+          }
+          if (!prov && matchedSvc) {
+            prov = matchedSvc.provider;
+          }
 
           if (!svcTitle) {
-            const targetLower = String(so.target_url || '').toLowerCase();
-            if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-              svcTitle = 'Instagram HQ Followers / Likes / Views [Instant]';
-            } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
-              svcTitle = 'YouTube Video Views & Engagement [HQ]';
-            } else if (targetLower.includes('tiktok.com')) {
-              svcTitle = 'TikTok Growth Package [Instant Start]';
-            } else {
-              svcTitle = so.service_id ? `Social Growth Service #${so.service_id}` : 'Social Growth Package';
-            }
+            svcTitle = (rawServiceId && rawServiceId !== 'N/A') ? `Social Growth Service #${rawServiceId}` : 'Social Growth Service';
           }
 
           const orderIdStr = String(so.provider_order_id || so.id || '');
-          const isSfOrder = so.assigned_provider_id === 3 || 
+          const isSfOrder = prov === 'socialfans' || 
+                            so.assigned_provider_id === 3 || 
                             (matchedSvc && matchedSvc.provider === 'socialfans');
-          const isWosOrder = so.assigned_provider_id === 2 || 
+          const isWosOrder = prov === 'worldofsmm' || 
+                             so.assigned_provider_id === 2 || 
                              orderIdStr.startsWith('58') || 
                              orderIdStr.startsWith('59') ||
                              (matchedSvc && matchedSvc.provider === 'worldofsmm');
@@ -1551,20 +1594,22 @@ class SmmStateStore {
           const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (String(so.id).length === 5 && so.status !== 'Completed' && so.status !== 'Refunded');
           return {
             id: String(so.id),
-            serviceId: matchedSvc ? matchedSvc.id : (so.service_id ? (isSfOrder ? `sf-${so.service_id}` : `wos-${so.service_id}`) : 'wos-2868'),
-            rawServiceId: matchedSvc?.rawId || so.service_id || '2868',
+            serviceId: matchedSvc ? matchedSvc.id : (rawServiceId ? (isSfOrder ? `sf-${rawServiceId}` : `wos-${rawServiceId}`) : 'N/A'),
+            rawServiceId: rawServiceId || 'N/A',
+            providerServiceId: rawServiceId || 'N/A',
             serviceName: svcTitle,
             provider: finalProvider,
             providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
-            providerOrderId: so.provider_order_id || String(so.id),
+            providerOrderId: so.provider_order_id || null,
             target: so.target_url || '',
             quantity: Number(so.quantity) || 1000,
             amount: Number(so.charge) || 0,
+            providerCost: Number(so.provider_cost) || snapshot?.wholesaleCost || 0,
             status: so.status || 'Completed',
             isQueued: isQueuedOrder,
-            errorReason: so.refill_status || '',
-            userEmail: matchedUser?.email || '',
-            customerName: matchedUser?.username || (matchedUser?.email ? matchedUser.email.split('@')[0] : 'Customer'),
+            errorReason: snapshot?.note || (so.refill_status && !so.refill_status.startsWith('SNAPSHOT:') ? so.refill_status : ''),
+            userEmail: matchedUser?.email || snapshot?.email || '',
+            customerName: matchedUser?.username || (matchedUser?.email ? matchedUser.email.split('@')[0] : (snapshot?.email ? snapshot.email.split('@')[0] : 'Customer')),
             createdAt: orderCreatedAt,
             date: this.formatRealDate(orderCreatedAt)
           };
@@ -1616,6 +1661,64 @@ class SmmStateStore {
     if (!email) return null;
     const safeKey = email.toLowerCase().replace(/[^a-z0-9]/g, '_');
     return `smm_user_${safeKey}_${key}`;
+  }
+
+  getCustomerWalletBalance(emailOrUserId) {
+    if (!emailOrUserId) return null;
+    const str = String(emailOrUserId).trim();
+
+    // 1. If currently logged in customer matches
+    if (this.data.customer) {
+      if ((this.data.customer.email && this.data.customer.email.toLowerCase() === str.toLowerCase()) ||
+          (this.data.customer.id && String(this.data.customer.id) === str)) {
+        return Number(this.data.customer.balance || 0);
+      }
+    }
+
+    // 2. Check localStorage user balance key
+    if (str.includes('@')) {
+      const balKey = this._getUserStorageKey(str, 'balance');
+      if (balKey) {
+        const saved = localStorage.getItem(balKey);
+        if (saved !== null && !isNaN(parseFloat(saved))) {
+          return parseFloat(saved);
+        }
+      }
+    }
+
+    // 3. Scan all smm_user_*_balance in localStorage
+    try {
+      const safeKey = str.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const directKey = `smm_user_${safeKey}_balance`;
+      const directSaved = localStorage.getItem(directKey);
+      if (directSaved !== null && !isNaN(parseFloat(directSaved))) {
+        return parseFloat(directSaved);
+      }
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('smm_user_') && key.endsWith('_balance')) {
+          const emailPart = key.replace('smm_user_', '').replace('_balance', '');
+          if (emailPart === safeKey) {
+            const val = parseFloat(localStorage.getItem(key));
+            if (!isNaN(val)) return val;
+          }
+        }
+      }
+    } catch (e) {}
+
+    // 4. Check this.data.users if present
+    if (Array.isArray(this.data.users)) {
+      const u = this.data.users.find(usr => 
+        (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
+        (usr.id && String(usr.id) === str)
+      );
+      if (u && u.balance !== undefined && u.balance !== null) {
+        return Number(u.balance);
+      }
+    }
+
+    return null;
   }
 
   loadUserData(email) {
@@ -1955,7 +2058,7 @@ class SmmStateStore {
     }, 3500);
   }
 
-  async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost, comments }, options = {}) {
+  async placeOrder({ serviceId, rawServiceId, serviceName, category, platform, provider, wholesaleCost, target, quantity, comments }, options = {}) {
     if (this._isPlacingOrder) {
       return { success: false, message: 'Order is currently being processed' };
     }
@@ -1974,32 +2077,47 @@ class SmmStateStore {
       }
 
       // Determine provider & raw service id
-      let targetProvider = 'worldofsmm';
-      let rawServiceId = serviceId;
+      let targetProvider = provider || 'worldofsmm';
+      let cleanRawServiceId = rawServiceId;
       const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
-      const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
+      const foundSvc = activeServices.find(s => 
+        (serviceId && (String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId))) ||
+        (cleanRawServiceId && (String(s.rawId) === String(cleanRawServiceId) || String(s.id) === String(cleanRawServiceId)))
+      );
       if (foundSvc) {
-        targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
-        rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace(/-likex$/, '');
+        if (!provider) {
+          targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+        }
+        if (!cleanRawServiceId) {
+          cleanRawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace(/-likex$/, '');
+        }
         if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
           serviceName = foundSvc.customerName || foundSvc.name;
         }
       } else if (String(serviceId).startsWith('sf-')) {
         targetProvider = 'socialfans';
-        rawServiceId = String(serviceId).replace('sf-', '').replace(/-likex$/, '');
+        if (!cleanRawServiceId) cleanRawServiceId = String(serviceId).replace('sf-', '').replace(/-likex$/, '');
       } else if (String(serviceId).startsWith('wos-')) {
         targetProvider = 'worldofsmm';
-        rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
+        if (!cleanRawServiceId) cleanRawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
+      }
+
+      if (!cleanRawServiceId) {
+        cleanRawServiceId = String(serviceId || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
       }
 
       if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
-        const targetLower = String(target || '').toLowerCase();
-        if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-          serviceName = 'Instagram HQ Followers / Likes / Views [Instant]';
-        } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
-          serviceName = 'YouTube Video Views & Engagement [HQ]';
+        if (cleanRawServiceId && cleanRawServiceId !== '2868' && cleanRawServiceId !== 'N/A') {
+          serviceName = `Social Growth Service #${cleanRawServiceId}`;
         } else {
-          serviceName = `Social Growth Service #${rawServiceId || '2868'}`;
+          const targetLower = String(target || '').toLowerCase();
+          if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
+            serviceName = 'Instagram HQ Engagement [Instant]';
+          } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
+            serviceName = 'YouTube Video Engagement [HQ]';
+          } else {
+            serviceName = `Social Growth Service #${cleanRawServiceId || 'General'}`;
+          }
         }
       }
 
@@ -2007,7 +2125,7 @@ class SmmStateStore {
 
       // Dynamic Live Wholesale Rate Lookup to protect profit margin
       let targetWholesaleCost = wholesaleCost;
-      const liveInfo = this.getLiveRateInfo(serviceId, rawServiceId, targetProvider);
+      const liveInfo = this.getLiveRateInfo(serviceId, cleanRawServiceId, targetProvider);
       if (liveInfo && liveInfo.rate > 0) {
         targetWholesaleCost = liveInfo.rate;
       } else if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
@@ -2036,8 +2154,12 @@ class SmmStateStore {
       const profitVal = Math.max(0, totalCost - providerCostVal);
       const marginPercentVal = totalCost > 0 ? (((totalCost - providerCostVal) / totalCost) * 100).toFixed(1) : '0.0';
 
+      // Wallet balance tracking
+      const currentWalletBal = Number(this.data.customer.balance || 0);
+      const walletBalAfter = Number((currentWalletBal - totalCost).toFixed(4));
+
       // Deduct user wallet immediately
-      this.data.customer.balance -= totalCost;
+      this.data.customer.balance = walletBalAfter;
 
       // Deduct in transactions
       this.data.transactions.unshift({
@@ -2045,28 +2167,48 @@ class SmmStateStore {
         type: 'Order Placed',
         description: `Order #${finalOrderId} — ${serviceName}`,
         amount: -totalCost,
-        balanceAfter: this.data.customer.balance,
+        balanceAfter: walletBalAfter,
         status: 'Success',
         createdAt: now,
         date: fullDateStr
       });
 
+      const resolvedCategory = category || foundSvc?.category || 'Social Growth';
+      const resolvedPlatform = platform || foundSvc?.platform || (String(cleanedTarget).includes('instagram') ? 'instagram' : 'smm');
+      const resolvedServiceId = serviceId || (targetProvider === 'socialfans' ? `sf-${cleanRawServiceId}` : `wos-${cleanRawServiceId}`);
+
+      const serviceSnapshot = {
+        serviceId: resolvedServiceId,
+        rawServiceId: String(cleanRawServiceId),
+        providerServiceId: String(cleanRawServiceId),
+        serviceName: serviceName,
+        category: resolvedCategory,
+        platform: resolvedPlatform,
+        provider: targetProvider,
+        providerDisplayName: providerDisplayName,
+        wholesaleCost: targetWholesaleCost,
+        charge: totalCost,
+        unitSellingPrice: unitSellingPrice
+      };
+
       const newOrder = {
         id: finalOrderId,
         likeXOrderId: finalOrderId,
         providerOrderId: null, // Distinct from LikeX Order ID; filled asynchronously when provider returns it
-        serviceId: serviceId || `wos-${rawServiceId}`,
-        rawServiceId: rawServiceId,
-        providerServiceId: rawServiceId,
+        serviceId: resolvedServiceId,
+        rawServiceId: String(cleanRawServiceId),
+        providerServiceId: String(cleanRawServiceId),
         serviceName: serviceName,
-        category: foundSvc?.category || 'Social Growth',
-        platform: foundSvc?.platform || (String(cleanedTarget).includes('instagram') ? 'instagram' : 'smm'),
+        category: resolvedCategory,
+        platform: resolvedPlatform,
         provider: targetProvider,
         providerDisplayName: providerDisplayName,
         providerName: providerDisplayName,
+        serviceSnapshot: serviceSnapshot,
         target: cleanedTarget,
         quantity: Number(quantity),
         amount: totalCost,
+        cost: providerCostVal,
         providerCost: providerCostVal,
         profit: profitVal,
         marginPercent: marginPercentVal,
@@ -2088,6 +2230,9 @@ class SmmStateStore {
         refillReason: `Dispatched to ${providerDisplayName}`,
         userEmail: this.data.customer?.email || '',
         customerName: this.data.customer?.name || 'Customer',
+        customerUserId: this.data.customer?.id || null,
+        walletBalanceBeforeOrder: currentWalletBal,
+        walletBalanceAtOrder: walletBalAfter,
         paymentMethod: 'LikeX Wallet (Full Advance)',
         isQueued: false,
         needsTopup: false,
@@ -2137,7 +2282,7 @@ class SmmStateStore {
       this.notify();
 
       // ULTRA-FAST EXECUTION: Launch background provider submission without delaying customer confirmation
-      this._dispatchOrderToProviderAsync(newOrder, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost);
+      this._dispatchOrderToProviderAsync(newOrder, targetProvider, cleanRawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot);
 
       return { success: true, orderId: finalOrderId, totalCost };
     } finally {
@@ -2146,7 +2291,7 @@ class SmmStateStore {
   }
 
   // Background asynchronous provider submission
-  _dispatchOrderToProviderAsync(order, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost) {
+  _dispatchOrderToProviderAsync(order, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot) {
     const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
 
     (async () => {
@@ -2158,6 +2303,10 @@ class SmmStateStore {
             provider: targetProvider,
             action: 'add',
             service: String(rawServiceId),
+            serviceId: order.serviceId,
+            category: order.category,
+            platform: order.platform,
+            wholesaleCost: targetWholesaleCost,
             link: cleanedTarget,
             quantity: quantity,
             comments: comments || undefined,
@@ -2728,12 +2877,19 @@ class SmmStateStore {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          provider: order.provider || 'worldofsmm',
+          provider: order.serviceSnapshot?.provider || order.provider || 'worldofsmm',
           action: 'add',
-          service: String(order.rawServiceId || order.serviceId || '2868').replace('wos-', '').replace('sf-', ''),
+          service: String(order.serviceSnapshot?.rawServiceId || order.rawServiceId || order.serviceId || '').replace('wos-', '').replace('sf-', ''),
+          serviceId: order.serviceSnapshot?.serviceId || order.serviceId,
+          serviceName: order.serviceSnapshot?.serviceName || order.serviceName,
+          category: order.serviceSnapshot?.category || order.category,
+          platform: order.serviceSnapshot?.platform || order.platform,
+          wholesaleCost: order.serviceSnapshot?.wholesaleCost || order.providerCost || 0,
           link: order.target,
           quantity: order.quantity,
           charge: order.amount,
+          customerEmail: order.userEmail || '',
+          customerName: order.customerName || 'Customer',
           likeXOrderId: orderId
         })
       });

@@ -2486,7 +2486,16 @@ const AdminApp = {
 
   getOrderServiceId(order) {
     if (!order) return 'N/A';
-    if (order.rawServiceId && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '') {
+    if (order.serviceSnapshot?.rawServiceId && String(order.serviceSnapshot.rawServiceId) !== 'N/A') {
+      return String(order.serviceSnapshot.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
+    }
+    if (order.serviceSnapshot?.providerServiceId && String(order.serviceSnapshot.providerServiceId) !== 'N/A') {
+      return String(order.serviceSnapshot.providerServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
+    }
+    if (order.providerServiceId && String(order.providerServiceId) !== 'N/A' && String(order.providerServiceId) !== 'undefined' && String(order.providerServiceId) !== 'null') {
+      return String(order.providerServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
+    }
+    if (order.rawServiceId && String(order.rawServiceId) !== 'N/A' && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '') {
       return String(order.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     // Check in customerServices catalog
@@ -2499,10 +2508,10 @@ const AdminApp = {
     if (matchedSvc) {
       return String(matchedSvc.rawId || matchedSvc.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
-    if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined') {
+    if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined' && String(order.serviceId) !== 'N/A') {
       return String(order.serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
-    return '2868';
+    return 'N/A';
   },
 
   handleAdminOrdersSearch(val) {
@@ -2663,13 +2672,14 @@ const AdminApp = {
 
     return filteredOrders.map(o => {
       const svcId = this.getOrderServiceId(o);
-      const sIdStr = String(o.serviceId || o.rawServiceId || '');
-      const provKey = String(o.provider || '').toLowerCase();
+      const sIdStr = String(o.serviceSnapshot?.rawServiceId || o.serviceSnapshot?.serviceId || o.serviceId || o.rawServiceId || '');
+      const provKey = String(o.serviceSnapshot?.provider || o.provider || '').toLowerCase();
       const provIdStr = String(o.providerOrderId || '');
 
       // Strictly distinguish Provider Origin
       const isSf = provKey === 'socialfans' ||
                    sIdStr.startsWith('sf-') ||
+                   (o.serviceSnapshot?.providerDisplayName && o.serviceSnapshot.providerDisplayName.includes('SocialFans')) ||
                    (o.providerDisplayName && o.providerDisplayName.includes('SocialFans'));
 
       const isWos = provKey === 'worldofsmm' || 
@@ -2689,21 +2699,14 @@ const AdminApp = {
       const dateOnly = store.formatDateOnly ? store.formatDateOnly(o.createdAt || o.date) : (o.date || 'Recently');
       const timeOnly = store.formatTimeOnly ? store.formatTimeOnly(o.createdAt || o.date) : '';
 
-      let svcDisplayName = (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : '';
+      let svcDisplayName = o.serviceSnapshot?.serviceName || ((o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : '');
       if (!svcDisplayName || svcDisplayName.startsWith('Service #')) {
         const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
         const matched = activeServices.find(s => String(s.id) === String(o.serviceId) || String(s.rawId) === String(o.serviceId) || String(s.rawId) === String(svcId));
         if (matched) {
           svcDisplayName = matched.customerName || matched.name;
         } else {
-          const targetLower = String(o.target || '').toLowerCase();
-          if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-            svcDisplayName = 'Instagram HQ Engagement [Instant]';
-          } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
-            svcDisplayName = 'YouTube Video Engagement [HQ]';
-          } else {
-            svcDisplayName = `Social Growth Service #${svcId}`;
-          }
+          svcDisplayName = (svcId && svcId !== 'N/A') ? `Social Growth Service #${svcId}` : 'Social Growth Service';
         }
       }
 
@@ -3124,10 +3127,13 @@ const AdminApp = {
     const margin = order.marginPercent !== undefined ? order.marginPercent : (charge > 0 ? Math.round((profit / charge) * 100) : 0);
 
     // Provider Identification
-    const provKey = String(order.provider || '').toLowerCase();
-    const sIdStr = String(order.serviceId || order.rawServiceId || '');
-    const isSf = provKey === 'socialfans' || sIdStr.startsWith('sf-') || (order.providerDisplayName && order.providerDisplayName.includes('SocialFans'));
-    const isWos = provKey === 'worldofsmm' || sIdStr.startsWith('wos-') || provKey.includes('wos') || (!isSf && (String(order.providerOrderId).startsWith('58') || String(order.providerOrderId).startsWith('59')));
+    const provKey = String(order.serviceSnapshot?.provider || order.provider || '').toLowerCase();
+    const sIdStr = String(order.serviceSnapshot?.rawServiceId || order.serviceSnapshot?.serviceId || order.serviceId || order.rawServiceId || '');
+    const isSf = provKey === 'socialfans' || sIdStr.startsWith('sf-') || 
+                 (order.serviceSnapshot?.providerDisplayName && order.serviceSnapshot.providerDisplayName.includes('SocialFans')) ||
+                 (order.providerDisplayName && order.providerDisplayName.includes('SocialFans'));
+    const isWos = provKey === 'worldofsmm' || sIdStr.startsWith('wos-') || provKey.includes('wos') || 
+                  (!isSf && (String(order.providerOrderId).startsWith('58') || String(order.providerOrderId).startsWith('59')));
     const providerName = isSf ? 'SocialFans' : (isWos ? 'World of SMM' : (order.providerDisplayName || 'Upstream Provider'));
     const providerPanelKey = isSf ? 'socialfans' : 'worldofsmm';
 
@@ -3138,13 +3144,36 @@ const AdminApp = {
     const timeOnly = store.formatTimeOnly ? store.formatTimeOnly(order.createdAt || order.date) : '';
 
     // Customer & Wallet
-    const custEmail = order.userEmail || order.customerEmail || 'Guest Customer';
+    const custEmail = order.userEmail || order.customerEmail || '';
     const custName = order.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
-    const matchedUser = (store.data.users || []).find(u => (u.email || '').toLowerCase() === custEmail.toLowerCase()) || store.data.user;
-    const custWalletBal = matchedUser ? store.formatMoney(matchedUser.balance || 0) : 'N/A';
+    const isGuest = !custEmail || custEmail.toLowerCase() === 'guest customer' || custEmail.toLowerCase() === 'guest@likex.com';
+
+    // User ID
+    const customerUserId = order.customerUserId || order.user_id || null;
+
+    // Live Wallet Balance
+    let balanceVal = null;
+    if (!isGuest && store.getCustomerWalletBalance) {
+      balanceVal = store.getCustomerWalletBalance(custEmail || customerUserId);
+    }
+    const currentWalletBalStr = (balanceVal !== null && balanceVal !== undefined)
+      ? store.formatMoney(balanceVal)
+      : (isGuest ? 'N/A (Guest Order)' : '₹0.00');
+
+    // Balance at Order Time
+    const balAtOrderNum = order.walletBalanceAtOrder !== undefined 
+      ? order.walletBalanceAtOrder 
+      : (order.balanceAfter !== undefined ? order.balanceAfter : null);
+    const balAtOrderStr = (balAtOrderNum !== null && balAtOrderNum !== undefined) 
+      ? store.formatMoney(balAtOrderNum) 
+      : null;
 
     // Service & Platform
     const svcId = this.getOrderServiceId(order);
+    const accurateServiceName = order.serviceSnapshot?.serviceName || order.serviceName || 'Social Growth Service';
+    const accuratePlatform = order.serviceSnapshot?.platform || order.platform || (String(order.target || '').includes('instagram') ? 'Instagram' : 'Social Media');
+    const accurateCategory = order.serviceSnapshot?.category || order.category || 'Social Growth';
+
     const qty = Number(order.quantity || 1000);
     const remains = (order.remains !== undefined && order.remains !== null) ? Number(order.remains) : null;
     const startCount = (order.start_count !== undefined && order.start_count !== null) ? Number(order.start_count) : null;
@@ -3197,14 +3226,26 @@ const AdminApp = {
           <div class="order-data-row">
             <span class="order-data-label">Customer Email:</span>
             <span class="order-data-val" style="display: inline-flex; align-items: center; gap: 5px;">
-              <span>${custEmail}</span>
-              ${custEmail !== 'Guest Customer' ? `<button type="button" title="Copy Email" onclick="navigator.clipboard.writeText('${custEmail}'); window.store.showToast('Email copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 11px;">📋</button>` : ''}
+              <span>${custEmail || 'Guest Customer'}</span>
+              ${(custEmail && !isGuest) ? `<button type="button" title="Copy Email" onclick="navigator.clipboard.writeText('${custEmail}'); window.store.showToast('Email copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 11px;">📋</button>` : ''}
+            </span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Customer / User ID:</span>
+            <span class="order-data-val" style="font-family: var(--font-mono); font-weight: 700; color: var(--text-secondary);">
+              ${customerUserId ? `#${customerUserId}` : (isGuest ? 'Guest Order' : 'Web Customer')}
             </span>
           </div>
           <div class="order-data-row">
             <span class="order-data-label">User Wallet Balance:</span>
-            <span class="order-data-val" style="color: var(--primary);">${custWalletBal}</span>
+            <span class="order-data-val" style="color: var(--primary); font-weight: 800;">${currentWalletBalStr}</span>
           </div>
+          ${balAtOrderStr ? `
+            <div class="order-data-row">
+              <span class="order-data-label">Balance at Order Time:</span>
+              <span class="order-data-val" style="color: var(--text-secondary); font-weight: 700;">${balAtOrderStr}</span>
+            </div>
+          ` : ''}
         </div>
 
         <!-- 2. SERVICE DETAILS -->
@@ -3215,15 +3256,19 @@ const AdminApp = {
           </div>
           <div class="order-data-row">
             <span class="order-data-label">Service Name:</span>
-            <span class="order-data-val" style="text-align: right; max-width: 220px;">${order.serviceName || 'Social Service'}</span>
+            <span class="order-data-val" style="text-align: right; max-width: 220px; font-weight: 700;">${accurateServiceName}</span>
           </div>
           <div class="order-data-row">
             <span class="order-data-label">Service ID:</span>
             <span class="order-data-val" style="font-family: var(--font-mono); color: #4338CA; font-weight: 800;">SVC #${svcId}</span>
           </div>
           <div class="order-data-row">
+            <span class="order-data-label">Category:</span>
+            <span class="order-data-val">${accurateCategory}</span>
+          </div>
+          <div class="order-data-row">
             <span class="order-data-label">Platform:</span>
-            <span class="order-data-val" style="text-transform: capitalize;">${order.platform || 'Social Media'}</span>
+            <span class="order-data-val" style="text-transform: capitalize;">${accuratePlatform}</span>
           </div>
           ${order.comments ? `
             <div class="order-data-row">
@@ -3270,7 +3315,7 @@ const AdminApp = {
           </div>
           <div class="order-data-row">
             <span class="order-data-label">Provider Service ID:</span>
-            <span class="order-data-val" style="font-family: var(--font-mono);">${svcId}</span>
+            <span class="order-data-val" style="font-family: var(--font-mono); font-weight: 800;">${svcId}</span>
           </div>
           <div class="order-data-row">
             <span class="order-data-label">Provider Order ID:</span>

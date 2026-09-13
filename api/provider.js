@@ -102,6 +102,19 @@ export default async function handler(req, res) {
       const orderStatus = isSuccess ? (data.status || 'Processing') : 'Queued';
       const orderErrorNote = data && data.error ? `Error: ${String(data.error).slice(0, 42)}` : null;
 
+      const snapshotPayload = {
+        rawServiceId: String(paramsObj.service || ''),
+        serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
+        serviceName: String(paramsObj.serviceName || ''),
+        category: String(paramsObj.category || ''),
+        platform: String(paramsObj.platform || ''),
+        provider: providerKey,
+        wholesaleCost: Number(paramsObj.wholesaleCost || 0),
+        charge: Number(paramsObj.charge || 0),
+        email: paramsObj.customerEmail || '',
+        note: orderErrorNote || null
+      };
+
       fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
         method: 'POST',
         headers: {
@@ -120,7 +133,7 @@ export default async function handler(req, res) {
           assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
           status: orderStatus,
           remains: Number(paramsObj.quantity) || 1000,
-          refill_status: orderErrorNote,
+          refill_status: 'SNAPSHOT:' + JSON.stringify(snapshotPayload),
           created_at: new Date().toISOString()
         })
       }).catch(dbErr => {
@@ -160,8 +173,18 @@ export default async function handler(req, res) {
           provider_order_id: null,
           assigned_provider_id: requestedProvider === 'socialfans' ? 3 : 2,
           status: 'Queued',
-          remains: Number(paramsObj.quantity) || 1000,
-          refill_status: `Timeout: ${error.message.slice(0, 40)}`,
+          refill_status: 'SNAPSHOT:' + JSON.stringify({
+            rawServiceId: String(paramsObj.service || ''),
+            serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
+            serviceName: String(paramsObj.serviceName || ''),
+            category: String(paramsObj.category || ''),
+            platform: String(paramsObj.platform || ''),
+            provider: requestedProvider === 'socialfans' ? 'socialfans' : 'worldofsmm',
+            wholesaleCost: Number(paramsObj.wholesaleCost || 0),
+            charge: Number(paramsObj.charge || 0),
+            email: paramsObj.customerEmail || '',
+            note: `Timeout: ${error.message.slice(0, 40)}`
+          }),
           created_at: new Date().toISOString()
         })
       }).catch(() => {});

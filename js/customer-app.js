@@ -1287,8 +1287,21 @@ const CustomerApp = {
               const p = store.getSellingPrice(s.cost || 0.1);
               const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
               const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
+              const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+              const sProv = s.provider || (String(s.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
               return `
-                <option value="${s.id}" data-cost="${s.cost}" data-min="${sMin}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${activeService && String(s.id) === String(activeService.id) ? 'selected' : ''}>
+                <option 
+                  value="${s.id}" 
+                  data-raw-id="${cleanId}"
+                  data-provider="${sProv}"
+                  data-category="${(s.category || CustomerApp.currentCategory || '').replace(/"/g, '&quot;')}"
+                  data-platform="${(s.platform || 'instagram').replace(/"/g, '&quot;')}"
+                  data-cost="${s.cost}" 
+                  data-min="${sMin}" 
+                  data-max="${s.max}" 
+                  data-refill="${s.refill ? '1' : '0'}" 
+                  data-name="${(s.name || '').replace(/"/g, '&quot;')}" 
+                  ${activeService && String(s.id) === String(activeService.id) ? 'selected' : ''}>
                   #${s.id} - ${s.name} (${store.formatMoney(p)}/1K)
                 </option>
               `;
@@ -1825,16 +1838,20 @@ const CustomerApp = {
       return;
     }
     
+    const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
+    const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
+
+    const rawServiceId = selectedOpt ? (selectedOpt.getAttribute('data-raw-id') || foundSvc?.rawId || String(serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '')) : (foundSvc?.rawId || String(serviceId));
     let serviceName = selectedOpt ? selectedOpt.getAttribute('data-name') : '';
     if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
-      const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
-      const found = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
-      if (found) serviceName = found.customerName || found.name;
-      else serviceName = `Social Growth Service #${serviceId}`;
+      serviceName = foundSvc ? (foundSvc.customerName || foundSvc.name) : `Social Growth Service #${rawServiceId}`;
     }
+    const category = (selectedOpt ? selectedOpt.getAttribute('data-category') : null) || foundSvc?.category || CustomerApp.currentCategory || 'Social Growth';
+    const platform = (selectedOpt ? selectedOpt.getAttribute('data-platform') : null) || foundSvc?.platform || (serviceName.toLowerCase().includes('instagram') ? 'instagram' : 'smm');
+    const provider = (selectedOpt ? selectedOpt.getAttribute('data-provider') : null) || foundSvc?.provider || (String(serviceId).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
 
-    const wholesaleCost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
-    const rawMin = parseInt(selectedOpt.getAttribute('data-min')) || 10;
+    const wholesaleCost = parseFloat(selectedOpt?.getAttribute('data-cost')) || foundSvc?.cost || 0.20;
+    const rawMin = parseInt(selectedOpt?.getAttribute('data-min')) || foundSvc?.min || 10;
     const target = document.getElementById('new-order-target').value.trim();
     const qtyInput = document.getElementById('new-order-quantity');
     const quantity = Number(qtyInput.value);
@@ -1921,7 +1938,18 @@ const CustomerApp = {
     }
 
     try {
-      const res = await store.placeOrder({ serviceId, serviceName, wholesaleCost, target, quantity, comments }, { silent: true });
+      const res = await store.placeOrder({ 
+        serviceId, 
+        rawServiceId,
+        serviceName, 
+        category,
+        platform,
+        provider,
+        wholesaleCost, 
+        target, 
+        quantity, 
+        comments 
+      }, { silent: true });
 
       if (res && res.success) {
         // Track Purchase
