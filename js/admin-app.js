@@ -2557,7 +2557,7 @@ const AdminApp = {
     const s = store || window.store;
     const allOrders = (s && s.getAllAdminOrders ? s.getAllAdminOrders() : s?.data?.orders) || [];
     const query = (this.adminOrdersSearch || '').trim().toLowerCase();
-    const cleanQuery = query.replace(/^#/, '');
+    const cleanQuery = query.replace(/^[#lx\-]+/i, '');
     const filter = this.adminOrdersFilter || 'all';
 
     let filtered = allOrders;
@@ -2577,6 +2577,21 @@ const AdminApp = {
           const st = (o.status || '').toLowerCase();
           return st === 'refunded' || st === 'canceled';
         });
+      } else if (filter === 'in_progress') {
+        filtered = filtered.filter(o => {
+          const st = (o.status || '').toLowerCase();
+          return st === 'in_progress' || st === 'in progress';
+        });
+      } else if (filter === 'processing') {
+        filtered = filtered.filter(o => {
+          const st = (o.status || '').toLowerCase();
+          return st === 'processing';
+        });
+      } else if (filter === 'completed') {
+        filtered = filtered.filter(o => {
+          const st = (o.status || '').toLowerCase();
+          return st === 'completed';
+        });
       } else {
         filtered = filtered.filter(o => (o.status || '').toLowerCase().replace(/\s+/g, '_') === filter.toLowerCase());
       }
@@ -2585,6 +2600,7 @@ const AdminApp = {
     if (query) {
       filtered = filtered.filter(o => {
         const idStr = String(o.id || '').toLowerCase();
+        const lxStr = String(o.likeXOrderId || '').toLowerCase();
         const svcId = this.getOrderServiceId(o).toLowerCase();
         const rawIdStr = String(o.serviceId || '').toLowerCase();
         const provIdStr = String(o.providerOrderId || '').toLowerCase();
@@ -2592,6 +2608,7 @@ const AdminApp = {
         const targetStr = String(o.target || '').toLowerCase();
         const statusStr = String(o.status || '').toLowerCase();
         const provStr = String(o.provider || '').toLowerCase();
+        const provDisplayStr = String(o.providerDisplayName || '').toLowerCase();
         const emailStr = String(o.userEmail || o.customerEmail || '').toLowerCase();
         const custNameStr = String(o.customerName || '').toLowerCase();
         const commentsStr = String(o.comments || '').toLowerCase();
@@ -2599,17 +2616,20 @@ const AdminApp = {
         const errStr = String(o.errorReason || o.refillReason || '').toLowerCase();
 
         return idStr.includes(query) ||
-               idStr.includes(cleanQuery) ||
+               (cleanQuery && idStr.includes(cleanQuery)) ||
+               lxStr.includes(query) ||
+               (cleanQuery && lxStr.includes(cleanQuery)) ||
                svcId.includes(query) ||
-               svcId.includes(cleanQuery) ||
+               (cleanQuery && svcId.includes(cleanQuery)) ||
                rawIdStr.includes(query) ||
-               rawIdStr.includes(cleanQuery) ||
+               (cleanQuery && rawIdStr.includes(cleanQuery)) ||
                provIdStr.includes(query) ||
-               provIdStr.includes(cleanQuery) ||
+               (cleanQuery && provIdStr.includes(cleanQuery)) ||
                nameStr.includes(query) ||
                targetStr.includes(query) ||
                statusStr.includes(query) ||
                provStr.includes(query) ||
+               provDisplayStr.includes(query) ||
                emailStr.includes(query) ||
                custNameStr.includes(query) ||
                commentsStr.includes(query) ||
@@ -2630,7 +2650,7 @@ const AdminApp = {
           <td colspan="8" style="text-align: center; padding: 48px 20px; color: var(--text-muted);">
             <div style="font-size: 38px; margin-bottom: 10px;">🔍</div>
             <strong style="font-size: 15px; color: var(--text-main);">No orders found matching "${q || f}"</strong>
-            <p style="font-size: 13px; margin-top: 6px; color: var(--text-secondary);">Directly search by Order ID (#42078), Customer Email, or Service ID (#10131), or reset search filters.</p>
+            <p style="font-size: 13px; margin-top: 6px; color: var(--text-secondary);">Directly search by LikeX Order ID (#LX12345), Upstream Provider Order ID (#987654), Customer Email, or Service ID, or reset search filters.</p>
             ${(q || f !== 'all') ? `
               <button type="button" class="btn btn-sm btn-secondary" onclick="AdminApp.handleAdminOrdersSearch(''); AdminApp.setAdminOrdersFilter('all');" style="margin-top: 14px; border-radius: 999px; font-weight: 700; padding: 6px 16px;">
                 Reset Search Filters
@@ -2643,28 +2663,31 @@ const AdminApp = {
 
     return filteredOrders.map(o => {
       const svcId = this.getOrderServiceId(o);
-      const idStr = String(o.id || '');
-      const provIdStr = String(o.providerOrderId || '');
       const sIdStr = String(o.serviceId || o.rawServiceId || '');
+      const provKey = String(o.provider || '').toLowerCase();
+      const provIdStr = String(o.providerOrderId || '');
 
-      const isSf = o.provider === 'socialfans' ||
+      // Strictly distinguish Provider Origin
+      const isSf = provKey === 'socialfans' ||
                    sIdStr.startsWith('sf-') ||
                    (o.providerDisplayName && o.providerDisplayName.includes('SocialFans'));
 
-      const isWos = o.provider === 'worldofsmm' || 
+      const isWos = provKey === 'worldofsmm' || 
                     sIdStr.startsWith('wos-') || 
-                    idStr.startsWith('58') || 
-                    idStr.startsWith('59') || 
-                    provIdStr.startsWith('58') || 
-                    provIdStr.startsWith('59');
+                    provKey.includes('wos') ||
+                    (!isSf && (provIdStr.startsWith('58') || provIdStr.startsWith('59') || String(o.id).startsWith('58')));
 
       const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
 
       const custEmail = o.userEmail || o.customerEmail || '';
       const custName = o.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
       const avatarLetter = (custName || 'C').charAt(0).toUpperCase();
-      const dateStr = o.date || (o.createdAt ? store.formatRealDate(o.createdAt) : 'Recently');
-      const relativeBadge = store.formatOrderDisplayDate ? store.formatOrderDisplayDate(o) : '';
+
+      // Formatted IDs
+      const rawIdVal = o.likeXOrderId || o.id;
+      const displayLikeXId = store.formatLikeXOrderId ? store.formatLikeXOrderId(rawIdVal) : (String(rawIdVal).startsWith('LX') ? rawIdVal : 'LX' + rawIdVal);
+      const dateOnly = store.formatDateOnly ? store.formatDateOnly(o.createdAt || o.date) : (o.date || 'Recently');
+      const timeOnly = store.formatTimeOnly ? store.formatTimeOnly(o.createdAt || o.date) : '';
 
       let svcDisplayName = (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : '';
       if (!svcDisplayName || svcDisplayName.startsWith('Service #')) {
@@ -2675,9 +2698,9 @@ const AdminApp = {
         } else {
           const targetLower = String(o.target || '').toLowerCase();
           if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-            svcDisplayName = 'Instagram HQ Followers / Likes / Views [Instant]';
+            svcDisplayName = 'Instagram HQ Engagement [Instant]';
           } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
-            svcDisplayName = 'YouTube Video Views & Engagement [HQ]';
+            svcDisplayName = 'YouTube Video Engagement [HQ]';
           } else {
             svcDisplayName = `Social Growth Service #${svcId}`;
           }
@@ -2694,33 +2717,40 @@ const AdminApp = {
       else if (lowSvc.includes('facebook') || o.platform === 'facebook') platformIcon = '📘';
       else if (lowSvc.includes('spotify') || o.platform === 'spotify') platformIcon = '🎧';
 
+      // Financials
+      const charge = Number(o.amount || 0);
+      const cost = Number(o.cost || o.providerCost || 0);
+      const profit = charge - cost;
+      const margin = o.marginPercent !== undefined ? o.marginPercent : (charge > 0 ? Math.round((profit / charge) * 100) : 0);
+
+      // Progress & counts
+      const hasCounts = o.start_count !== undefined && o.start_count !== null && o.remains !== undefined && o.remains !== null;
+      const qty = Number(o.quantity || 1000);
+      const remains = Number(o.remains || 0);
+      const delivered = Math.max(0, qty - remains);
+      const progressPct = qty > 0 ? Math.min(100, Math.max(0, Math.round((delivered / qty) * 100))) : 0;
+
       return `
-        <tr>
-          <!-- 1. ORDER ID & DATE / TIME -->
+        <tr style="cursor: pointer;" onclick="AdminApp.openOrderDetailsModal('${o.id}', event)">
+          <!-- 1. LIKEX ORDER ID & CREATION TIME -->
           <td>
-            <div style="display: flex; flex-direction: column; gap: 3px;">
+            <div style="display: flex; flex-direction: column; gap: 3px;" onclick="event.stopPropagation()">
               <div style="display: inline-flex; align-items: center; gap: 6px;">
-                <span style="font-family: var(--font-mono); font-weight: 800; font-size: 14px; color: var(--primary); cursor: pointer;" title="Click to copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');">
-                  #${o.id}
+                <span style="font-family: var(--font-mono); font-weight: 800; font-size: 13.5px; color: var(--primary); cursor: pointer;" title="Click to copy LikeX Order ID" onclick="navigator.clipboard.writeText('${displayLikeXId}'); window.store.showToast('LikeX Order ID ${displayLikeXId} copied!', 'success');">
+                  #${displayLikeXId}
                 </span>
-                <button type="button" class="btn-copy-id" title="Copy Order ID" onclick="navigator.clipboard.writeText('${o.id}'); window.store.showToast('Order ID #${o.id} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px;">📋</button>
+                <button type="button" class="btn-copy-id" title="Copy LikeX Order ID" onclick="navigator.clipboard.writeText('${displayLikeXId}'); window.store.showToast('LikeX Order ID ${displayLikeXId} copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px;">📋</button>
               </div>
               <div style="font-size: 11px; color: var(--text-secondary); display: flex; align-items: center; gap: 4px;">
-                <span>📅 ${dateStr}</span>
+                <span>📅 ${dateOnly}</span>
+                ${timeOnly ? `<span style="opacity: 0.7;">• ${timeOnly}</span>` : ''}
               </div>
-              ${relativeBadge && relativeBadge !== dateStr ? `
-                <div>
-                  <span style="font-size: 10px; font-weight: 700; color: #059669; background: rgba(16, 185, 129, 0.12); padding: 1px 6px; border-radius: 4px;">
-                    ${relativeBadge}
-                  </span>
-                </div>
-              ` : ''}
             </div>
           </td>
 
           <!-- 2. CUSTOMER -->
           <td>
-            <div style="display: flex; align-items: center; gap: 9px;">
+            <div style="display: flex; align-items: center; gap: 9px;" onclick="event.stopPropagation()">
               <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #9333EA); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);">
                 ${avatarLetter}
               </div>
@@ -2740,7 +2770,7 @@ const AdminApp = {
             </div>
           </td>
 
-          <!-- 3. CUSTOMER SERVICE / ORDER DETAILS -->
+          <!-- 3. SERVICE & SERVICE ID -->
           <td>
             <div style="display: flex; align-items: flex-start; gap: 7px;">
               <span style="font-size: 16px; line-height: 1.2; flex-shrink: 0; margin-top: 1px;">${platformIcon}</span>
@@ -2748,13 +2778,13 @@ const AdminApp = {
                 <div style="font-weight: 700; color: var(--text-main); font-size: 13.5px; line-height: 1.4;">
                   ${svcDisplayName}
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px; font-size: 11px; flex-wrap: wrap;" onclick="event.stopPropagation()">
                   <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: #4338CA; font-weight: 800; font-family: var(--font-mono); font-size: 11px; padding: 2px 7px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.25); cursor: pointer;" title="Click to copy Service ID" onclick="navigator.clipboard.writeText('${svcId}'); window.store.showToast('Service ID #${svcId} copied!', 'success');">
                     SVC #${svcId}
                   </span>
                   ${o.comments ? `
                     <span style="color: #7C3AED; font-weight: 700; background: rgba(124, 58, 237, 0.1); padding: 2px 7px; border-radius: 6px;" title="${o.comments}">
-                      💬 Custom Comments Included
+                      💬 Comments
                     </span>
                   ` : ''}
                 </div>
@@ -2762,56 +2792,86 @@ const AdminApp = {
             </div>
           </td>
 
-          <!-- 4. PROVIDER ORIGIN -->
+          <!-- 4. PROVIDER & UPSTREAM ORDER ID -->
           <td>
-            ${isSf ? `
-              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
-                🔥 SocialFans
-              </span>
-            ` : (isWos ? `
-              <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
-                🇮🇳 WorldOfSMM
-              </span>
-            ` : `
-              <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #4338CA; font-weight: 800; border: 1px solid rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
-                ⚡ Upstream API
-              </span>
-            `)}
-            <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
-              <span>${o.providerOrderId || 'Prov #' + o.id}</span>
-              ${(o.providerOrderId || o.id) ? `
-                <button type="button" title="Copy Provider Order ID" onclick="navigator.clipboard.writeText('${o.providerOrderId || o.id}'); window.store.showToast('Provider Order ID copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 10px; opacity: 0.6;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">📋</button>
-              ` : ''}
+            <div style="display: flex; flex-direction: column; gap: 4px;" onclick="event.stopPropagation()">
+              <div>
+                ${isSf ? `
+                  <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; font-weight: 800; border: 1px solid rgba(245, 158, 11, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
+                    🔥 SocialFans
+                  </span>
+                ` : (isWos ? `
+                  <span class="badge" style="background: rgba(37, 211, 102, 0.15); color: #075E54; font-weight: 800; border: 1px solid rgba(37, 211, 102, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
+                    🇮🇳 WorldOfSMM
+                  </span>
+                ` : `
+                  <span class="badge" style="background: rgba(99, 102, 241, 0.15); color: #4338CA; font-weight: 800; border: 1px solid rgba(99, 102, 241, 0.3); display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px;">
+                    ⚡ Upstream API
+                  </span>
+                `)}
+              </div>
+              <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+                ${o.providerOrderId ? `
+                  <span style="font-weight: 700; color: var(--text-main); cursor: pointer;" title="Click to copy Provider Order ID" onclick="navigator.clipboard.writeText('${o.providerOrderId}'); window.store.showToast('Provider Order ID #${o.providerOrderId} copied!', 'success');">
+                    #${o.providerOrderId}
+                  </span>
+                  <button type="button" title="Search on Provider Panel" onclick="AdminApp.openProviderSearch('${isSf ? 'socialfans' : 'worldofsmm'}', '${o.providerOrderId}', event)" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.25); color: var(--primary); border-radius: 4px; cursor: pointer; padding: 1px 5px; font-size: 10px; font-weight: 700;" title="Open orders list on provider panel">Panel ↗</button>
+                ` : `
+                  <span style="color: var(--text-muted); font-size: 11px; font-style: italic;">N/A</span>
+                `}
+              </div>
             </div>
           </td>
 
-          <!-- 5. TARGET URL -->
-          <td style="font-family: var(--font-mono); font-size: 12px; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-            <div style="display: flex; align-items: center; gap: 4px;">
-              <a href="${o.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.target}">
-                ${o.target || '—'}
-              </a>
-              ${o.target ? `
-                <button type="button" title="Copy Link" onclick="navigator.clipboard.writeText('${o.target}'); window.store.showToast('Target URL copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: 0.7; flex-shrink: 0;">📋</button>
-              ` : ''}
+          <!-- 5. TARGET URL & QUANTITY -->
+          <td>
+            <div style="display: flex; flex-direction: column; gap: 3px;" onclick="event.stopPropagation()">
+              <div style="display: flex; align-items: center; gap: 4px; max-width: 170px;">
+                <a href="${o.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; font-weight: 600; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.target}">
+                  ${o.target || '—'}
+                </a>
+                ${o.target ? `
+                  <button type="button" title="Copy Link" onclick="navigator.clipboard.writeText('${o.target}'); window.store.showToast('Target URL copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 11px; opacity: 0.7; flex-shrink: 0;">📋</button>
+                ` : ''}
+              </div>
+              <div style="font-size: 11.5px; font-weight: 700; color: var(--text-secondary);">
+                Qty: <span style="color: var(--text-main); font-weight: 800;">${qty.toLocaleString()}</span>
+              </div>
             </div>
           </td>
 
-          <!-- 6. QUANTITY -->
-          <td style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">${Number(o.quantity || 1000).toLocaleString()}</td>
-
-          <!-- 7. CHARGE -->
-          <td><strong style="color: var(--primary); font-size: 14px;">${store.formatMoney(o.amount)}</strong></td>
-
-          <!-- 8. STATUS -->
+          <!-- 6. FINANCIALS (CHARGE / COST / PROFIT) -->
           <td>
-            ${(isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
-              <div style="display: flex; flex-direction: column; gap: 4px;">
+            <div style="display: flex; flex-direction: column; gap: 2px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px;">
+                <span style="font-size: 11px; color: var(--text-muted);">Charge:</span>
+                <strong style="color: var(--text-main); font-size: 13.5px;">${store.formatMoney(charge)}</strong>
+              </div>
+              ${cost > 0 ? `
+                <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 11px;">
+                  <span style="color: var(--text-muted);">Cost:</span>
+                  <span style="color: var(--text-secondary);">${store.formatMoney(cost)}</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 11px; margin-top: 1px;">
+                  <span style="color: var(--text-muted);">Profit:</span>
+                  <span style="font-weight: 800; color: ${profit >= 0 ? '#10B981' : '#EF4444'};">
+                    +₹${profit.toFixed(2)} (${margin}%)
+                  </span>
+                </div>
+              ` : `
+                <div style="font-size: 10.5px; color: var(--text-muted);">Cost: N/A</div>
+              `}
+            </div>
+          </td>
+
+          <!-- 7. STATUS & LIVE PROGRESS -->
+          <td>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              ${(isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
                 <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;">
-                  ⚠️ Queued — Waiting for Provider Topup
+                  ⚠️ Queued Top-Up
                 </span>
-                ${(o.errorReason || o.providerResponse) ? `<span style="font-size: 10px; color: #DC2626; font-weight: 600; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.errorReason || o.providerResponse}">${o.errorReason || o.providerResponse}</span>` : ''}
-                <div style="display: flex; gap: 4px; margin-top: 2px;">
+                <div style="display: flex; gap: 4px; margin-top: 2px;" onclick="event.stopPropagation()">
                   <button type="button" class="btn btn-xs" style="background: #10B981; color: white; border: none; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="window.store.dispatchQueuedOrder ? window.store.dispatchQueuedOrder('${o.id}') : AdminApp.handleRetryOrder('${o.id}')" title="1-Click Dispatch order to provider">
                     ⚡ Dispatch
                   </button>
@@ -2819,24 +2879,60 @@ const AdminApp = {
                     💸 Refund
                   </button>
                 </div>
-              </div>
-            ` : (String(o.status).toLowerCase() === 'partial') ? `
-              <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800;">
-                ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
-              </span>
-            ` : (String(o.status).toLowerCase() === 'completed') ? `
-              <span class="badge badge-success" style="font-weight: 800;">Completed</span>
-            ` : (String(o.status).toLowerCase() === 'in_progress' || String(o.status).toLowerCase() === 'in progress') ? `
-              <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #7C3AED; font-weight: 800; border: 1px solid rgba(139, 92, 246, 0.3);">
-                In Progress
-              </span>
-            ` : (String(o.status).toLowerCase() === 'refunded' || String(o.status).toLowerCase() === 'canceled') ? `
-              <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800; border: 1px solid rgba(100, 116, 139, 0.3);">
-                ✓ Refunded
-              </span>
-            ` : `
-              <span class="badge badge-primary" style="font-weight: 800;">${o.status || 'Processing'}</span>
-            `}
+              ` : (String(o.status).toLowerCase() === 'partial') ? `
+                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800;">
+                  ⚡ Partial (${o.remains !== undefined ? o.remains : '0'} Remains)
+                </span>
+              ` : (String(o.status).toLowerCase() === 'completed') ? `
+                <span class="badge badge-success" style="font-weight: 800;">Completed</span>
+              ` : (String(o.status).toLowerCase() === 'in_progress' || String(o.status).toLowerCase() === 'in progress') ? `
+                <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #7C3AED; font-weight: 800; border: 1px solid rgba(139, 92, 246, 0.3);">
+                  In Progress
+                </span>
+              ` : (String(o.status).toLowerCase() === 'refunded' || String(o.status).toLowerCase() === 'canceled') ? `
+                <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800; border: 1px solid rgba(100, 116, 139, 0.3);">
+                  ✓ Refunded
+                </span>
+              ` : `
+                <span class="badge badge-primary" style="font-weight: 800;">${o.status || 'Processing'}</span>
+              `}
+
+              ${hasCounts ? `
+                <div style="margin-top: 3px;">
+                  <div style="display: flex; justify-content: space-between; font-size: 10px; color: var(--text-secondary); margin-bottom: 2px;">
+                    <span>${delivered.toLocaleString()} / ${qty.toLocaleString()}</span>
+                    <span style="font-weight: 700;">${progressPct}%</span>
+                  </div>
+                  <div style="height: 4px; background: rgba(0, 0, 0, 0.08); border-radius: 999px; overflow: hidden;">
+                    <div style="height: 100%; width: ${progressPct}%; background: ${progressPct >= 100 ? '#10B981' : '#6366F1'}; border-radius: 999px; transition: width 0.3s ease;"></div>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+          </td>
+
+          <!-- 8. ACTIONS -->
+          <td>
+            <div style="display: flex; align-items: center; gap: 6px;" onclick="event.stopPropagation()">
+              <button 
+                type="button" 
+                class="btn btn-xs btn-outline" 
+                onclick="AdminApp.openOrderDetailsModal('${o.id}', event)" 
+                style="border-radius: 8px; font-weight: 700; padding: 4px 9px; font-size: 11px; white-space: nowrap;" 
+                title="View complete 9-section order details"
+              >
+                👁️ Details
+              </button>
+              <button 
+                type="button" 
+                class="btn btn-xs btn-secondary" 
+                onclick="AdminApp.handleSyncSingleOrder('${o.id}', this, event)" 
+                style="border-radius: 8px; font-weight: 700; padding: 4px 7px; font-size: 11px;" 
+                title="Query live provider status now"
+              >
+                🔄
+              </button>
+            </div>
           </td>
         </tr>
       `;
@@ -2920,7 +3016,7 @@ const AdminApp = {
           </div>
         ` : ''}
 
-        <!-- Top Toolbar with Direct Live Search and Status Filter Chips -->
+        <!-- Top Toolbar with Live Search, Manual Order Creation & Live Sync -->
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
           <div style="position: relative; flex: 1; min-width: 280px; max-width: 520px;">
             <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; opacity: 0.6; pointer-events: none;">🔍</span>
@@ -2928,7 +3024,7 @@ const AdminApp = {
               id="admin-orders-search-input"
               type="text" 
               class="form-control" 
-              placeholder="Search by Order ID (#42078), Customer Email, Service ID (#10131), Link..." 
+              placeholder="Search LikeX Order ID (#LX12345), Provider Order ID, Customer, Link..." 
               value="${this.adminOrdersSearch || ''}" 
               oninput="AdminApp.handleAdminOrdersSearch(this.value)"
               style="padding-left: 42px; padding-right: 36px; border-radius: 999px; height: 42px; font-size: 13.5px; width: 100%; border: 1.5px solid var(--border-color); background: var(--bg-surface); color: var(--text-main);"
@@ -2942,10 +3038,14 @@ const AdminApp = {
             >&times;</button>
           </div>
 
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <span id="admin-orders-count-label" style="font-size: 13px; font-weight: 700; color: var(--text-secondary);">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span id="admin-orders-count-label" style="font-size: 13px; font-weight: 700; color: var(--text-secondary); margin-right: 4px;">
               Showing ${filtered.length} of ${allOrders.length} Orders
             </span>
+            <button class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 800; background: linear-gradient(135deg, #10B981, #059669); box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);" onclick="AdminApp.openCreateManualOrderModal()">
+              <span>➕</span>
+              <span>Create Manual Order</span>
+            </button>
             <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700;" onclick="store.syncOrdersStatus()">
               <span>🔄</span>
               <span>Sync Live Status</span>
@@ -2956,7 +3056,7 @@ const AdminApp = {
         <!-- Filter Chips -->
         <div class="orders-filter-chips">
           <button class="orders-filter-pill ${filter === 'all' ? 'active' : ''}" data-filter="all" onclick="AdminApp.setAdminOrdersFilter('all')">All (${allOrders.length})</button>
-          <button class="orders-filter-pill ${filter === 'queued' ? 'active' : ''}" data-filter="queued" onclick="AdminApp.setAdminOrdersFilter('queued')" style="${queuedOrders.length > 0 ? 'border-color: #EF4444; color: #DC2626; font-weight: 800;' : ''}">🚨 Queued / Waiting Top-Up (${queuedOrders.length})</button>
+          <button class="orders-filter-pill ${filter === 'queued' ? 'active' : ''}" data-filter="queued" onclick="AdminApp.setAdminOrdersFilter('queued')" style="${queuedOrders.length > 0 ? 'border-color: #EF4444; color: #DC2626; font-weight: 800;' : ''}">🚨 Queued / Top-Up (${queuedOrders.length})</button>
           <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" onclick="AdminApp.setAdminOrdersFilter('in_progress')">In Progress</button>
           <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" data-filter="processing" onclick="AdminApp.setAdminOrdersFilter('processing')">Processing</button>
           <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" data-filter="completed" onclick="AdminApp.setAdminOrdersFilter('completed')">Completed</button>
@@ -2970,14 +3070,14 @@ const AdminApp = {
             <table class="sync-data-table">
               <thead>
                 <tr>
-                  <th style="min-width: 140px;">ORDER ID & DATE</th>
+                  <th style="min-width: 150px;">LIKEX ORDER & DATE</th>
                   <th style="min-width: 160px;">CUSTOMER</th>
-                  <th style="min-width: 250px;">CUSTOMER SERVICE</th>
-                  <th style="min-width: 140px;">PROVIDER ORIGIN</th>
-                  <th style="min-width: 170px;">TARGET URL</th>
-                  <th style="min-width: 80px;">QTY</th>
-                  <th style="min-width: 100px;">CHARGE</th>
-                  <th style="min-width: 130px;">STATUS</th>
+                  <th style="min-width: 230px;">SERVICE</th>
+                  <th style="min-width: 150px;">PROVIDER & UPSTREAM ID</th>
+                  <th style="min-width: 170px;">TARGET & QTY</th>
+                  <th style="min-width: 140px;">CHARGE / COST / PROFIT</th>
+                  <th style="min-width: 140px;">STATUS & PROGRESS</th>
+                  <th style="min-width: 100px;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody id="admin-orders-table-body">
@@ -2988,6 +3088,719 @@ const AdminApp = {
         </div>
       </div>
     `;
+  },
+
+  /* ==========================================================
+     ORDER DETAILS MODAL (9 Comprehensive Sections)
+     ========================================================== */
+  openOrderDetailsModal(orderId, event) {
+    if (event) event.stopPropagation();
+    const store = window.store;
+    if (!store) return;
+
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
+    const cleanId = String(orderId || '').trim();
+    const order = allOrders.find(o => {
+      if (!o) return false;
+      const oId = String(o.id || '').trim();
+      const oLx = String(o.likeXOrderId || '').trim();
+      const oProv = String(o.providerOrderId || '').trim();
+      return oId === cleanId || oLx === cleanId || oProv === cleanId ||
+             oId.replace(/^LX/i, '') === cleanId.replace(/^LX/i, '');
+    });
+
+    if (!order) {
+      store.showToast(`Order #${orderId} not found.`, 'error');
+      return;
+    }
+
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!sheet) return;
+
+    // Financial & Profit Calculations
+    const charge = Number(order.amount || 0);
+    const cost = Number(order.cost || order.providerCost || 0);
+    const profit = charge - cost;
+    const margin = order.marginPercent !== undefined ? order.marginPercent : (charge > 0 ? Math.round((profit / charge) * 100) : 0);
+
+    // Provider Identification
+    const provKey = String(order.provider || '').toLowerCase();
+    const sIdStr = String(order.serviceId || order.rawServiceId || '');
+    const isSf = provKey === 'socialfans' || sIdStr.startsWith('sf-') || (order.providerDisplayName && order.providerDisplayName.includes('SocialFans'));
+    const isWos = provKey === 'worldofsmm' || sIdStr.startsWith('wos-') || provKey.includes('wos') || (!isSf && (String(order.providerOrderId).startsWith('58') || String(order.providerOrderId).startsWith('59')));
+    const providerName = isSf ? 'SocialFans' : (isWos ? 'World of SMM' : (order.providerDisplayName || 'Upstream Provider'));
+    const providerPanelKey = isSf ? 'socialfans' : 'worldofsmm';
+
+    // Formatted IDs
+    const rawIdVal = order.likeXOrderId || order.id;
+    const displayLikeXId = store.formatLikeXOrderId ? store.formatLikeXOrderId(rawIdVal) : (String(rawIdVal).startsWith('LX') ? rawIdVal : 'LX' + rawIdVal);
+    const dateOnly = store.formatDateOnly ? store.formatDateOnly(order.createdAt || order.date) : (order.date || 'Recently');
+    const timeOnly = store.formatTimeOnly ? store.formatTimeOnly(order.createdAt || order.date) : '';
+
+    // Customer & Wallet
+    const custEmail = order.userEmail || order.customerEmail || 'Guest Customer';
+    const custName = order.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
+    const matchedUser = (store.data.users || []).find(u => (u.email || '').toLowerCase() === custEmail.toLowerCase()) || store.data.user;
+    const custWalletBal = matchedUser ? store.formatMoney(matchedUser.balance || 0) : 'N/A';
+
+    // Service & Platform
+    const svcId = this.getOrderServiceId(order);
+    const qty = Number(order.quantity || 1000);
+    const remains = (order.remains !== undefined && order.remains !== null) ? Number(order.remains) : null;
+    const startCount = (order.start_count !== undefined && order.start_count !== null) ? Number(order.start_count) : null;
+    const delivered = (remains !== null) ? Math.max(0, qty - remains) : null;
+    const progressPct = (delivered !== null && qty > 0) ? Math.min(100, Math.max(0, Math.round((delivered / qty) * 100))) : 0;
+    const currentEstCount = (startCount !== null && delivered !== null) ? (startCount + delivered) : (order.currentCount || 'N/A');
+
+    // Raw API Response formatted
+    const rawResponseObj = order.providerApiResponse || order.rawStatusResponse || order.providerResponse || {
+      provider: providerName,
+      status: order.status,
+      providerOrderId: order.providerOrderId || null,
+      start_count: order.start_count !== undefined ? order.start_count : null,
+      remains: order.remains !== undefined ? order.remains : null
+    };
+    const rawResponseJson = typeof rawResponseObj === 'string' ? rawResponseObj : JSON.stringify(rawResponseObj, null, 2);
+
+    sheet.className = 'modal-sheet order-details-sheet';
+    sheet.innerHTML = `
+      <div class="modal-header" style="padding-bottom: 14px; border-bottom: 1.5px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 6px;">
+              <span>Order Details</span>
+              <span style="font-family: var(--font-mono); color: var(--primary); cursor: pointer;" title="Copy LikeX Order ID" onclick="navigator.clipboard.writeText('${displayLikeXId}'); window.store.showToast('LikeX ID copied!', 'success');">#${displayLikeXId}</span>
+              <button type="button" class="btn-copy-id" title="Copy LikeX Order ID" onclick="navigator.clipboard.writeText('${displayLikeXId}'); window.store.showToast('LikeX ID copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 13px;">📋</button>
+            </h3>
+            <span class="badge ${order.status === 'Completed' ? 'badge-success' : 'badge-primary'}" style="font-weight: 800; font-size: 12px; padding: 3px 10px;">
+              ${order.status || 'Processing'}
+            </span>
+          </div>
+          <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 5px; display: flex; align-items: center; gap: 6px;">
+            <span>📅 Placed: ${dateOnly} ${timeOnly ? 'at ' + timeOnly : ''}</span>
+          </div>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()" style="font-size: 24px; line-height: 1; border: none; background: none; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <div class="order-details-grid" style="margin-top: 18px;">
+        <!-- 1. CUSTOMER INFORMATION -->
+        <div class="order-details-card">
+          <div class="order-details-card-title">
+            <span>👤</span>
+            <span>Customer Information</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Customer Name:</span>
+            <span class="order-data-val">${custName}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Customer Email:</span>
+            <span class="order-data-val" style="display: inline-flex; align-items: center; gap: 5px;">
+              <span>${custEmail}</span>
+              ${custEmail !== 'Guest Customer' ? `<button type="button" title="Copy Email" onclick="navigator.clipboard.writeText('${custEmail}'); window.store.showToast('Email copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 11px;">📋</button>` : ''}
+            </span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">User Wallet Balance:</span>
+            <span class="order-data-val" style="color: var(--primary);">${custWalletBal}</span>
+          </div>
+        </div>
+
+        <!-- 2. SERVICE DETAILS -->
+        <div class="order-details-card">
+          <div class="order-details-card-title">
+            <span>⚡</span>
+            <span>Service Details</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Service Name:</span>
+            <span class="order-data-val" style="text-align: right; max-width: 220px;">${order.serviceName || 'Social Service'}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Service ID:</span>
+            <span class="order-data-val" style="font-family: var(--font-mono); color: #4338CA; font-weight: 800;">SVC #${svcId}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Platform:</span>
+            <span class="order-data-val" style="text-transform: capitalize;">${order.platform || 'Social Media'}</span>
+          </div>
+          ${order.comments ? `
+            <div class="order-data-row">
+              <span class="order-data-label">Custom Comments:</span>
+              <span class="order-data-val" style="font-size: 11.5px; color: #7C3AED;">${order.comments}</span>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- 3. TARGET LINK & QUANTITY -->
+        <div class="order-details-card">
+          <div class="order-details-card-title">
+            <span>🎯</span>
+            <span>Target Link & Quantity</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Target URL:</span>
+            <span class="order-data-val" style="display: inline-flex; align-items: center; gap: 4px; max-width: 220px; overflow: hidden; text-overflow: ellipsis;">
+              <a href="${order.target}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                ${order.target || '—'}
+              </a>
+              ${order.target ? `<button type="button" title="Copy URL" onclick="navigator.clipboard.writeText('${order.target}'); window.store.showToast('Target URL copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 11px;">📋</button>` : ''}
+            </span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Ordered Quantity:</span>
+            <span class="order-data-val" style="font-size: 15px; color: var(--primary);">${qty.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <!-- 4. PROVIDER INFORMATION & DIRECT ACCESS -->
+        <div class="order-details-card">
+          <div class="order-details-card-title">
+            <span>🌐</span>
+            <span>Provider Information</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Provider Name:</span>
+            <span class="order-data-val">
+              <span class="badge" style="font-weight: 800; font-size: 12px; ${isSf ? 'background: rgba(245, 158, 11, 0.15); color: #D97706;' : 'background: rgba(37, 211, 102, 0.15); color: #075E54;'}">
+                ${isSf ? '🔥 SocialFans' : '🇮🇳 World of SMM'}
+              </span>
+            </span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Provider Service ID:</span>
+            <span class="order-data-val" style="font-family: var(--font-mono);">${svcId}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Provider Order ID:</span>
+            <span class="order-data-val" style="font-family: var(--font-mono); font-weight: 800; display: inline-flex; align-items: center; gap: 5px;">
+              ${order.providerOrderId ? `
+                <span style="color: var(--text-main); font-size: 14px;">#${order.providerOrderId}</span>
+                <button type="button" class="btn-copy-id" title="Copy Provider Order ID" onclick="navigator.clipboard.writeText('${order.providerOrderId}'); window.store.showToast('Provider Order ID copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 11px;">📋</button>
+              ` : `
+                <span style="color: var(--text-muted); font-size: 12px; font-style: italic;">N/A (Not returned by API)</span>
+              `}
+            </span>
+          </div>
+          <div style="margin-top: 4px;">
+            <button 
+              type="button" 
+              class="btn btn-sm btn-outline" 
+              style="width: 100%; border-radius: 999px; font-weight: 700; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px;"
+              onclick="AdminApp.openProviderSearch('${providerPanelKey}', '${order.providerOrderId || ''}', event)"
+            >
+              <span>🔗 Search on ${providerName} Orders Panel ↗</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. PRICING & PROFIT BREAKDOWN -->
+        <div class="order-details-card">
+          <div class="order-details-card-title">
+            <span>💰</span>
+            <span>Financials & Margin</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Customer Charge:</span>
+            <span class="order-data-val" style="color: var(--text-main); font-size: 14px;">${store.formatMoney(charge)}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Provider Cost:</span>
+            <span class="order-data-val" style="color: var(--text-secondary);">${cost > 0 ? store.formatMoney(cost) : 'N/A'}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Net Profit:</span>
+            <span class="order-data-val" style="font-weight: 800; font-size: 14px; color: ${profit >= 0 ? '#10B981' : '#EF4444'};">
+              ${cost > 0 ? `+₹${profit.toFixed(2)} (${margin}%)` : '₹' + charge.toFixed(2) + ' (Direct)'}
+            </span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Payment Method:</span>
+            <span class="order-data-val" style="color: var(--text-muted); font-size: 12px;">Wallet Balance (Instant)</span>
+          </div>
+        </div>
+
+        <!-- 6. LIVE PROVIDER PROGRESS & COUNTS -->
+        <div class="order-details-card">
+          <div class="order-details-card-title">
+            <span>📊</span>
+            <span>Live Provider Progress</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Start Count:</span>
+            <span class="order-data-val">${startCount !== null ? startCount.toLocaleString() : 'N/A'}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Remains:</span>
+            <span class="order-data-val" style="color: ${remains > 0 ? '#F59E0B' : 'var(--text-main)'};">${remains !== null ? remains.toLocaleString() : 'N/A'}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Delivered:</span>
+            <span class="order-data-val" style="color: #10B981;">${delivered !== null ? delivered.toLocaleString() : 'N/A'}</span>
+          </div>
+          <div class="order-data-row">
+            <span class="order-data-label">Current Estimated Count:</span>
+            <span class="order-data-val" style="font-weight: 800;">${typeof currentEstCount === 'number' ? currentEstCount.toLocaleString() : currentEstCount}</span>
+          </div>
+          ${delivered !== null ? `
+            <div style="margin-top: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); margin-bottom: 4px;">
+                <span>Delivery Completion</span>
+                <span style="font-weight: 800; color: var(--text-main);">${progressPct}%</span>
+              </div>
+              <div style="height: 6px; background: rgba(0, 0, 0, 0.08); border-radius: 999px; overflow: hidden;">
+                <div style="height: 100%; width: ${progressPct}%; background: ${progressPct >= 100 ? '#10B981' : '#6366F1'}; border-radius: 999px;"></div>
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- 7. RAW PROVIDER API RESPONSE (DEBUG AUDIT) -->
+        <div class="order-details-card order-details-fullcard">
+          <div class="order-details-card-title">
+            <span>🤖</span>
+            <span>Raw Provider API Response (Audit Trail)</span>
+          </div>
+          <pre class="json-debug-box">${rawResponseJson}</pre>
+        </div>
+      </div>
+
+      <!-- 8. ACTIONS TOOLBAR -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 14px; padding-top: 16px; border-top: 1.5px solid var(--border-color);">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <select id="modal-order-status-select" class="form-select" style="min-width: 140px; height: 38px; border-radius: 999px; font-size: 12.5px; font-weight: 700;">
+            <option value="Processing" ${order.status === 'Processing' ? 'selected' : ''}>Processing</option>
+            <option value="In Progress" ${(order.status === 'In Progress' || order.status === 'in_progress') ? 'selected' : ''}>In Progress</option>
+            <option value="Completed" ${order.status === 'Completed' ? 'selected' : ''}>Completed</option>
+            <option value="Partial" ${order.status === 'Partial' ? 'selected' : ''}>Partial</option>
+            <option value="Queued" ${order.status === 'Queued' ? 'selected' : ''}>Queued</option>
+            <option value="Canceled" ${order.status === 'Canceled' ? 'selected' : ''}>Canceled</option>
+            <option value="Refunded" ${order.status === 'Refunded' ? 'selected' : ''}>Refunded</option>
+          </select>
+          <button 
+            type="button" 
+            class="btn btn-sm btn-secondary" 
+            style="border-radius: 999px; font-weight: 700; height: 38px;"
+            onclick="AdminApp.handleManualStatusUpdate('${order.id}')"
+          >
+            Update Status
+          </button>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <button 
+            type="button" 
+            class="btn btn-sm btn-outline" 
+            style="border-radius: 999px; font-weight: 700; height: 38px; display: inline-flex; align-items: center; gap: 6px;"
+            onclick="AdminApp.handleSyncSingleOrder('${order.id}', this, event, true)"
+          >
+            <span>🔄</span>
+            <span>Query Live Status Now</span>
+          </button>
+          ${(order.isQueued || order.needsTopup || String(order.status).toLowerCase() === 'queued') ? `
+            <button 
+              type="button" 
+              class="btn btn-sm" 
+              style="background: #10B981; color: white; border-radius: 999px; font-weight: 800; height: 38px; padding: 0 16px;"
+              onclick="window.store.dispatchQueuedOrder ? window.store.dispatchQueuedOrder('${order.id}') : AdminApp.handleRetryOrder('${order.id}')"
+            >
+              ⚡ Dispatch to Provider
+            </button>
+          ` : ''}
+          ${order.status !== 'Refunded' ? `
+            <button 
+              type="button" 
+              class="btn btn-sm" 
+              style="background: #FEF2F2; color: #DC2626; border: 1.5px solid #FECACA; border-radius: 999px; font-weight: 800; height: 38px; padding: 0 16px;"
+              onclick="AdminApp.handleAdminRefund('${order.id}')"
+            >
+              💸 Refund Order
+            </button>
+          ` : ''}
+          <button 
+            type="button" 
+            class="btn btn-sm btn-secondary" 
+            style="border-radius: 999px; height: 38px; padding: 0 16px;"
+            onclick="CustomerApp.closeModal()"
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+
+    CustomerApp.openModal();
+  },
+
+  /* ==========================================================
+     LIVE PROVIDER SYNC HANDLER (Single Order)
+     ========================================================== */
+  async handleSyncSingleOrder(orderId, btnEl, event, refreshModal) {
+    if (event) event.stopPropagation();
+    const store = window.store;
+    if (!store) return;
+
+    if (btnEl) {
+      btnEl.style.opacity = '0.6';
+      btnEl.style.pointerEvents = 'none';
+      btnEl.innerText = '⏳';
+    }
+
+    try {
+      const res = await store.checkSingleOrderStatus(orderId);
+      if (res && res.success) {
+        store.showToast(`Order #${orderId} status: ${res.status}${res.remains !== undefined ? ' (' + res.remains + ' remains)' : ''}`, 'success');
+      } else {
+        store.showToast(`Sync completed: ${res?.status || 'Active'}`, 'info');
+      }
+    } catch (err) {
+      console.warn('Sync order error:', err);
+      store.showToast(`Could not query provider: ${err.message}`, 'error');
+    } finally {
+      this.updateAdminOrdersTableView();
+      if (refreshModal) {
+        this.openOrderDetailsModal(orderId);
+      }
+    }
+  },
+
+  /* ==========================================================
+     PROVIDER PANEL DIRECT DEEP LINK
+     ========================================================== */
+  openProviderSearch(providerKey, providerOrderId, event) {
+    if (event) event.stopPropagation();
+    const store = window.store;
+
+    if (!providerOrderId || String(providerOrderId).trim() === '' || String(providerOrderId) === 'null' || String(providerOrderId) === 'undefined') {
+      if (store) store.showToast('No Provider Order ID recorded for this order yet.', 'info');
+      return;
+    }
+
+    const cleanId = String(providerOrderId).trim();
+    const isSf = String(providerKey).toLowerCase().includes('socialfans') || String(providerKey).toLowerCase().includes('sf');
+    const panelUrl = isSf ? 'https://socialfanss.com/orders' : 'https://worldofsmm.com/orders';
+    const panelName = isSf ? 'SocialFans' : 'World of SMM';
+
+    // Copy to clipboard
+    try {
+      navigator.clipboard.writeText(cleanId);
+    } catch (e) {
+      console.warn('Clipboard write failed:', e);
+    }
+
+    if (store) {
+      store.showToast(`Copied Provider Order #${cleanId}! Opening ${panelName} Orders...`, 'success');
+    }
+
+    window.open(panelUrl, '_blank', 'noopener,noreferrer');
+  },
+
+  /* ==========================================================
+     MANUAL STATUS OVERRIDE
+     ========================================================== */
+  handleManualStatusUpdate(orderId) {
+    const store = window.store;
+    if (!store) return;
+
+    const selectEl = document.getElementById('modal-order-status-select');
+    if (!selectEl) return;
+
+    const newStatus = selectEl.value;
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.likeXOrderId) === String(orderId) || String(o.providerOrderId) === String(orderId));
+
+    if (!order) {
+      store.showToast(`Order #${orderId} not found.`, 'error');
+      return;
+    }
+
+    const updated = {
+      ...order,
+      status: newStatus
+    };
+
+    store.updateOrderInAllStorages(updated);
+    store.showToast(`Order #${orderId} status updated to "${newStatus}"`, 'success');
+    this.updateAdminOrdersTableView();
+    this.openOrderDetailsModal(orderId);
+  },
+
+  /* ==========================================================
+     CREATE MANUAL ORDER MODAL & CONTROLLER
+     ========================================================== */
+  openCreateManualOrderModal() {
+    const store = window.store;
+    if (!store) return;
+
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!sheet) return;
+
+    const activeServices = (store.getActiveServices ? store.getActiveServices() : window.JAP_SERVICES) || [];
+
+    sheet.className = 'modal-sheet order-details-sheet';
+    sheet.innerHTML = `
+      <div class="modal-header" style="padding-bottom: 14px; border-bottom: 1.5px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>➕</span>
+            <span>Create Manual / Offline Order</span>
+          </h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 4px 0 0;">
+            Place orders directly as Admin with full margin calculations and optional instant provider dispatch.
+          </p>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()" style="font-size: 24px; line-height: 1; border: none; background: none; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <form onsubmit="AdminApp.handleCreateManualOrder(event)" style="display: flex; flex-direction: column; gap: 16px; margin-top: 18px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px;">
+          <!-- Customer Email -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Customer Email: *</label>
+            <input 
+              type="email" 
+              id="manual-order-email" 
+              class="form-control" 
+              placeholder="e.g. customer@example.com" 
+              required 
+              style="height: 42px; border-radius: 12px; font-size: 13px; border: 1.5px solid var(--border-color);"
+            />
+          </div>
+
+          <!-- Customer Name -->
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Customer Name (Optional):</label>
+            <input 
+              type="text" 
+              id="manual-order-name" 
+              class="form-control" 
+              placeholder="e.g. Rahul Sharma" 
+              style="height: 42px; border-radius: 12px; font-size: 13px; border: 1.5px solid var(--border-color);"
+            />
+          </div>
+        </div>
+
+        <!-- Service Selector -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Select Service: *</label>
+          <select 
+            id="manual-order-service" 
+            class="form-select" 
+            required 
+            onchange="AdminApp.handleManualServiceSelect(this.value)"
+            style="height: 44px; border-radius: 12px; font-size: 13px; border: 1.5px solid var(--border-color); font-weight: 600;"
+          >
+            <option value="">-- Choose a Catalog Service --</option>
+            ${activeServices.map(s => {
+              const provTag = (s.provider === 'socialfans' || String(s.id).startsWith('sf-')) ? 'SocialFans' : 'WorldOfSMM';
+              return `<option value="${s.id}" data-rate="${s.rate || 0}" data-cost="${s.cost || s.providerCost || 0}" data-provider="${s.provider || 'worldofsmm'}" data-name="${(s.customerName || s.name || '').replace(/"/g, '&quot;')}">
+                [${provTag}] SVC #${s.rawId || s.id} — ${s.customerName || s.name} (₹${s.rate}/1k)
+              </option>`;
+            }).join('')}
+          </select>
+        </div>
+
+        <!-- Target Link -->
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Target Link / Profile / Post URL: *</label>
+          <input 
+            type="url" 
+            id="manual-order-target" 
+            class="form-control" 
+            placeholder="https://instagram.com/p/... or https://youtube.com/watch?v=..." 
+            required 
+            style="height: 42px; border-radius: 12px; font-size: 13px; border: 1.5px solid var(--border-color);"
+          />
+        </div>
+
+        <!-- Quantity, Charge, Provider Cost -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Quantity: *</label>
+            <input 
+              type="number" 
+              id="manual-order-qty" 
+              class="form-control" 
+              value="1000" 
+              min="10" 
+              step="1" 
+              required 
+              oninput="AdminApp.recalculateManualOrderProfit()"
+              style="height: 42px; border-radius: 12px; font-size: 13.5px; font-weight: 700; border: 1.5px solid var(--border-color);"
+            />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Customer Charge (₹): *</label>
+            <input 
+              type="number" 
+              id="manual-order-charge" 
+              class="form-control" 
+              value="0" 
+              min="0" 
+              step="0.01" 
+              required 
+              oninput="AdminApp.recalculateManualOrderProfit()"
+              style="height: 42px; border-radius: 12px; font-size: 13.5px; font-weight: 700; border: 1.5px solid var(--border-color);"
+            />
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Provider Cost (₹): *</label>
+            <input 
+              type="number" 
+              id="manual-order-cost" 
+              class="form-control" 
+              value="0" 
+              min="0" 
+              step="0.01" 
+              required 
+              oninput="AdminApp.recalculateManualOrderProfit()"
+              style="height: 42px; border-radius: 12px; font-size: 13.5px; font-weight: 700; border: 1.5px solid var(--border-color);"
+            />
+          </div>
+        </div>
+
+        <!-- Profit & Margin Preview Bar -->
+        <div id="manual-order-profit-preview" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 12px; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 13px; font-weight: 600; color: #065F46;">
+            Estimated Profit: <strong id="manual-order-profit-text" style="font-size: 15px; color: #10B981;">₹0.00 (0%)</strong>
+          </div>
+          <div style="font-size: 12px; color: var(--text-secondary);" id="manual-order-provider-tag">
+            Provider: World of SMM
+          </div>
+        </div>
+
+        <!-- Instant Dispatch Checkbox -->
+        <div style="display: flex; align-items: center; gap: 10px; background: var(--bg-surface); padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+          <input type="checkbox" id="manual-order-dispatch-toggle" checked style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;" />
+          <label for="manual-order-dispatch-toggle" style="font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; margin: 0;">
+            ⚡ Dispatch to upstream provider API immediately
+          </label>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display: flex; gap: 10px; margin-top: 6px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1; height: 44px; border-radius: 12px;" onclick="CustomerApp.closeModal()">
+            Cancel
+          </button>
+          <button type="submit" id="manual-order-submit-btn" class="btn btn-primary" style="flex: 2; height: 44px; border-radius: 12px; font-weight: 800; background: linear-gradient(135deg, #10B981, #059669);">
+            Create Order Now 🚀
+          </button>
+        </div>
+      </form>
+    `;
+
+    CustomerApp.openModal();
+  },
+
+  handleManualServiceSelect(serviceId) {
+    const store = window.store;
+    if (!store || !serviceId) return;
+
+    const selectEl = document.getElementById('manual-order-service');
+    const selectedOpt = selectEl ? selectEl.selectedOptions[0] : null;
+    if (!selectedOpt) return;
+
+    const rate = Number(selectedOpt.getAttribute('data-rate') || 0);
+    const cost = Number(selectedOpt.getAttribute('data-cost') || 0);
+    const provider = selectedOpt.getAttribute('data-provider') || 'worldofsmm';
+
+    const qty = Number(document.getElementById('manual-order-qty')?.value || 1000);
+    const chargeVal = ((rate * qty) / 1000).toFixed(2);
+    const costVal = ((cost * qty) / 1000).toFixed(2);
+
+    const chargeInp = document.getElementById('manual-order-charge');
+    const costInp = document.getElementById('manual-order-cost');
+    if (chargeInp) chargeInp.value = chargeVal;
+    if (costInp) costInp.value = costVal;
+
+    const provTag = document.getElementById('manual-order-provider-tag');
+    if (provTag) {
+      provTag.innerText = `Provider: ${provider === 'socialfans' ? 'SocialFans' : 'World of SMM'}`;
+    }
+
+    this.recalculateManualOrderProfit();
+  },
+
+  recalculateManualOrderProfit() {
+    const chargeInp = document.getElementById('manual-order-charge');
+    const costInp = document.getElementById('manual-order-cost');
+    const profitText = document.getElementById('manual-order-profit-text');
+    if (!chargeInp || !costInp || !profitText) return;
+
+    const charge = Number(chargeInp.value || 0);
+    const cost = Number(costInp.value || 0);
+    const profit = charge - cost;
+    const margin = charge > 0 ? Math.round((profit / charge) * 100) : 0;
+
+    profitText.innerText = `+₹${profit.toFixed(2)} (${margin}%)`;
+    profitText.style.color = profit >= 0 ? '#10B981' : '#EF4444';
+  },
+
+  async handleCreateManualOrder(event) {
+    event.preventDefault();
+    const store = window.store;
+    if (!store) return;
+
+    const email = document.getElementById('manual-order-email')?.value.trim();
+    const name = document.getElementById('manual-order-name')?.value.trim() || (email ? email.split('@')[0] : 'Customer');
+    const serviceSelect = document.getElementById('manual-order-service');
+    const serviceId = serviceSelect?.value;
+    const selectedOpt = serviceSelect ? serviceSelect.selectedOptions[0] : null;
+    const serviceName = selectedOpt ? selectedOpt.getAttribute('data-name') : 'Custom Service';
+    const provider = selectedOpt ? selectedOpt.getAttribute('data-provider') : 'worldofsmm';
+    const target = document.getElementById('manual-order-target')?.value.trim();
+    const qty = Number(document.getElementById('manual-order-qty')?.value || 1000);
+    const charge = Number(document.getElementById('manual-order-charge')?.value || 0);
+    const cost = Number(document.getElementById('manual-order-cost')?.value || 0);
+    const dispatchImmediately = document.getElementById('manual-order-dispatch-toggle')?.checked !== false;
+
+    if (!email || !serviceId || !target || qty <= 0) {
+      store.showToast('Please fill in all required fields.', 'error');
+      return;
+    }
+
+    const submitBtn = document.getElementById('manual-order-submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = 'Creating Order... ⏳';
+    }
+
+    try {
+      const res = await store.createManualOrder({
+        userEmail: email,
+        customerName: name,
+        serviceId: serviceId,
+        serviceName: serviceName,
+        provider: provider,
+        target: target,
+        quantity: qty,
+        amount: charge,
+        cost: cost,
+        dispatchImmediately: dispatchImmediately
+      });
+
+      if (res && res.success) {
+        CustomerApp.closeModal();
+        store.showToast(`Manual Order ${res.order.id} created successfully!`, 'success');
+        this.updateAdminOrdersTableView();
+      } else {
+        store.showToast(res?.message || 'Failed to create manual order.', 'error');
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Create Order Now 🚀';
+        }
+      }
+    } catch (err) {
+      console.error('Manual order creation error:', err);
+      store.showToast(`Error: ${err.message}`, 'error');
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Create Order Now 🚀';
+      }
+    }
   },
 
   renderAdminSupport(store) {

@@ -93,14 +93,13 @@ export default async function handler(req, res) {
 
     const data = await callProvider(providerConfig);
 
-    // If order was placed, log to Supabase PostgreSQL orders table (both successful 8-digit and queued 5-digit orders)
+    // If order was placed, log to Supabase PostgreSQL orders table (keeps LikeX ID & Provider Order ID separate)
     if (action === 'add') {
       const isSuccess = Boolean(data && data.order);
-      const orderIdNum = isSuccess 
-        ? parseInt(data.order, 10) 
-        : (paramsObj.likeXOrderId ? parseInt(paramsObj.likeXOrderId, 10) : Math.floor(10000 + Math.random() * 90000));
+      const rawLikeXStr = paramsObj.likeXOrderId ? String(paramsObj.likeXOrderId).replace(/\D/g, '') : '';
+      const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
 
-      const orderStatus = isSuccess ? 'Processing' : 'Queued';
+      const orderStatus = isSuccess ? (data.status || 'Processing') : 'Queued';
       const orderErrorNote = data && data.error ? `Error: ${String(data.error).slice(0, 42)}` : null;
 
       fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
@@ -117,7 +116,7 @@ export default async function handler(req, res) {
           target_url: paramsObj.link || '',
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
-          provider_order_id: isSuccess ? String(data.order) : String(orderIdNum),
+          provider_order_id: isSuccess ? String(data.order) : null,
           assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
           status: orderStatus,
           remains: Number(paramsObj.quantity) || 1000,
@@ -142,7 +141,8 @@ export default async function handler(req, res) {
     });
   } catch (error) {
     if (action === 'add' && paramsObj.likeXOrderId) {
-      const orderIdNum = parseInt(paramsObj.likeXOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
+      const rawLikeXStr = String(paramsObj.likeXOrderId).replace(/\D/g, '');
+      const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
       fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
         method: 'POST',
         headers: {
@@ -157,7 +157,7 @@ export default async function handler(req, res) {
           target_url: paramsObj.link || '',
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
-          provider_order_id: String(orderIdNum),
+          provider_order_id: null,
           assigned_provider_id: requestedProvider === 'socialfans' ? 3 : 2,
           status: 'Queued',
           remains: Number(paramsObj.quantity) || 1000,

@@ -879,16 +879,49 @@ class SmmStateStore {
     return (Number(wholesaleCostUsd) || 0.10) * (1 + markup / 100);
   }
 
-  // Generate unique 5-digit Order ID for LikeX (e.g. 58392)
+  // Generate unique LikeX Order ID (e.g. LX58392)
   generateLikeXOrderId() {
-    const existing = new Set((this.data.orders || []).map(o => String(o.id)));
+    const existing = new Set((this.data.orders || []).map(o => String(o.id || o.likeXOrderId || '')));
     for (let attempts = 0; attempts < 1000; attempts++) {
-      const candidate = String(Math.floor(10000 + Math.random() * 90000));
-      if (!existing.has(candidate)) {
+      const num = Math.floor(10000 + Math.random() * 90000);
+      const candidate = `LX${num}`;
+      if (!existing.has(candidate) && !existing.has(String(num))) {
         return candidate;
       }
     }
-    return String(Math.floor(10000 + Math.random() * 90000));
+    return `LX${Math.floor(10000 + Math.random() * 90000)}`;
+  }
+
+  // Helper to format any LikeX Order ID cleanly (e.g. 58392 -> LX58392)
+  formatLikeXOrderId(id) {
+    if (!id && id !== 0) return 'LX—';
+    const s = String(id).trim().replace(/^#/, '');
+    if (s.startsWith('LX') || s.startsWith('lx')) {
+      return 'LX' + s.slice(2);
+    }
+    return `LX${s}`;
+  }
+
+  // Date only helper: e.g. "13 Sep 2026"
+  formatDateOnly(timestamp = Date.now()) {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return 'Recently';
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  // Time only helper: e.g. "04:53 PM"
+  formatTimeOnly(timestamp = Date.now()) {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
   }
 
   // Clean and sanitize target URL (strips ?igsi=..., ?utm_source=..., handles @username)
@@ -1180,19 +1213,53 @@ class SmmStateStore {
 
     // Helper to add or merge an order (deduplicates across LikeX Order ID and Provider Order ID)
     const addOrMerge = (o) => {
-      if (!o || !o.id) return;
-      const oId = String(o.id).trim();
-      const oProvId = o.providerOrderId ? String(o.providerOrderId).trim() : null;
+      if (!o) return;
+      const rawId = String(o.id || o.likeXOrderId || '').trim();
+      if (!rawId) return;
 
-      // Find existing match by either id OR providerOrderId
+      // Extract distinct LikeX Order ID and Provider Order ID
+      let likeXOrderId = o.likeXOrderId ? String(o.likeXOrderId).trim() : null;
+      let providerOrderId = o.providerOrderId ? String(o.providerOrderId).trim() : null;
+
+      if (!likeXOrderId) {
+        if (rawId.startsWith('LX') || rawId.startsWith('lx')) {
+          likeXOrderId = this.formatLikeXOrderId(rawId);
+        } else if (/^\d{5}$/.test(rawId)) {
+          // Exactly 5 digits = LikeX Order ID
+          likeXOrderId = `LX${rawId}`;
+        } else if (/^\d{6,}$/.test(rawId)) {
+          // Long digit string (e.g. 58662283) is an upstream Provider Order ID
+          if (!providerOrderId) providerOrderId = rawId;
+          likeXOrderId = `LX${rawId.slice(-5)}`;
+        } else {
+          likeXOrderId = this.formatLikeXOrderId(rawId);
+        }
+      } else {
+        likeXOrderId = this.formatLikeXOrderId(likeXOrderId);
+      }
+
+      // Check if providerOrderId is valid or placeholder
+      if (providerOrderId === 'null' || providerOrderId === 'undefined' || providerOrderId === 'N/A' || providerOrderId === '') {
+        providerOrderId = null;
+      } else if (providerOrderId === likeXOrderId || providerOrderId === rawId.replace(/^LX/i, '')) {
+        // Was mistakenly set to LikeX ID in earlier code
+        if (!/^\d{6,}$/.test(providerOrderId)) {
+          providerOrderId = null;
+        }
+      }
+
+      // Find existing match
       const existingIdx = ordersList.findIndex(existing => {
-        const eId = String(existing.id).trim();
-        const eProvId = existing.providerOrderId ? String(existing.providerOrderId).trim() : null;
+        const eLikeX = String(existing.likeXOrderId || existing.id || '').trim();
+        const eProv = existing.providerOrderId ? String(existing.providerOrderId).trim() : null;
 
-        return eId === oId || 
-               (oProvId && eProvId && oProvId === eProvId) ||
-               (oProvId && eId === oProvId) ||
-               (eProvId && oId === eId);
+        if (likeXOrderId && eLikeX && (eLikeX === likeXOrderId || eLikeX.replace(/^LX/i, '') === likeXOrderId.replace(/^LX/i, ''))) {
+          return true;
+        }
+        if (providerOrderId && eProv && eProv === providerOrderId) {
+          return true;
+        }
+        return false;
       });
 
       const amountVal = Number(o.amount !== undefined ? o.amount : (o.charge !== undefined ? o.charge : 0));
@@ -1201,32 +1268,60 @@ class SmmStateStore {
       const accurateProv = resolveProvider(o);
       const accurateSvcName = resolveServiceTitle(o);
 
+      const matchedSvc = activeServices.find(s => 
+        (o.serviceId && (String(s.id) === String(o.serviceId) || String(s.rawId) === String(o.serviceId))) ||
+        (o.rawServiceId && String(s.rawId) === String(o.rawServiceId))
+      );
+      const rawSvcId = o.rawServiceId || (matchedSvc?.rawId) || (o.serviceId ? String(o.serviceId).replace(/^wos-/, '').replace(/^sf-/, '') : '2868');
+
+      // Wholesale & profit calculation
+      let providerCostVal = Number(o.providerCost !== undefined ? o.providerCost : 0);
+      if (!providerCostVal || providerCostVal === 0) {
+        const liveInfo = this.getLiveRateInfo(o.serviceId, rawSvcId, accurateProv);
+        const unitWholesale = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : (matchedSvc?.cost || matchedSvc?.rate || 0.20);
+        providerCostVal = (unitWholesale / 1000) * qtyVal;
+      }
+      const profitVal = Math.max(0, amountVal - providerCostVal);
+      const marginPercentVal = amountVal > 0 ? (((amountVal - providerCostVal) / amountVal) * 100).toFixed(1) : '0.0';
+
+      const dateStr = o.date || this.formatDateOnly(createdTs);
+      const timeStr = o.time || this.formatTimeOnly(createdTs);
+      const fullDateStr = this.formatRealDate(createdTs);
+
       if (existingIdx === -1) {
-        const displayId = oProvId || oId;
         ordersList.push({
           ...o,
-          id: displayId,
-          providerOrderId: oProvId || displayId,
+          id: likeXOrderId,
+          likeXOrderId: likeXOrderId,
+          providerOrderId: providerOrderId,
+          serviceId: o.serviceId || `wos-${rawSvcId}`,
+          rawServiceId: rawSvcId,
+          providerServiceId: rawSvcId,
           serviceName: accurateSvcName,
+          category: o.category || matchedSvc?.category || 'Social Growth',
+          platform: o.platform || matchedSvc?.platform || (String(o.target || '').includes('instagram') ? 'instagram' : 'smm'),
           provider: accurateProv,
           providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
           amount: amountVal,
+          providerCost: providerCostVal,
+          profit: profitVal,
+          marginPercent: marginPercentVal,
           quantity: qtyVal,
           createdAt: createdTs,
-          date: o.date || this.formatRealDate(createdTs)
+          date: dateStr,
+          time: timeStr,
+          createdDateStr: fullDateStr,
+          lastUpdatedAt: o.lastUpdatedAt || createdTs,
+          status: o.status || 'Processing',
+          providerStatus: o.providerStatus || (providerOrderId ? (o.status || 'Active') : 'N/A'),
+          startCount: (o.startCount !== undefined && o.startCount !== null) ? Number(o.startCount) : null,
+          currentCount: (o.currentCount !== undefined && o.currentCount !== null) ? Number(o.currentCount) : null,
+          remains: (o.remains !== undefined && o.remains !== null) ? Number(o.remains) : qtyVal,
+          providerResponse: o.providerResponse || null
         });
       } else {
         const existing = ordersList[existingIdx];
-        // Prefer Provider Order ID (e.g. 58662283) as primary ID so admin can search directly in provider dashboard
-        const bestProvId = oProvId || existing.providerOrderId || (String(oId).length > 5 ? oId : (String(existing.id).length > 5 ? String(existing.id) : null));
-        const bestId = bestProvId || existing.id || oId;
-
-        const bestName = resolveServiceTitle({
-          ...existing,
-          ...o,
-          serviceName: (o.serviceName && !o.serviceName.includes('null') && !o.serviceName.includes('undefined')) ? o.serviceName : existing.serviceName
-        });
-
+        const bestProvId = providerOrderId || existing.providerOrderId || null;
         const bestEmail = o.userEmail || o.customerEmail || existing.userEmail || existing.customerEmail || '';
         const bestCustName = (o.customerName && o.customerName !== 'Guest' && o.customerName !== 'Customer')
           ? o.customerName
@@ -1234,26 +1329,44 @@ class SmmStateStore {
             ? existing.customerName
             : (bestEmail ? bestEmail.split('@')[0] : (o.customerName || existing.customerName || 'Customer'));
 
-        const bestAmount = (o.amount !== undefined && o.amount > 0) ? amountVal : (existing.amount || amountVal);
-        const mergedProv = accurateProv || existing.provider || 'worldofsmm';
+        const bestAmount = (amountVal > 0) ? amountVal : (existing.amount || 0);
+        const bestCost = (providerCostVal > 0) ? providerCostVal : (existing.providerCost || 0);
+        const bestProfit = Math.max(0, bestAmount - bestCost);
+        const bestMargin = bestAmount > 0 ? (((bestAmount - bestCost) / bestAmount) * 100).toFixed(1) : '0.0';
+
+        const mergedStatus = (o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing');
+        const mergedProvStatus = o.providerStatus || existing.providerStatus || (bestProvId ? mergedStatus : 'N/A');
 
         ordersList[existingIdx] = {
           ...existing,
           ...o,
-          id: bestId,
-          providerOrderId: bestProvId || existing.providerOrderId || bestId,
-          serviceName: bestName,
+          id: existing.likeXOrderId || likeXOrderId,
+          likeXOrderId: existing.likeXOrderId || likeXOrderId,
+          providerOrderId: bestProvId,
+          serviceId: existing.serviceId || o.serviceId || `wos-${rawSvcId}`,
+          rawServiceId: rawSvcId,
+          providerServiceId: rawSvcId,
+          serviceName: accurateSvcName,
+          category: existing.category || o.category || matchedSvc?.category || 'Social Growth',
+          platform: existing.platform || o.platform || matchedSvc?.platform || (String(o.target || '').includes('instagram') ? 'instagram' : 'smm'),
+          provider: accurateProv,
+          providerDisplayName: accurateProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
+          amount: bestAmount,
+          providerCost: bestCost,
+          profit: bestProfit,
+          marginPercent: bestMargin,
+          quantity: qtyVal || existing.quantity || 1000,
           userEmail: bestEmail,
           customerName: bestCustName,
           target: o.target || existing.target || '',
           comments: o.comments || existing.comments || '',
-          provider: mergedProv,
-          providerDisplayName: mergedProv === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
-          createdAt: Math.min(Number(existing.createdAt) || createdTs, createdTs),
-          date: o.date || existing.date || this.formatRealDate(createdTs),
-          amount: bestAmount,
-          quantity: qtyVal || existing.quantity || 1000,
-          status: (o.status && o.status !== 'Processing') ? o.status : (existing.status || o.status || 'Processing')
+          status: mergedStatus,
+          providerStatus: mergedProvStatus,
+          startCount: (o.startCount !== undefined && o.startCount !== null) ? Number(o.startCount) : existing.startCount,
+          currentCount: (o.currentCount !== undefined && o.currentCount !== null) ? Number(o.currentCount) : existing.currentCount,
+          remains: (o.remains !== undefined && o.remains !== null) ? Number(o.remains) : existing.remains,
+          lastUpdatedAt: Math.max(Number(o.lastUpdatedAt) || 0, Number(existing.lastUpdatedAt) || 0, createdTs),
+          providerResponse: o.providerResponse || existing.providerResponse || null
         };
       }
     };
@@ -1843,159 +1956,564 @@ class SmmStateStore {
   }
 
   async placeOrder({ serviceId, target, quantity, serviceName, wholesaleCost, comments }, options = {}) {
-    if (!this.data.isLoggedIn) {
-      this.showToast('Please sign in or create an account to place an order.', 'error');
-      CustomerApp.openAuthModal();
-      return { success: false, message: 'Authentication required' };
+    if (this._isPlacingOrder) {
+      return { success: false, message: 'Order is currently being processed' };
     }
-
-    const isComment = (serviceName || '').toLowerCase().includes('comment');
-    if (isComment && quantity < 50) {
-      this.showToast('⚠️ Minimum order quantity for comments is 50.', 'error');
-      return { success: false, message: 'Minimum 50 comments required' };
-    }
-
-    // Determine provider & raw service id
-    let targetProvider = 'worldofsmm';
-    let rawServiceId = serviceId;
-    const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
-    const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
-    if (foundSvc) {
-      targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
-      rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace(/-likex$/, '');
-      if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
-        serviceName = foundSvc.customerName || foundSvc.name;
+    this._isPlacingOrder = true;
+    try {
+      if (!this.data.isLoggedIn) {
+        this.showToast('Please sign in or create an account to place an order.', 'error');
+        CustomerApp.openAuthModal();
+        return { success: false, message: 'Authentication required' };
       }
-    } else if (String(serviceId).startsWith('sf-')) {
-      targetProvider = 'socialfans';
-      rawServiceId = String(serviceId).replace('sf-', '').replace(/-likex$/, '');
-    } else if (String(serviceId).startsWith('wos-')) {
-      targetProvider = 'worldofsmm';
-      rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
-    }
 
-    if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
-      const targetLower = String(target || '').toLowerCase();
-      if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
-        serviceName = 'Instagram HQ Followers / Likes / Views [Instant]';
-      } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
-        serviceName = 'YouTube Video Views & Engagement [HQ]';
-      } else {
-        serviceName = `Social Growth Service #${rawServiceId || '2868'}`;
+      const isComment = (serviceName || '').toLowerCase().includes('comment');
+      if (isComment && quantity < 50) {
+        this.showToast('⚠️ Minimum order quantity for comments is 50.', 'error');
+        return { success: false, message: 'Minimum 50 comments required' };
       }
-    }
 
-    const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
-
-    // Dynamic Live Wholesale Rate Lookup to protect profit margin
-    let targetWholesaleCost = wholesaleCost;
-    const liveInfo = this.getLiveRateInfo(serviceId, rawServiceId, targetProvider);
-    if (liveInfo && liveInfo.rate > 0) {
-      targetWholesaleCost = liveInfo.rate;
-    } else if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
+      // Determine provider & raw service id
+      let targetProvider = 'worldofsmm';
+      let rawServiceId = serviceId;
       const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
       const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
-      targetWholesaleCost = foundSvc ? (foundSvc.cost || foundSvc.rate || 0.20) : 0.20;
+      if (foundSvc) {
+        targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+        rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace(/-likex$/, '');
+        if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
+          serviceName = foundSvc.customerName || foundSvc.name;
+        }
+      } else if (String(serviceId).startsWith('sf-')) {
+        targetProvider = 'socialfans';
+        rawServiceId = String(serviceId).replace('sf-', '').replace(/-likex$/, '');
+      } else if (String(serviceId).startsWith('wos-')) {
+        targetProvider = 'worldofsmm';
+        rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
+      }
+
+      if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
+        const targetLower = String(target || '').toLowerCase();
+        if (targetLower.includes('instagram.com') || targetLower.includes('instagr.am')) {
+          serviceName = 'Instagram HQ Followers / Likes / Views [Instant]';
+        } else if (targetLower.includes('youtube.com') || targetLower.includes('youtu.be')) {
+          serviceName = 'YouTube Video Views & Engagement [HQ]';
+        } else {
+          serviceName = `Social Growth Service #${rawServiceId || '2868'}`;
+        }
+      }
+
+      const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
+
+      // Dynamic Live Wholesale Rate Lookup to protect profit margin
+      let targetWholesaleCost = wholesaleCost;
+      const liveInfo = this.getLiveRateInfo(serviceId, rawServiceId, targetProvider);
+      if (liveInfo && liveInfo.rate > 0) {
+        targetWholesaleCost = liveInfo.rate;
+      } else if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
+        targetWholesaleCost = foundSvc ? (foundSvc.cost || foundSvc.rate || 0.20) : 0.20;
+      }
+      const unitSellingPrice = this.getSellingPrice(targetWholesaleCost);
+      const totalCost = (unitSellingPrice / 1000) * Number(quantity);
+
+      if (this.data.customer.balance < totalCost) {
+        this.showToast('Insufficient wallet balance. Please add funds.', 'error');
+        CustomerApp.openDepositModal();
+        return { success: false, message: 'Insufficient balance' };
+      }
+
+      // Clean and sanitize target URL
+      const cleanedTarget = this.cleanTargetUrl(target);
+
+      // Unique LikeX Order ID (e.g. LX58392)
+      const finalOrderId = this.generateLikeXOrderId();
+      const now = Date.now();
+      const formattedDate = this.formatDateOnly(now);
+      const formattedTime = this.formatTimeOnly(now);
+      const fullDateStr = this.formatRealDate(now);
+
+      const providerCostVal = (targetWholesaleCost / 1000) * Number(quantity);
+      const profitVal = Math.max(0, totalCost - providerCostVal);
+      const marginPercentVal = totalCost > 0 ? (((totalCost - providerCostVal) / totalCost) * 100).toFixed(1) : '0.0';
+
+      // Deduct user wallet immediately
+      this.data.customer.balance -= totalCost;
+
+      // Deduct in transactions
+      this.data.transactions.unshift({
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'Order Placed',
+        description: `Order #${finalOrderId} — ${serviceName}`,
+        amount: -totalCost,
+        balanceAfter: this.data.customer.balance,
+        status: 'Success',
+        createdAt: now,
+        date: fullDateStr
+      });
+
+      const newOrder = {
+        id: finalOrderId,
+        likeXOrderId: finalOrderId,
+        providerOrderId: null, // Distinct from LikeX Order ID; filled asynchronously when provider returns it
+        serviceId: serviceId || `wos-${rawServiceId}`,
+        rawServiceId: rawServiceId,
+        providerServiceId: rawServiceId,
+        serviceName: serviceName,
+        category: foundSvc?.category || 'Social Growth',
+        platform: foundSvc?.platform || (String(cleanedTarget).includes('instagram') ? 'instagram' : 'smm'),
+        provider: targetProvider,
+        providerDisplayName: providerDisplayName,
+        providerName: providerDisplayName,
+        target: cleanedTarget,
+        quantity: Number(quantity),
+        amount: totalCost,
+        providerCost: providerCostVal,
+        profit: profitVal,
+        marginPercent: marginPercentVal,
+        wholesaleRate: targetWholesaleCost,
+        unitSellingPrice: unitSellingPrice,
+        comments: comments || undefined,
+        status: 'Processing',
+        providerStatus: 'Submitting to Provider...',
+        displayStatus: 'Processing',
+        createdAt: now,
+        date: formattedDate,
+        time: formattedTime,
+        createdDateStr: fullDateStr,
+        lastUpdatedAt: now,
+        startCount: null,
+        currentCount: null,
+        remains: Number(quantity),
+        refillEligible: false,
+        refillReason: `Dispatched to ${providerDisplayName}`,
+        userEmail: this.data.customer?.email || '',
+        customerName: this.data.customer?.name || 'Customer',
+        paymentMethod: 'LikeX Wallet (Full Advance)',
+        isQueued: false,
+        needsTopup: false,
+        upstreamError: null,
+        providerResponse: null
+      };
+
+      this.data.orders.unshift(newOrder);
+
+      // Save to global likex_master_orders
+      try {
+        const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
+        master.unshift(newOrder);
+        localStorage.setItem('likex_master_orders', JSON.stringify(master));
+      } catch (e) {}
+
+      // Track customer registration
+      try {
+        if (this.data.customer?.email) {
+          const reg = JSON.parse(localStorage.getItem('likex_registered_customers') || '[]');
+          if (!reg.some(c => (typeof c === 'string' ? c : c.email) === this.data.customer.email)) {
+            reg.push({ email: this.data.customer.email, name: this.data.customer.name, registeredAt: Date.now() });
+            localStorage.setItem('likex_registered_customers', JSON.stringify(reg));
+          }
+        }
+      } catch (e) {}
+
+      this.saveUserData();
+
+      this.data.recentActivity.unshift({
+        id: `act-${now}`,
+        type: 'order',
+        title: `New Order #${finalOrderId}`,
+        sub: `${serviceName} • LikeX Express Server`,
+        amount: this.formatMoney(totalCost),
+        time: formattedDate,
+        icon: '🛒'
+      });
+
+      this.recalculateAdminStats();
+
+      if (!options.silent) {
+        this.showToast(`🎉 Order #${finalOrderId} placed successfully!`, 'success');
+        this.setCustomerTab('orders');
+      }
+
+      this.notify();
+
+      // ULTRA-FAST EXECUTION: Launch background provider submission without delaying customer confirmation
+      this._dispatchOrderToProviderAsync(newOrder, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost);
+
+      return { success: true, orderId: finalOrderId, totalCost };
+    } finally {
+      this._isPlacingOrder = false;
     }
-    const unitSellingPrice = this.getSellingPrice(targetWholesaleCost);
-    const totalCost = (unitSellingPrice / 1000) * Number(quantity);
+  }
 
-    if (this.data.customer.balance < totalCost) {
-      this.showToast('Insufficient wallet balance. Please add funds.', 'error');
-      CustomerApp.openDepositModal();
-      return { success: false, message: 'Insufficient balance' };
+  // Background asynchronous provider submission
+  _dispatchOrderToProviderAsync(order, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost) {
+    const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
+
+    (async () => {
+      try {
+        const liveRes = await fetch('/api/provider', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: targetProvider,
+            action: 'add',
+            service: String(rawServiceId),
+            link: cleanedTarget,
+            quantity: quantity,
+            comments: comments || undefined,
+            likeXOrderId: finalOrderId,
+            serviceName: serviceName,
+            charge: totalCost,
+            customerEmail: order.userEmail || '',
+            customerName: order.customerName || 'Customer'
+          })
+        });
+
+        if (liveRes.ok) {
+          const liveData = await liveRes.json();
+          if (liveData && liveData.order) {
+            order.providerOrderId = String(liveData.order);
+            order.providerResponse = liveData;
+            order.providerStatus = liveData.status || 'Processing';
+            order.status = liveData.status || 'Processing';
+            order.isQueued = false;
+            order.needsTopup = false;
+            order.upstreamError = null;
+            order.lastUpdatedAt = Date.now();
+            order.refillReason = `Dispatched to ${providerDisplayName} (Provider Order #${liveData.order})`;
+
+            this.updateOrderInAllStorages(order);
+            this.triggerAlert({
+              type: 'live_order',
+              orderId: String(liveData.order),
+              likeXOrderId: finalOrderId,
+              providerName: providerDisplayName,
+              providerKey: targetProvider,
+              serviceName: serviceName,
+              target: cleanedTarget,
+              quantity: quantity,
+              customerPaid: totalCost.toFixed(2),
+              customerEmail: order.userEmail || ''
+            });
+          } else {
+            const errMsg = liveData?.error || 'Provider rejected order';
+            order.isQueued = true;
+            order.needsTopup = true;
+            order.upstreamError = errMsg;
+            order.providerResponse = liveData || null;
+            order.providerStatus = `Queued: ${errMsg}`;
+            order.status = 'Queued';
+            order.lastUpdatedAt = Date.now();
+            order.refillReason = `Queued: Waiting ${providerDisplayName} topup (${errMsg})`;
+
+            this.updateOrderInAllStorages(order);
+            this.triggerAlert({
+              type: 'queued_order',
+              orderId: finalOrderId,
+              providerName: providerDisplayName,
+              providerKey: targetProvider,
+              serviceName: serviceName,
+              target: cleanedTarget,
+              quantity: quantity,
+              customerPaid: totalCost.toFixed(2),
+              customerEmail: order.userEmail || ''
+            });
+          }
+        } else {
+          order.isQueued = true;
+          order.needsTopup = true;
+          order.upstreamError = `HTTP ${liveRes.status}`;
+          order.lastUpdatedAt = Date.now();
+          this.updateOrderInAllStorages(order);
+        }
+      } catch (err) {
+        order.isQueued = true;
+        order.needsTopup = true;
+        order.upstreamError = err.name === 'AbortError' ? 'Provider timeout' : err.message;
+        order.lastUpdatedAt = Date.now();
+        this.updateOrderInAllStorages(order);
+      }
+
+      // Upsert to Supabase
+      if (window.supabaseClient) {
+        try {
+          const rawNum = String(finalOrderId).replace(/\D/g, '');
+          const orderNum = parseInt(rawNum, 10) || Math.floor(10000 + Math.random() * 90000);
+          await window.supabaseClient.from('orders').upsert([{
+            id: orderNum,
+            user_id: null,
+            service_id: null,
+            assigned_provider_id: targetProvider === 'socialfans' ? 3 : 2,
+            target_url: cleanedTarget,
+            quantity: Number(quantity),
+            charge: totalCost,
+            provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
+            provider_order_id: order.providerOrderId || null,
+            status: order.status || 'Processing',
+            remains: Number(quantity),
+            refill_status: order.isQueued ? `Queued: ${String(order.upstreamError || 'Pending dispatch').slice(0, 40)}` : null,
+            created_at: new Date(order.createdAt).toISOString()
+          }], { onConflict: 'id' });
+        } catch (dbErr) {
+          console.warn('[LikeX Supabase] Async order upsert notice:', dbErr);
+        }
+      }
+
+      this.notify();
+    })();
+  }
+
+  // Live single-order status checking from upstream provider API
+  async checkSingleOrderStatus(orderId) {
+    const allOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : (this.data.orders || []);
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.likeXOrderId) === String(orderId) || String(o.providerOrderId) === String(orderId));
+    if (!order) {
+      this.showToast(`Order #${orderId} not found.`, 'error');
+      return null;
     }
 
-    // Clean and sanitize target URL
-    const cleanedTarget = this.cleanTargetUrl(target);
-
-    // Fallback 5-Digit LikeX Order ID (used only if provider is unreachable)
-    const fallbackOrderId = this.generateLikeXOrderId();
-    const now = Date.now();
-    const formattedDate = this.formatRealDate(now);
-
-    // Dispatch live order to upstream provider with 15s timeout
-    let liveOrderId = null;
-    let upstreamError = null;
-    let isQueued = false;
-
-    const abortCtrl = new AbortController();
-    const timeoutTimer = setTimeout(() => abortCtrl.abort(), 15000);
+    const provOrderId = order.providerOrderId;
+    if (!provOrderId || provOrderId === 'null' || provOrderId === 'N/A' || !/^\d+$/.test(provOrderId)) {
+      this.showToast(`Order #${order.likeXOrderId || order.id} does not have an active Provider Order ID yet.`, 'warning');
+      return null;
+    }
 
     try {
-      const liveRes = await fetch('/api/provider', {
+      this.showToast(`Checking status for #${order.likeXOrderId || order.id} from ${order.providerDisplayName || 'Provider'}...`, 'info');
+      const res = await fetch('/api/provider', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: abortCtrl.signal,
         body: JSON.stringify({
-          provider: targetProvider,
-          action: 'add',
-          service: String(rawServiceId),
-          link: cleanedTarget,
-          quantity: quantity,
-          comments: comments || undefined,
-          likeXOrderId: fallbackOrderId,
-          serviceName: serviceName,
-          charge: totalCost,
-          customerEmail: this.data.customer?.email || '',
-          customerName: this.data.customer?.name || 'Customer'
+          provider: order.provider || 'worldofsmm',
+          action: 'status',
+          order: provOrderId
         })
       });
-      clearTimeout(timeoutTimer);
-      if (liveRes.ok) {
-        const liveData = await liveRes.json();
-        if (liveData.order) {
-          liveOrderId = String(liveData.order);
-        } else if (liveData.error) {
-          upstreamError = liveData.error;
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.status) {
+          const rawStat = String(data.status).trim();
+          let liveStatus = rawStat;
+          const low = rawStat.toLowerCase();
+          if (low === 'in progress' || low === 'in_progress') liveStatus = 'In Progress';
+          else if (low === 'completed') liveStatus = 'Completed';
+          else if (low === 'processing') liveStatus = 'Processing';
+          else if (low === 'pending') liveStatus = 'Pending';
+          else if (low === 'partial') liveStatus = 'Partial';
+          else if (low === 'canceled' || low === 'cancelled') liveStatus = 'Cancelled';
+          else if (low === 'refunded') liveStatus = 'Refunded';
+          else if (low === 'fail' || low === 'failed' || low === 'error') liveStatus = 'Failed';
+
+          order.status = liveStatus;
+          order.providerStatus = rawStat;
+          order.providerResponse = data;
+          order.lastUpdatedAt = Date.now();
+
+          if (data.start_count !== undefined && data.start_count !== null && data.start_count !== '') {
+            order.startCount = Number(data.start_count);
+          }
+          if (data.remains !== undefined && data.remains !== null && data.remains !== '') {
+            order.remains = Number(data.remains);
+          }
+          if (order.startCount !== null && order.startCount !== undefined && order.remains !== null && order.remains !== undefined) {
+            order.currentCount = order.startCount + (order.quantity - order.remains);
+          }
+
+          this.updateOrderInAllStorages(order);
+          this.showToast(`✅ Order #${order.likeXOrderId || order.id} live status: ${liveStatus}`, 'success');
+          this.notify();
+          return order;
+        } else if (data && data.error) {
+          order.providerResponse = data;
+          order.upstreamError = data.error;
+          this.updateOrderInAllStorages(order);
+          this.showToast(`⚠️ Provider returned: ${data.error}`, 'warning');
+          return order;
         }
       } else {
-        upstreamError = `Server responded with HTTP ${liveRes.status}`;
+        this.showToast(`Provider API returned HTTP ${res.status}`, 'error');
       }
     } catch (e) {
-      clearTimeout(timeoutTimer);
-      upstreamError = e.name === 'AbortError' ? 'Provider connection timed out' : 'Network communication error';
+      this.showToast(`Failed to reach provider: ${e.message}`, 'error');
+    }
+    return null;
+  }
+
+  // Live Status Synchronization from Upstream Provider for all active orders
+  async syncOrdersStatus(silent = false) {
+    const allOrders = (this.getAllAdminOrders ? this.getAllAdminOrders() : this.data.orders) || [];
+    if (allOrders.length === 0) return 0;
+
+    let updatedCount = 0;
+    const activeToSync = allOrders.filter(o => {
+      const st = (o.status || '').toLowerCase();
+      const hasProvId = o.providerOrderId && /^\d+$/.test(o.providerOrderId);
+      return hasProvId && st !== 'completed' && st !== 'canceled' && st !== 'cancelled' && st !== 'refunded';
+    });
+
+    if (activeToSync.length === 0) {
+      if (!silent) this.showToast('✅ All active orders are up to date!', 'info');
+      return 0;
     }
 
-    // QUEUE LOGIC: If provider did not return immediate ID, safely queue
-    if (!liveOrderId) {
-      isQueued = true;
+    if (!silent) {
+      this.showToast(`🔄 Querying live status for ${activeToSync.length} orders from provider APIs...`, 'info');
     }
 
-    const finalOrderId = liveOrderId || fallbackOrderId;
+    for (const order of activeToSync) {
+      try {
+        const res = await fetch('/api/provider', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: order.provider || 'worldofsmm',
+            action: 'status',
+            order: order.providerOrderId
+          })
+        });
 
-    // Deduct user wallet immediately
-    this.data.customer.balance -= totalCost;
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.status) {
+            const rawStat = String(data.status).trim();
+            let liveStatus = rawStat;
+            const low = rawStat.toLowerCase();
+            if (low === 'in progress' || low === 'in_progress') liveStatus = 'In Progress';
+            else if (low === 'completed') liveStatus = 'Completed';
+            else if (low === 'processing') liveStatus = 'Processing';
+            else if (low === 'pending') liveStatus = 'Pending';
+            else if (low === 'partial') liveStatus = 'Partial';
+            else if (low === 'canceled' || low === 'cancelled') liveStatus = 'Cancelled';
+            else if (low === 'refunded') liveStatus = 'Refunded';
+            else if (low === 'fail' || low === 'failed' || low === 'error') liveStatus = 'Failed';
+
+            order.status = liveStatus;
+            order.providerStatus = rawStat;
+            order.providerResponse = data;
+            order.lastUpdatedAt = Date.now();
+
+            if (data.start_count !== undefined && data.start_count !== null && data.start_count !== '') {
+              order.startCount = Number(data.start_count);
+            }
+            if (data.remains !== undefined && data.remains !== null && data.remains !== '') {
+              order.remains = Number(data.remains);
+            }
+            if (order.startCount !== null && order.startCount !== undefined && order.remains !== null && order.remains !== undefined) {
+              order.currentCount = order.startCount + (order.quantity - order.remains);
+            }
+
+            this.updateOrderInAllStorages(order);
+            updatedCount++;
+          }
+        }
+      } catch (e) {
+        console.warn('Status sync error for order', order.id, e);
+      }
+    }
+
+    try {
+      this.syncSupabaseDataForAdmin();
+    } catch (e) {}
+
+    if (updatedCount > 0) {
+      this.saveUserData();
+      this.notify();
+      if (!silent) {
+        this.showToast(`🔄 Synchronized ${updatedCount} orders with live provider response!`, 'success');
+      }
+    } else if (!silent) {
+      this.showToast('✅ All live orders are up to date!', 'info');
+    }
+    return updatedCount;
+  }
+
+  // Admin Custom / Manual Order Creation
+  async createManualOrder(orderData) {
+    const now = Date.now();
+    const formattedDate = this.formatDateOnly(now);
+    const formattedTime = this.formatTimeOnly(now);
+    const fullDateStr = this.formatRealDate(now);
+    const finalOrderId = this.generateLikeXOrderId();
+
+    const chargeVal = Number(orderData.charge || 0);
+    const costVal = Number(orderData.providerCost || 0);
+    const profitVal = Math.max(0, chargeVal - costVal);
+    const marginVal = chargeVal > 0 ? (((chargeVal - costVal) / chargeVal) * 100).toFixed(1) : '0.0';
+
+    const targetProvider = orderData.provider || 'worldofsmm';
+    const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
 
     const newOrder = {
       id: finalOrderId,
-      serviceId: serviceId || `wos-${rawServiceId}`,
-      rawServiceId: rawServiceId,
-      serviceName: serviceName,
+      likeXOrderId: finalOrderId,
+      providerOrderId: orderData.providerOrderId ? String(orderData.providerOrderId).trim() : null,
       provider: targetProvider,
-      providerName: 'LikeX Cloud Engine',
       providerDisplayName: providerDisplayName,
-      providerOrderId: liveOrderId || finalOrderId,
-      isQueued: isQueued,
-      needsTopup: isQueued,
-      upstreamError: upstreamError || null,
-      platform: 'smm',
-      target: cleanedTarget,
-      quantity: Number(quantity),
-      amount: totalCost,
-      comments: comments || undefined,
-      status: 'Processing',
-      displayStatus: isQueued ? 'Processing (Queued for Dispatch)' : 'Processing',
+      providerName: providerDisplayName,
+      providerServiceId: orderData.providerServiceId || orderData.rawServiceId || '',
+      serviceId: orderData.serviceId || `manual-${Date.now()}`,
+      rawServiceId: orderData.providerServiceId || '',
+      serviceName: orderData.serviceName || 'Custom / Manual Growth Order',
+      category: orderData.category || 'Manual / Custom Order',
+      platform: orderData.platform || 'smm',
+      target: this.cleanTargetUrl(orderData.target || ''),
+      quantity: Number(orderData.quantity || 1000),
+      amount: chargeVal,
+      providerCost: costVal,
+      profit: profitVal,
+      marginPercent: marginVal,
+      status: orderData.status || 'Processing',
+      providerStatus: orderData.providerStatus || (orderData.providerOrderId ? (orderData.status || 'Active') : 'Manual Record'),
       createdAt: now,
       date: formattedDate,
-      startCount: 0,
-      currentCount: 0,
-      remains: Number(quantity),
-      refillEligible: false,
-      refillReason: isQueued ? `Queued on LikeX cloud server (Waiting ${providerDisplayName} top-up)` : `Dispatched to LikeX cloud server`,
-      userEmail: this.data.customer?.email || '',
-      customerName: this.data.customer?.name || 'Customer'
+      time: formattedTime,
+      createdDateStr: fullDateStr,
+      lastUpdatedAt: now,
+      userEmail: orderData.customerEmail || '',
+      customerName: orderData.customerName || 'Customer',
+      paymentMethod: orderData.paymentMethod || 'Manual Admin Credit (INR Paid)',
+      startCount: (orderData.startCount !== undefined && orderData.startCount !== null && orderData.startCount !== '') ? Number(orderData.startCount) : null,
+      currentCount: null,
+      remains: Number(orderData.quantity || 1000),
+      isManual: true,
+      providerResponse: null
     };
+
+    if (orderData.sendToProvider && newOrder.providerServiceId && newOrder.target) {
+      try {
+        this.showToast(`Submitting manual order #${finalOrderId} to ${providerDisplayName}...`, 'info');
+        const res = await fetch('/api/provider', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: targetProvider,
+            action: 'add',
+            service: String(newOrder.providerServiceId),
+            link: newOrder.target,
+            quantity: newOrder.quantity,
+            likeXOrderId: finalOrderId
+          })
+        });
+        if (res.ok) {
+          const liveData = await res.json();
+          if (liveData && liveData.order) {
+            newOrder.providerOrderId = String(liveData.order);
+            newOrder.providerResponse = liveData;
+            newOrder.providerStatus = liveData.status || 'Processing';
+            newOrder.status = liveData.status || 'Processing';
+            this.showToast(`🎉 Order #${finalOrderId} dispatched to ${providerDisplayName}! Provider Order ID: #${liveData.order}`, 'success');
+          } else if (liveData && liveData.error) {
+            newOrder.upstreamError = liveData.error;
+            newOrder.providerResponse = liveData;
+            newOrder.isQueued = true;
+            this.showToast(`⚠️ Provider error: ${liveData.error}. Order saved as Queued.`, 'warning');
+          }
+        }
+      } catch (e) {
+        console.warn('Manual order provider dispatch error:', e);
+      }
+    }
 
     this.data.orders.unshift(newOrder);
 
@@ -2006,171 +2524,32 @@ class SmmStateStore {
       localStorage.setItem('likex_master_orders', JSON.stringify(master));
     } catch (e) {}
 
-    // Async background Supabase insertion & Alert notification (non-blocking)
-    setTimeout(async () => {
-      if (isQueued) {
-        // Send alert ONLY if truly queued or balance error
-        this.triggerAlert({
-          type: 'queued_order',
-          orderId: finalOrderId,
-          providerName: providerDisplayName,
-          providerKey: targetProvider,
-          serviceName: serviceName,
-          target: cleanedTarget,
-          quantity: quantity,
-          customerPaid: totalCost.toFixed(2),
-          customerEmail: this.data.customer?.email || ''
-        });
-      } else if (liveOrderId) {
-        // Successful live order dispatch notification
-        this.triggerAlert({
-          type: 'live_order',
-          orderId: liveOrderId,
-          providerName: providerDisplayName,
-          providerKey: targetProvider,
-          serviceName: serviceName,
-          target: cleanedTarget,
-          quantity: quantity,
-          customerPaid: totalCost.toFixed(2),
-          customerEmail: this.data.customer?.email || ''
-        });
-      }
-
-      if (window.supabaseClient) {
-        try {
-          const orderNum = parseInt(finalOrderId, 10) || Math.floor(10000 + Math.random() * 90000);
-          await window.supabaseClient
-            .from('orders')
-            .upsert([{
-              id: orderNum,
-              user_id: null,
-              service_id: null, // Null prevents foreign key constraint error with customer_services table
-              assigned_provider_id: targetProvider === 'worldofsmm' ? 2 : (targetProvider === 'socialfans' ? 3 : 1),
-              target_url: cleanedTarget,
-              quantity: Number(quantity),
-              charge: totalCost,
-              provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
-              provider_order_id: liveOrderId || finalOrderId,
-              status: isQueued ? 'Queued' : 'Processing',
-              remains: Number(quantity),
-              refill_status: isQueued ? `Queued: ${String(upstreamError || 'Pending dispatch').slice(0, 40)}` : null,
-              created_at: new Date(now).toISOString()
-            }], { onConflict: 'id' });
-        } catch (dbErr) {
-          console.warn('[LikeX Supabase] Order insert notice:', dbErr);
-        }
-      }
-    }, 10);
-
-    // Track customer registration
-    try {
-      if (this.data.customer?.email) {
-        const reg = JSON.parse(localStorage.getItem('likex_registered_customers') || '[]');
-        if (!reg.some(c => (typeof c === 'string' ? c : c.email) === this.data.customer.email)) {
-          reg.push({ email: this.data.customer.email, name: this.data.customer.name, registeredAt: Date.now() });
-          localStorage.setItem('likex_registered_customers', JSON.stringify(reg));
-        }
-      }
-    } catch (e) {}
-
-    this.data.transactions.unshift({
-      id: `TXN-${Math.floor(1000 + Math.random() * 9000)}`,
-      type: 'Order Deduction',
-      description: `Payment for Order #${finalOrderId}`,
-      amount: -totalCost,
-      balanceAfter: this.data.customer.balance,
-      status: 'Success',
-      createdAt: now,
-      date: formattedDate
-    });
-
     this.saveUserData();
-
-    this.data.recentActivity.unshift({
-      id: `act-${now}`,
-      type: 'order',
-      title: `New Order #${finalOrderId}`,
-      sub: `${serviceName} • LikeX Express Server`,
-      amount: this.formatMoney(totalCost),
-      time: formattedDate,
-      icon: '🛒'
-    });
-
     this.recalculateAdminStats();
-
-    if (!options.silent) {
-      this.showToast(`🎉 Order #${finalOrderId} placed successfully! Queued on high-speed server.`, 'success');
-      this.setCustomerTab('orders');
-    }
     this.notify();
-    return { success: true, orderId: finalOrderId, totalCost };
-  }
 
-  // Live Status Synchronization from Upstream Provider
-  async syncOrdersStatus(silent = false) {
-    if (!this.data.orders || this.data.orders.length === 0) return 0;
-
-    let updatedCount = 0;
-    for (const order of this.data.orders) {
-      if (order.status === 'Completed' || order.status === 'Canceled' || order.status === 'Refunded') {
-        continue;
-      }
-
-      // Check if order has a provider order ID
-      const provOrderId = (order.providerOrderId && /^\d+$/.test(order.providerOrderId))
-        ? order.providerOrderId
-        : (/^\d{6,}$/.test(order.id) ? order.id : null);
-
-      if (provOrderId) {
-        try {
-          const res = await fetch('/api/provider', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              provider: order.provider || 'worldofsmm',
-              action: 'status',
-              order: provOrderId
-            })
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.status) {
-              const rawStat = String(data.status).trim();
-              const liveStatus = rawStat.toLowerCase() === 'in progress' 
-                ? 'In Progress' 
-                : (rawStat.toLowerCase() === 'partial' ? 'Partial' : rawStat);
-              order.status = liveStatus;
-              if (data.start_count !== undefined && data.start_count !== null) {
-                order.startCount = Number(data.start_count);
-              }
-              if (data.remains !== undefined && data.remains !== null) {
-                order.remains = Number(data.remains);
-              }
-              order.currentCount = (order.startCount || 0) + (order.quantity - (order.remains || 0));
-              updatedCount++;
-            }
-          }
-        } catch (e) {
-          console.warn('Status sync error for order', order.id, e);
-        }
-      }
+    // Upsert to Supabase
+    if (window.supabaseClient) {
+      try {
+        const orderNum = parseInt(String(finalOrderId).replace(/\D/g, ''), 10) || Math.floor(10000 + Math.random() * 90000);
+        window.supabaseClient.from('orders').upsert([{
+          id: orderNum,
+          user_id: null,
+          service_id: null,
+          assigned_provider_id: targetProvider === 'socialfans' ? 3 : 2,
+          target_url: newOrder.target,
+          quantity: newOrder.quantity,
+          charge: newOrder.amount,
+          provider_cost: newOrder.providerCost,
+          provider_order_id: newOrder.providerOrderId || null,
+          status: newOrder.status,
+          remains: newOrder.remains,
+          created_at: new Date(now).toISOString()
+        }], { onConflict: 'id' }).catch(() => {});
+      } catch (e) {}
     }
 
-    // Also refresh admin orders from Supabase cloud
-    try {
-      this.syncSupabaseDataForAdmin();
-    } catch (e) {}
-
-    if (updatedCount > 0) {
-      this.saveUserData();
-      this.notify();
-      if (!silent) {
-        this.showToast(`🔄 Synchronized ${updatedCount} orders with live server!`, 'success');
-      }
-    } else if (!silent) {
-      this.showToast('✅ All live orders are up to date!', 'info');
-    }
-    return updatedCount;
+    return newOrder;
   }
 
   // Refund an unfulfilled or canceled order back to user's wallet
@@ -2785,18 +3164,19 @@ class SmmStateStore {
 
   // Admin Single Order Manual Retry Dispatch (WorldOfSMM / SocialFans)
   async retrySingleOrder(orderId) {
-    const allOrders = this.getAllAdminOrders();
-    const order = allOrders.find(o => String(o.id) === String(orderId));
+    const allOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : (this.data.orders || []);
+    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.likeXOrderId) === String(orderId) || String(o.providerOrderId) === String(orderId));
     if (!order) {
       this.showToast(`Order #${orderId} not found in system.`, 'error');
       return { success: false };
     }
 
     const prov = order.provider || (String(order.serviceId).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
-    const rawId = order.rawServiceId || String(order.serviceId).replace('sf-', '').replace('wos-', '');
+    const rawId = order.providerServiceId || order.rawServiceId || String(order.serviceId).replace('sf-', '').replace('wos-', '');
     const provName = prov === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
+    const displayLikeXId = order.likeXOrderId || order.id;
 
-    this.showToast(`⚡ Dispatching Order #${orderId} to ${provName}...`, 'info');
+    this.showToast(`⚡ Dispatching Order #${displayLikeXId} to ${provName}...`, 'info');
 
     try {
       const liveRes = await fetch('/api/provider', {
@@ -2808,51 +3188,87 @@ class SmmStateStore {
           service: String(rawId),
           link: order.target,
           quantity: order.quantity,
-          comments: order.comments || undefined
+          comments: order.comments || undefined,
+          likeXOrderId: displayLikeXId
         })
       });
 
       if (liveRes.ok) {
         const liveData = await liveRes.json();
-        if (liveData.order) {
+        if (liveData && liveData.order) {
           order.providerOrderId = String(liveData.order);
+          order.providerResponse = liveData;
+          order.providerStatus = liveData.status || 'In Progress';
           order.isQueued = false;
           order.needsTopup = false;
           order.upstreamError = null;
           order.status = 'In Progress';
           order.displayStatus = 'In Progress';
+          order.lastUpdatedAt = Date.now();
           order.refillReason = `Dispatched to ${provName} (Provider Order #${liveData.order})`;
 
           this.updateOrderInAllStorages(order);
-          this.showToast(`🎉 Order #${orderId} successfully dispatched to ${provName}! Upstream Order ID: #${liveData.order}`, 'success');
+          this.showToast(`🎉 Order #${displayLikeXId} successfully dispatched to ${provName}! Upstream Provider Order ID: #${liveData.order}`, 'success');
           this.notify();
+
+          // Sync with Supabase
+          if (window.supabaseClient) {
+            try {
+              const rawNum = String(displayLikeXId).replace(/\D/g, '');
+              const orderNum = parseInt(rawNum, 10) || Math.floor(10000 + Math.random() * 90000);
+              window.supabaseClient.from('orders').upsert([{
+                id: orderNum,
+                provider_order_id: String(liveData.order),
+                status: 'In Progress',
+                refill_status: null
+              }], { onConflict: 'id' }).catch(() => {});
+            } catch (e) {}
+          }
+
           return { success: true, providerOrderId: liveData.order };
         } else {
-          this.showToast(`⚠️ ${provName} returned: ${liveData.error || 'Insufficient balance'}. Please refill provider account first.`, 'error');
-          return { success: false, error: liveData.error };
+          order.providerResponse = liveData;
+          order.upstreamError = liveData?.error || 'Insufficient balance';
+          this.updateOrderInAllStorages(order);
+          this.showToast(`⚠️ ${provName} returned: ${liveData?.error || 'Insufficient balance'}. Please refill provider account first.`, 'error');
+          return { success: false, error: liveData?.error };
         }
       } else {
         this.showToast(`❌ Gateway responded with HTTP ${liveRes.status}`, 'error');
         return { success: false };
       }
     } catch (e) {
-      this.showToast(`❌ Network error while dispatching order #${orderId}`, 'error');
+      this.showToast(`❌ Network error while dispatching order #${displayLikeXId}`, 'error');
       return { success: false, error: e.message };
     }
   }
 
   updateOrderInAllStorages(updatedOrder) {
+    if (!updatedOrder) return;
+    const targetLikeX = String(updatedOrder.likeXOrderId || updatedOrder.id || '').trim();
+    const targetProv = updatedOrder.providerOrderId ? String(updatedOrder.providerOrderId).trim() : null;
+
+    const matchesOrder = (o) => {
+      if (!o) return false;
+      const oLikeX = String(o.likeXOrderId || o.id || '').trim();
+      const oProv = o.providerOrderId ? String(o.providerOrderId).trim() : null;
+      return (targetLikeX && (oLikeX === targetLikeX || oLikeX.replace(/^LX/i, '') === targetLikeX.replace(/^LX/i, ''))) ||
+             (targetProv && oProv && oProv === targetProv);
+    };
+
     // 1. Update in local store data
-    const idx = (this.data.orders || []).findIndex(o => String(o.id) === String(updatedOrder.id));
+    const idx = (this.data.orders || []).findIndex(matchesOrder);
     if (idx >= 0) {
       this.data.orders[idx] = { ...this.data.orders[idx], ...updatedOrder };
+    } else {
+      this.data.orders.unshift(updatedOrder);
     }
     this.saveUserData();
 
     // 2. Update in master global orders
     try {
       const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
-      const mIdx = master.findIndex(o => String(o.id) === String(updatedOrder.id));
+      const mIdx = master.findIndex(matchesOrder);
       if (mIdx >= 0) {
         master[mIdx] = { ...master[mIdx], ...updatedOrder };
       } else {
@@ -2866,7 +3282,7 @@ class SmmStateStore {
       try {
         const key = this._getUserStorageKey(updatedOrder.userEmail, 'orders');
         const uOrders = JSON.parse(localStorage.getItem(key) || '[]');
-        const uIdx = uOrders.findIndex(o => String(o.id) === String(updatedOrder.id));
+        const uIdx = uOrders.findIndex(matchesOrder);
         if (uIdx >= 0) {
           uOrders[uIdx] = { ...uOrders[uIdx], ...updatedOrder };
           localStorage.setItem(key, JSON.stringify(uOrders));

@@ -1809,6 +1809,7 @@ const CustomerApp = {
   },
 
   async handlePlaceOrder() {
+    if (this._isPlacingOrder) return;
     const store = window.store;
     if (!store.data.isLoggedIn) {
       this.openAuthModal('login');
@@ -1899,6 +1900,8 @@ const CustomerApp = {
       return;
     }
 
+    this._isPlacingOrder = true;
+
     // Track InitiateCheckout
     if (window.PixelTracker) {
       window.PixelTracker.trackInitiateCheckout({
@@ -1914,7 +1917,7 @@ const CustomerApp = {
     const submitBtn = document.getElementById('btn-submit-order');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.innerHTML = '<span style="display: inline-flex; align-items: center; gap: 8px;"><span class="spinner" style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></span> Connecting to SMM Node...</span>';
+      submitBtn.innerHTML = '<span style="display: inline-flex; align-items: center; gap: 8px;"><span class="spinner" style="width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></span> Creating Order...</span>';
     }
 
     try {
@@ -1943,6 +1946,7 @@ const CustomerApp = {
       console.error('Order placement error:', err);
       store.showToast('Something went wrong while placing order. Please try again.', 'error');
     } finally {
+      this._isPlacingOrder = false;
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<span>⚡ Confirm & Place Order</span>';
