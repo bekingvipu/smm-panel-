@@ -990,8 +990,8 @@ const CustomerApp = {
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
     } else if (this.currentCategory === 'Instagram Non-Drop Followers — Refill Guaranteed' && activePackages.length > 0) {
-      // Order: 4237, 7244, 7551
-      const order = ['4237', '4137', '7244', '7551'];
+      // Order: 4137, 7244, 7551
+      const order = ['4137', '7244', '7551'];
       activePackages.sort((a, b) => {
         const idxA = order.indexOf(String(a.rawId || a.id || ''));
         const idxB = order.indexOf(String(b.rawId || b.id || ''));
