@@ -252,14 +252,17 @@ class SmmStateStore {
       this.data.claimedUtrs = {};
     }
 
-    // Initialize Live Provider Rates Auto-Sync Engine
+    // Initialize Live Provider Rates Auto-Sync Engine (v4: strictly provider-scoped keys)
     try {
-      const savedRates = localStorage.getItem('likex_live_rates_cache');
+      localStorage.removeItem('likex_live_rates_cache');
+      localStorage.removeItem('likex_live_rates_cache_v2');
+      localStorage.removeItem('likex_live_rates_cache_v3');
+      const savedRates = localStorage.getItem('likex_live_rates_cache_v4');
       this.liveRatesCache = savedRates ? JSON.parse(savedRates) : {};
     } catch (e) {
       this.liveRatesCache = {};
     }
-    this.lastRatesSyncTime = Number(localStorage.getItem('likex_last_rates_sync_time') || 0);
+    this.lastRatesSyncTime = Number(localStorage.getItem('likex_last_rates_sync_time_v4') || 0);
     this.isSyncingLiveRates = false;
 
     this.initServerSync();
@@ -603,20 +606,33 @@ class SmmStateStore {
     return 'other';
   }
 
-  // Retrieve live rate override from auto-sync cache if available
-  getLiveRateInfo(serviceId, rawId = null) {
+  // Retrieve live rate override from auto-sync cache if available (strictly provider-scoped to avoid ID collisions)
+  getLiveRateInfo(serviceId, rawId = null, provider = null) {
     if (!this.liveRatesCache) return null;
-    const sId = String(serviceId);
-    const rId = rawId ? String(rawId) : '';
+    const sId = String(serviceId || '');
+    const rId = String(rawId || sId).replace(/^sf-/, '').replace(/^wos-/, '').replace(/-c\d+$/, '').replace(/-likex$/, '');
     
+    // Determine provider context
+    let prov = (provider ? String(provider) : '').toLowerCase();
+    if (!prov) {
+      if (sId.startsWith('sf-')) prov = 'socialfans';
+      else if (sId.startsWith('wos-')) prov = 'worldofsmm';
+    }
+
+    if (prov === 'socialfans') {
+      if (this.liveRatesCache[`sf-${rId}`]) return this.liveRatesCache[`sf-${rId}`];
+      if (this.liveRatesCache[sId] && sId.startsWith('sf-')) return this.liveRatesCache[sId];
+      return null;
+    }
+
+    if (prov === 'worldofsmm') {
+      if (this.liveRatesCache[`wos-${rId}`]) return this.liveRatesCache[`wos-${rId}`];
+      if (this.liveRatesCache[sId] && sId.startsWith('wos-')) return this.liveRatesCache[sId];
+      return null;
+    }
+
+    // Direct match if provider is unspecified
     if (this.liveRatesCache[sId]) return this.liveRatesCache[sId];
-    if (rId && this.liveRatesCache[rId]) return this.liveRatesCache[rId];
-    if (sId.startsWith('wos-') && this.liveRatesCache[sId.replace('wos-', '')]) {
-      return this.liveRatesCache[sId.replace('wos-', '')];
-    }
-    if (sId.startsWith('sf-') && this.liveRatesCache[sId.replace('sf-', '')]) {
-      return this.liveRatesCache[sId.replace('sf-', '')];
-    }
     return null;
   }
 
@@ -632,36 +648,73 @@ class SmmStateStore {
     this.isSyncingLiveRates = true;
 
     let updatedCount = 0;
+    const inrRate = this.data.exchangeRate || 95.385;
+
     try {
-      const res = await fetch('/api/provider?action=services&provider=worldofsmm');
-      if (res.ok) {
-        const liveServices = await res.json();
-        if (Array.isArray(liveServices) && liveServices.length > 0) {
-          liveServices.forEach(s => {
-            const rawId = String(s.service || s.id);
-            const wosId = `wos-${rawId}`;
-            const rate = parseFloat(s.rate || s.cost || 0);
-            if (rate > 0) {
-              const rateData = {
-                rate: rate,
-                min: parseInt(s.min || 10, 10),
-                max: parseInt(s.max || 1000000, 10),
-                refill: Boolean(s.refill),
-                cancel: Boolean(s.cancel),
-                updatedAt: now
-              };
-              this.liveRatesCache[rawId] = rateData;
-              this.liveRatesCache[wosId] = rateData;
-              updatedCount++;
-            }
-          });
+      // 1. Sync WorldOfSMM (rates returned in USD)
+      try {
+        const wosRes = await fetch('/api/provider?action=services&provider=worldofsmm');
+        if (wosRes.ok) {
+          const wosServices = await wosRes.json();
+          if (Array.isArray(wosServices) && wosServices.length > 0) {
+            wosServices.forEach(s => {
+              const rawId = String(s.service || s.id);
+              const wosId = `wos-${rawId}`;
+              const rate = parseFloat(s.rate || s.cost || 0);
+              if (rate > 0) {
+                this.liveRatesCache[wosId] = {
+                  rate: rate, // USD
+                  min: parseInt(s.min || 10, 10),
+                  max: parseInt(s.max || 1000000, 10),
+                  refill: Boolean(s.refill),
+                  cancel: Boolean(s.cancel),
+                  provider: 'worldofsmm',
+                  updatedAt: now
+                };
+                updatedCount++;
+              }
+            });
+          }
         }
+      } catch (wosErr) {
+        console.warn('[LikeX Rate Sync] WorldOfSMM sync error:', wosErr);
+      }
+
+      // 2. Sync SocialFans (rates returned in INR, normalized to USD for LikeX store calculations)
+      try {
+        const sfRes = await fetch('/api/provider?action=services&provider=socialfans');
+        if (sfRes.ok) {
+          const sfServices = await sfRes.json();
+          if (Array.isArray(sfServices) && sfServices.length > 0) {
+            sfServices.forEach(s => {
+              const rawId = String(s.service || s.id);
+              const sfId = `sf-${rawId}`;
+              const rateINR = parseFloat(s.rate || s.cost || 0);
+              if (rateINR > 0) {
+                const rateUSD = rateINR / inrRate;
+                this.liveRatesCache[sfId] = {
+                  rate: rateUSD, // USD equivalent
+                  providerPriceINR: rateINR, // Wholesale price in INR
+                  min: parseInt(s.min || 10, 10),
+                  max: parseInt(s.max || 10000000, 10),
+                  refill: Boolean(s.refill),
+                  cancel: Boolean(s.cancel),
+                  provider: 'socialfans',
+                  updatedAt: now
+                };
+                updatedCount++;
+              }
+            });
+          }
+        }
+      } catch (sfErr) {
+        console.warn('[LikeX Rate Sync] SocialFans sync error:', sfErr);
       }
 
       this.lastRatesSyncTime = now;
       try {
-        localStorage.setItem('likex_live_rates_cache', JSON.stringify(this.liveRatesCache));
-        localStorage.setItem('likex_last_rates_sync_time', String(now));
+        localStorage.setItem('likex_live_rates_cache_v4', JSON.stringify(this.liveRatesCache));
+        localStorage.setItem('likex_last_rates_sync_time_v4', String(now));
       } catch (e) {}
 
       // Notify UI of updated prices for admin views or when explicitly forced
@@ -687,8 +740,9 @@ class SmmStateStore {
     for (const s of base) {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
+      const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
       if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
-        const liveInfo = this.getLiveRateInfo(sId, rId);
+        const liveInfo = this.getLiveRateInfo(sId, rId, prov);
         const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
         activeMap.set(sId, {
           ...s,
@@ -705,8 +759,9 @@ class SmmStateStore {
     for (const s of added) {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
+      const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
       if (!disabled.has(sId) && (!rId || !disabled.has(rId))) {
-        const liveInfo = this.getLiveRateInfo(sId, rId);
+        const liveInfo = this.getLiveRateInfo(sId, rId, prov);
         const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
         activeMap.set(sId, {
           ...s,
@@ -1823,7 +1878,7 @@ class SmmStateStore {
 
     // Dynamic Live Wholesale Rate Lookup to protect profit margin
     let targetWholesaleCost = wholesaleCost;
-    const liveInfo = this.getLiveRateInfo(serviceId, rawServiceId);
+    const liveInfo = this.getLiveRateInfo(serviceId, rawServiceId, targetProvider);
     if (liveInfo && liveInfo.rate > 0) {
       targetWholesaleCost = liveInfo.rate;
     } else if (targetWholesaleCost === undefined || targetWholesaleCost === null) {

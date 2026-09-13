@@ -225,7 +225,7 @@ window.SMM_MOCK = {
       refillPeriod: '365 Days',
       description: 'Good quality non-drop Instagram followers with 365 days refill guarantee via SocialFans (7244).',
       provider: 'socialfans',
-      wholesaleCost: 1.75,
+      wholesaleCost: 1.749982,
       markupPercent: 50
     },
     {
