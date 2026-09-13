@@ -28,12 +28,12 @@ class SmmStateStore {
     this.subscribers = [];
     this._isLoggingOut = false;
 
-    // Restore saved profit markup percentage (NOT HARDCODED)
+    // Restore saved profit markup percentage (saved locally and synced with Supabase cloud)
     const savedMarkup = localStorage.getItem('smm_global_markup');
-    if (savedMarkup !== null) {
+    if (savedMarkup !== null && !isNaN(Number(savedMarkup))) {
       this.data.adminStats.globalMarkupPercent = Number(savedMarkup);
     } else {
-      this.data.adminStats.globalMarkupPercent = 50; // Default 50% (+50% profit) across all devices
+      this.data.adminStats.globalMarkupPercent = 100; // Default 100% (+100% profit) until cloud sync resolves
     }
 
     // Restore saved customer avatar
@@ -280,6 +280,11 @@ class SmmStateStore {
     setInterval(() => {
       this.syncLiveRates(false);
     }, 30 * 60 * 1000);
+
+    // Recurring background sync of global cloud settings (margin %, maintenance) every 20 seconds across all devices
+    setInterval(() => {
+      this.syncGlobalSiteSettings();
+    }, 20 * 1000);
   }
 
   extractYouTubeEmbedUrl(url) {
@@ -964,13 +969,33 @@ class SmmStateStore {
   applyGlobalMarkup(percent) {
     percent = Math.max(25, Number(percent) || 50);
     this.data.adminStats.globalMarkupPercent = percent;
-    localStorage.setItem('smm_global_markup', percent);
+    try {
+      localStorage.setItem('smm_global_markup', percent);
+    } catch (e) {}
 
-    this.showToast(`Applied +${percent}% profit markup across all 5,803 services!`, 'success');
+    // Update customerServices array in memory so admin table reflects updated prices & margin
+    if (Array.isArray(this.data.customerServices)) {
+      this.data.customerServices.forEach(s => {
+        s.markupPercent = percent;
+        if (s.wholesaleCost) {
+          s.pricePer1k = this.getSellingPrice(s.wholesaleCost);
+        }
+      });
+    }
+
+    // Save to Cloud database (Supabase) so all devices (mobile, other PCs, visitors) see this margin!
+    this.saveCloudConfig({ global_markup: percent });
+
+    this.showToast(`Applied +${percent}% profit markup across all devices & services!`, 'success');
     this.notify();
   }
 
   async initServerSync() {
+    // 1. Immediately sync Supabase global cloud settings (Margin %, Maintenance Mode, Tutorials, Announcements)
+    try {
+      this.syncGlobalSiteSettings();
+    } catch (e) {}
+
     try {
       const balanceRes = await fetch('/api/provider?action=balance&provider=all');
       if (balanceRes.ok) {
@@ -1104,6 +1129,19 @@ class SmmStateStore {
             updateIfDifferent('recommendedFollowers', 'likex_recommended_followers_config', { ...this.data.recommendedFollowers, ...item.value });
           } else if (item.key === 'support_video' && item.value) {
             updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...item.value });
+          } else if (item.key === 'global_markup' && item.value !== undefined) {
+            const markupVal = Number(item.value);
+            if (markupVal && markupVal >= 25 && markupVal !== this.data.adminStats.globalMarkupPercent) {
+              this.data.adminStats.globalMarkupPercent = markupVal;
+              try { localStorage.setItem('smm_global_markup', markupVal); } catch(e){}
+              if (Array.isArray(this.data.customerServices)) {
+                this.data.customerServices.forEach(s => {
+                  s.markupPercent = markupVal;
+                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost);
+                });
+              }
+              changed = true;
+            }
           } else if (item.key === 'claimed_utrs' && typeof item.value === 'object') {
             this.data.claimedUtrs = { ...this.data.claimedUtrs, ...item.value };
             try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
@@ -1120,6 +1158,20 @@ class SmmStateStore {
       if (configRows && configRows.length > 0 && configRows[0].password_hash) {
         try {
           const parsed = JSON.parse(configRows[0].password_hash);
+          if (parsed.global_markup !== undefined) {
+            const markupVal = Number(parsed.global_markup);
+            if (markupVal && markupVal >= 25 && markupVal !== this.data.adminStats.globalMarkupPercent) {
+              this.data.adminStats.globalMarkupPercent = markupVal;
+              try { localStorage.setItem('smm_global_markup', markupVal); } catch(e){}
+              if (Array.isArray(this.data.customerServices)) {
+                this.data.customerServices.forEach(s => {
+                  s.markupPercent = markupVal;
+                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost);
+                });
+              }
+              changed = true;
+            }
+          }
           if (parsed.maintenance_mode) {
             updateIfDifferent('maintenanceMode', 'likex_maintenance_mode', { ...this.getMaintenanceMode(), ...parsed.maintenance_mode });
           }

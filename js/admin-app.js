@@ -1920,11 +1920,11 @@ const AdminApp = {
                 </td>
                 <td>
                   <strong style="font-size: 15px; color: var(--primary);">
-                    ${store.formatMoney(s.pricePer1k)} / 1K
+                    ${store.formatMoney(store.getSellingPrice(s.wholesaleCost || 0.12))} / 1K
                   </strong>
                 </td>
                 <td>
-                  <span class="badge badge-success">+${s.markupPercent}% Profit</span>
+                  <span class="badge badge-success">+${currentMarkup}% Profit</span>
                 </td>
                 <td>
                   <span class="badge ${s.refillSupported ? 'badge-primary' : 'badge-neutral'}">
