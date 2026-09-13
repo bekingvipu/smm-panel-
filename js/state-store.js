@@ -1591,13 +1591,17 @@ class SmmStateStore {
           const finalProvider = isSfOrder ? 'socialfans' : (isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 3 ? 'socialfans' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
 
-          const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (String(so.id).length === 5 && so.status !== 'Completed' && so.status !== 'Refunded');
+          const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (!so.provider_order_id && so.status !== 'Completed' && so.status !== 'Refunded' && so.status !== 'Canceled');
+          const finalErrorMsg = snapshot?.note || (so.refill_status && !so.refill_status.startsWith('SNAPSHOT:') ? so.refill_status : '') || null;
           return {
             id: String(so.id),
+            likeXOrderId: String(so.id),
             serviceId: matchedSvc ? matchedSvc.id : (rawServiceId ? (isSfOrder ? `sf-${rawServiceId}` : `wos-${rawServiceId}`) : 'N/A'),
             rawServiceId: rawServiceId || 'N/A',
             providerServiceId: rawServiceId || 'N/A',
             serviceName: svcTitle,
+            category: snapshot?.category || (matchedSvc?.category || 'Social Growth'),
+            platform: snapshot?.platform || (matchedSvc?.platform || (String(so.target_url || '').includes('instagram') ? 'instagram' : 'smm')),
             provider: finalProvider,
             providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
             providerOrderId: so.provider_order_id || null,
@@ -1607,7 +1611,8 @@ class SmmStateStore {
             providerCost: Number(so.provider_cost) || snapshot?.wholesaleCost || 0,
             status: so.status || 'Completed',
             isQueued: isQueuedOrder,
-            errorReason: snapshot?.note || (so.refill_status && !so.refill_status.startsWith('SNAPSHOT:') ? so.refill_status : ''),
+            errorReason: finalErrorMsg,
+            upstreamError: finalErrorMsg,
             userEmail: matchedUser?.email || snapshot?.email || '',
             customerName: matchedUser?.username || (matchedUser?.email ? matchedUser.email.split('@')[0] : (snapshot?.email ? snapshot.email.split('@')[0] : 'Customer')),
             createdAt: orderCreatedAt,
@@ -2272,144 +2277,180 @@ class SmmStateStore {
         icon: '🛒'
       });
 
+      // Await direct fast provider submission
+      const dispatchResult = await this._dispatchOrderToProvider(newOrder, targetProvider, cleanRawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot);
+
       this.recalculateAdminStats();
 
       if (!options.silent) {
-        this.showToast(`🎉 Order #${finalOrderId} placed successfully!`, 'success');
+        if (dispatchResult.providerOrderId) {
+          this.showToast(`🎉 Order #${dispatchResult.providerOrderId} placed successfully!`, 'success');
+        } else {
+          this.showToast(`⚠️ Order #${finalOrderId} queued: ${dispatchResult.error || 'Pending provider dispatch'}`, 'warning');
+        }
         this.setCustomerTab('orders');
       }
 
       this.notify();
 
-      // ULTRA-FAST EXECUTION: Launch background provider submission without delaying customer confirmation
-      this._dispatchOrderToProviderAsync(newOrder, targetProvider, cleanRawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot);
-
-      return { success: true, orderId: finalOrderId, totalCost };
+      return { 
+        success: true, 
+        orderId: finalOrderId, 
+        providerOrderId: dispatchResult.providerOrderId || null, 
+        totalCost, 
+        isQueued: Boolean(!dispatchResult.providerOrderId),
+        error: dispatchResult.error || null 
+      };
     } finally {
       this._isPlacingOrder = false;
     }
   }
 
-  // Background asynchronous provider submission
-  _dispatchOrderToProviderAsync(order, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot) {
+  // Direct fast provider submission with live Order ID capture
+  async _dispatchOrderToProvider(order, targetProvider, rawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot) {
     const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
 
-    (async () => {
-      try {
-        const liveRes = await fetch('/api/provider', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            provider: targetProvider,
-            action: 'add',
-            service: String(rawServiceId),
-            serviceId: order.serviceId,
-            category: order.category,
-            platform: order.platform,
-            wholesaleCost: targetWholesaleCost,
-            link: cleanedTarget,
-            quantity: quantity,
-            comments: comments || undefined,
+    try {
+      const liveRes = await fetch('/api/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: targetProvider,
+          action: 'add',
+          service: String(rawServiceId),
+          serviceId: order.serviceId,
+          category: order.category,
+          platform: order.platform,
+          wholesaleCost: targetWholesaleCost,
+          link: cleanedTarget,
+          quantity: quantity,
+          comments: comments || undefined,
+          likeXOrderId: finalOrderId,
+          serviceName: serviceName,
+          charge: totalCost,
+          customerEmail: order.userEmail || '',
+          customerName: order.customerName || 'Customer'
+        })
+      });
+
+      if (liveRes.ok) {
+        const liveData = await liveRes.json();
+        const candidateId = liveData?.providerOrderId || liveData?.order || liveData?.order_id || liveData?.id;
+        const liveProvId = (candidateId && String(candidateId).trim() !== '' && String(candidateId).toLowerCase() !== 'null') ? String(candidateId).trim() : null;
+        const liveError = liveData?.error || liveData?.message || null;
+
+        if (liveProvId && !liveError) {
+          order.providerOrderId = liveProvId;
+          order.providerResponse = liveData;
+          order.providerStatus = liveData.status || 'Processing';
+          order.status = liveData.status || 'Processing';
+          order.isQueued = false;
+          order.needsTopup = false;
+          order.upstreamError = null;
+          order.errorReason = null;
+          order.lastUpdatedAt = Date.now();
+          order.refillReason = `Dispatched to ${providerDisplayName} (Provider Order #${liveProvId})`;
+
+          this.updateOrderInAllStorages(order);
+          this.triggerAlert({
+            type: 'live_order',
+            orderId: String(liveProvId),
             likeXOrderId: finalOrderId,
+            providerName: providerDisplayName,
+            providerKey: targetProvider,
             serviceName: serviceName,
-            charge: totalCost,
-            customerEmail: order.userEmail || '',
-            customerName: order.customerName || 'Customer'
-          })
-        });
-
-        if (liveRes.ok) {
-          const liveData = await liveRes.json();
-          if (liveData && liveData.order) {
-            order.providerOrderId = String(liveData.order);
-            order.providerResponse = liveData;
-            order.providerStatus = liveData.status || 'Processing';
-            order.status = liveData.status || 'Processing';
-            order.isQueued = false;
-            order.needsTopup = false;
-            order.upstreamError = null;
-            order.lastUpdatedAt = Date.now();
-            order.refillReason = `Dispatched to ${providerDisplayName} (Provider Order #${liveData.order})`;
-
-            this.updateOrderInAllStorages(order);
-            this.triggerAlert({
-              type: 'live_order',
-              orderId: String(liveData.order),
-              likeXOrderId: finalOrderId,
-              providerName: providerDisplayName,
-              providerKey: targetProvider,
-              serviceName: serviceName,
-              target: cleanedTarget,
-              quantity: quantity,
-              customerPaid: totalCost.toFixed(2),
-              customerEmail: order.userEmail || ''
-            });
-          } else {
-            const errMsg = liveData?.error || 'Provider rejected order';
-            order.isQueued = true;
-            order.needsTopup = true;
-            order.upstreamError = errMsg;
-            order.providerResponse = liveData || null;
-            order.providerStatus = `Queued: ${errMsg}`;
-            order.status = 'Queued';
-            order.lastUpdatedAt = Date.now();
-            order.refillReason = `Queued: Waiting ${providerDisplayName} topup (${errMsg})`;
-
-            this.updateOrderInAllStorages(order);
-            this.triggerAlert({
-              type: 'queued_order',
-              orderId: finalOrderId,
-              providerName: providerDisplayName,
-              providerKey: targetProvider,
-              serviceName: serviceName,
-              target: cleanedTarget,
-              quantity: quantity,
-              customerPaid: totalCost.toFixed(2),
-              customerEmail: order.userEmail || ''
-            });
-          }
+            target: cleanedTarget,
+            quantity: quantity,
+            customerPaid: totalCost.toFixed(2),
+            customerEmail: order.userEmail || ''
+          });
         } else {
+          const errMsg = liveError || 'Provider rejected order';
+          order.providerOrderId = null;
           order.isQueued = true;
           order.needsTopup = true;
-          order.upstreamError = `HTTP ${liveRes.status}`;
+          order.upstreamError = errMsg;
+          order.errorReason = errMsg;
+          order.providerResponse = liveData || null;
+          order.providerStatus = `Queued: ${errMsg}`;
+          order.status = 'Queued';
           order.lastUpdatedAt = Date.now();
+          order.refillReason = `Queued: ${errMsg}`;
+
           this.updateOrderInAllStorages(order);
+          this.triggerAlert({
+            type: 'queued_order',
+            orderId: finalOrderId,
+            providerName: providerDisplayName,
+            providerKey: targetProvider,
+            serviceName: serviceName,
+            target: cleanedTarget,
+            quantity: quantity,
+            customerPaid: totalCost.toFixed(2),
+            customerEmail: order.userEmail || ''
+          });
         }
-      } catch (err) {
+      } else {
+        const errMsg = `HTTP ${liveRes.status} Provider Error`;
+        order.providerOrderId = null;
         order.isQueued = true;
         order.needsTopup = true;
-        order.upstreamError = err.name === 'AbortError' ? 'Provider timeout' : err.message;
+        order.upstreamError = errMsg;
+        order.errorReason = errMsg;
+        order.providerStatus = `Queued: ${errMsg}`;
+        order.status = 'Queued';
         order.lastUpdatedAt = Date.now();
         this.updateOrderInAllStorages(order);
       }
+    } catch (err) {
+      const errMsg = err.name === 'AbortError' ? 'Provider timeout (15s)' : err.message;
+      order.providerOrderId = null;
+      order.isQueued = true;
+      order.needsTopup = true;
+      order.upstreamError = errMsg;
+      order.errorReason = errMsg;
+      order.providerStatus = `Queued: ${errMsg}`;
+      order.status = 'Queued';
+      order.lastUpdatedAt = Date.now();
+      this.updateOrderInAllStorages(order);
+    }
 
-      // Upsert to Supabase
-      if (window.supabaseClient) {
-        try {
-          const rawNum = String(finalOrderId).replace(/\D/g, '');
-          const orderNum = parseInt(rawNum, 10) || Math.floor(10000 + Math.random() * 90000);
-          await window.supabaseClient.from('orders').upsert([{
-            id: orderNum,
-            user_id: null,
-            service_id: null,
-            assigned_provider_id: targetProvider === 'socialfans' ? 3 : 2,
-            target_url: cleanedTarget,
-            quantity: Number(quantity),
-            charge: totalCost,
-            provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
-            provider_order_id: order.providerOrderId || null,
-            status: order.status || 'Processing',
-            remains: Number(quantity),
-            refill_status: order.isQueued ? `Queued: ${String(order.upstreamError || 'Pending dispatch').slice(0, 40)}` : null,
-            created_at: new Date(order.createdAt).toISOString()
-          }], { onConflict: 'id' });
-        } catch (dbErr) {
-          console.warn('[LikeX Supabase] Async order upsert notice:', dbErr);
-        }
+    // Upsert to Supabase while preserving full snapshot
+    if (window.supabaseClient) {
+      try {
+        const rawNum = String(finalOrderId).replace(/\D/g, '');
+        const orderNum = parseInt(rawNum, 10) || Math.floor(10000 + Math.random() * 90000);
+        const snapshotWithNote = {
+          ...serviceSnapshot,
+          email: order.userEmail || '',
+          note: order.upstreamError ? `Error: ${String(order.upstreamError).slice(0, 80)}` : null
+        };
+        await window.supabaseClient.from('orders').upsert([{
+          id: orderNum,
+          user_id: null,
+          service_id: null,
+          assigned_provider_id: targetProvider === 'socialfans' ? 3 : 2,
+          target_url: cleanedTarget,
+          quantity: Number(quantity),
+          charge: totalCost,
+          provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
+          provider_order_id: order.providerOrderId || null,
+          status: order.status || (order.isQueued ? 'Queued' : 'Processing'),
+          remains: Number(quantity),
+          refill_status: 'SNAPSHOT:' + JSON.stringify(snapshotWithNote),
+          created_at: new Date(order.createdAt).toISOString()
+        }], { onConflict: 'id' });
+      } catch (dbErr) {
+        console.warn('[LikeX Supabase] Async order upsert notice:', dbErr);
       }
+    }
 
-      this.notify();
-    })();
+    this.notify();
+    return {
+      success: !order.isQueued && Boolean(order.providerOrderId),
+      providerOrderId: order.providerOrderId || null,
+      error: order.upstreamError || null
+    };
   }
 
   // Live single-order status checking from upstream provider API
@@ -2441,7 +2482,13 @@ class SmmStateStore {
 
       if (res.ok) {
         const data = await res.json();
-        if (data && data.status) {
+        if (data && data.error) {
+          order.providerResponse = data;
+          order.upstreamError = typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+          this.updateOrderInAllStorages(order);
+          this.showToast(`⚠️ Provider returned: ${order.upstreamError}`, 'warning');
+          return order;
+        } else if (data && data.status) {
           const rawStat = String(data.status).trim();
           let liveStatus = rawStat;
           const low = rawStat.toLowerCase();
@@ -2472,12 +2519,6 @@ class SmmStateStore {
           this.updateOrderInAllStorages(order);
           this.showToast(`✅ Order #${order.likeXOrderId || order.id} live status: ${liveStatus}`, 'success');
           this.notify();
-          return order;
-        } else if (data && data.error) {
-          order.providerResponse = data;
-          order.upstreamError = data.error;
-          this.updateOrderInAllStorages(order);
-          this.showToast(`⚠️ Provider returned: ${data.error}`, 'warning');
           return order;
         }
       } else {
@@ -2895,16 +2936,21 @@ class SmmStateStore {
       });
 
       const data = await res.json();
-      if (data && data.order) {
-        const liveProvId = String(data.order);
+      const candidateId = data?.providerOrderId || data?.order || data?.order_id || data?.id;
+      const liveProvId = (candidateId && String(candidateId).trim() !== '' && String(candidateId).toLowerCase() !== 'null') ? String(candidateId).trim() : null;
+
+      if (liveProvId && !data.error) {
         order.providerOrderId = liveProvId;
         order.status = 'Processing';
         order.isQueued = false;
+        order.upstreamError = null;
+        order.errorReason = null;
         order.refillReason = `Dispatched live (Prov ID #${liveProvId})`;
+        this.updateOrderInAllStorages(order);
 
         // Update Supabase
         if (window.supabaseClient) {
-          const orderNum = parseInt(orderId, 10);
+          const orderNum = parseInt(String(orderId).replace(/\D/g, ''), 10);
           if (orderNum) {
             await window.supabaseClient
               .from('orders')
@@ -2921,8 +2967,12 @@ class SmmStateStore {
         this.notify();
         return true;
       } else {
-        const err = data?.error || 'Provider rejected request (Check provider balance or target link)';
-        this.showToast(`Dispatch failed: ${err}`, 'error');
+        const err = data?.error || data?.message || 'Provider rejected request (Check provider balance or target link)';
+        order.upstreamError = typeof err === 'string' ? err : JSON.stringify(err);
+        order.errorReason = order.upstreamError;
+        this.updateOrderInAllStorages(order);
+        this.showToast(`Dispatch failed: ${order.upstreamError}`, 'error');
+        this.notify();
         return false;
       }
     } catch (e) {

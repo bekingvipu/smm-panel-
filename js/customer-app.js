@@ -1955,7 +1955,8 @@ const CustomerApp = {
         // Track Purchase
         if (window.PixelTracker) {
           window.PixelTracker.trackPurchase({
-            orderId: res.orderId,
+            orderId: res.providerOrderId || res.orderId,
+            likeXOrderId: res.orderId,
             amount: res.totalCost || totalCost,
             serviceName,
             quantity
@@ -1964,6 +1965,8 @@ const CustomerApp = {
 
         CustomerApp.showOrderCelebrationModal({
           orderId: res.orderId,
+          providerOrderId: res.providerOrderId || null,
+          isQueued: res.isQueued,
           serviceName,
           target,
           quantity,
@@ -1982,10 +1985,14 @@ const CustomerApp = {
     }
   },
 
-  showOrderCelebrationModal({ orderId, serviceName, target, quantity, totalCost }) {
+  showOrderCelebrationModal({ orderId, providerOrderId, isQueued, serviceName, target, quantity, totalCost }) {
     const store = window.store;
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
+
+    const primaryOrderId = providerOrderId || orderId;
+    const isProviderIdAvailable = Boolean(providerOrderId);
+    const displayLikeXId = String(orderId).startsWith('LX') ? orderId : `LX${orderId}`;
 
     sheet.innerHTML = `
       <div class="order-success-overlay">
@@ -1994,19 +2001,30 @@ const CustomerApp = {
         </div>
 
         <div>
-          <h3 style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">Order Confirmed & Placed! ✨</h3>
-          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px;">Live automated delivery has initiated</p>
+          <h3 style="font-size: 22px; font-weight: 900; letter-spacing: -0.02em; color: var(--text-main);">
+            ${isQueued ? 'Order Received (Queued) ✨' : 'Order Confirmed & Placed! ✨'}
+          </h3>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 4px;">
+            ${isQueued ? 'Your order is queued for automated fulfillment' : 'Live automated delivery has initiated'}
+          </p>
         </div>
 
         <div style="background: var(--bg-subtle); border: 1.5px solid rgba(16, 185, 129, 0.25); border-radius: 16px; padding: 16px 18px; width: 100%; text-align: left; display: flex; flex-direction: column; gap: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Order Number</span>
-            <span style="font-family: var(--font-mono); font-weight: 900; color: var(--primary); font-size: 16px;">#${orderId}</span>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span style="font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">
+              ${isProviderIdAvailable ? 'Provider Order ID' : 'Order Reference'}
+            </span>
+            <div style="text-align: right;">
+              <span style="font-family: var(--font-mono); font-weight: 900; color: var(--primary); font-size: 16.5px;">#${primaryOrderId}</span>
+              ${isProviderIdAvailable ? `
+                <div style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px;">LikeX Ref: #${displayLikeXId}</div>
+              ` : ''}
+            </div>
           </div>
           <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main); line-height: 1.3;">
             ${serviceName}
           </div>
-          <div style="display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-secondary); border-top: 1px dashed var(--border-color); padding-top: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--text-secondary); border-top: 1px dashed var(--border-color); padding-top: 8px;">
             <span>Quantity: <strong style="color: var(--text-main);">${Number(quantity).toLocaleString()}</strong></span>
             <span>Total Paid: <strong style="color: #059669;">${store.formatMoney(totalCost)}</strong></span>
           </div>
@@ -3069,11 +3087,18 @@ const CustomerApp = {
     const canRefill = order.status === 'Completed';
     const isFailedOrLow = (order.isLowBalance || order.status.includes('Low Provider Balance') || (order.status === 'Processing' && String(order.id).startsWith('48') && !order.providerOrderId)) && order.status !== 'Refunded' && !isPartial;
 
+    const primaryDisplayId = order.providerOrderId || order.likeXOrderId || order.id;
+    const hasProvId = Boolean(order.providerOrderId);
+    const displayLikeX = order.likeXOrderId || order.id;
+
     return `
       <div class="order-history-card">
         <div class="order-history-top">
-          <div class="order-history-id-group">
-            <span class="order-history-id">#${order.id}</span>
+          <div class="order-history-id-group" style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px;">
+            <span class="order-history-id">#${primaryDisplayId}</span>
+            ${hasProvId ? `
+              <span style="font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); font-weight: 600;" title="Internal LikeX Reference">(LikeX: #${displayLikeX})</span>
+            ` : ''}
             <span style="background: ${badgeBg}; color: ${badgeColor}; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 9999px; display: inline-flex; align-items: center; gap: 5px; border: 1px solid ${isPartial ? '#F59E0B' : 'transparent'};">
               <span style="width: 6px; height: 6px; border-radius: 50%; background: ${badgeColor};"></span>
               ${badgeText}
@@ -3118,7 +3143,7 @@ const CustomerApp = {
               </div>
             </div>
             <a 
-              href="https://wa.me/919837371137?text=${encodeURIComponent('Hello LikeX Support, my Order #' + order.id + ' (' + (order.serviceName || 'Instagram Service') + ') is held in High Traffic queue with ' + (order.remains || 0) + ' remaining likes. Please priority complete my order.')}" 
+              href="https://wa.me/919837371137?text=${encodeURIComponent('Hello LikeX Support, my Order #' + primaryDisplayId + ' (LikeX Ref: #' + displayLikeX + ') is held in High Traffic queue with ' + (order.remains || 0) + ' remaining likes. Please priority complete my order.')}" 
               target="_blank" 
               rel="noopener noreferrer" 
               style="display: flex; align-items: center; justify-content: center; background: #25D366; color: #FFFFFF; font-weight: 800; font-size: 13.5px; padding: 10px 16px; border-radius: 999px; text-decoration: none; margin-top: 10px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease;"

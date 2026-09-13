@@ -74,8 +74,38 @@ export default async function handler(req, res) {
     return await response.json();
   };
 
+  // Universal Provider Response Parsers
+  function extractProviderOrderId(data) {
+    if (!data || typeof data !== 'object') return null;
+    if (data.error && typeof data.error === 'string' && data.error.trim().length > 0) return null;
+    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) return null;
+
+    const candidate = data.order ?? data.order_id ?? data.orderId ?? data.id;
+    if (candidate !== undefined && candidate !== null) {
+      const s = String(candidate).trim();
+      if (s !== '' && s !== '0' && s.toLowerCase() !== 'null' && s.toLowerCase() !== 'undefined' && s.toLowerCase() !== 'n/a') {
+        return s;
+      }
+    }
+    return null;
+  }
+
+  function extractProviderError(data) {
+    if (!data || typeof data !== 'object') return null;
+    if (data.error) {
+      return typeof data.error === 'string' ? data.error : JSON.stringify(data.error);
+    }
+    if (data.errors) {
+      return Array.isArray(data.errors) ? data.errors.join(', ') : JSON.stringify(data.errors);
+    }
+    if (data.message && (String(data.message).toLowerCase().includes('fail') || String(data.message).toLowerCase().includes('error'))) {
+      return String(data.message);
+    }
+    return null;
+  }
+
+  // Multi-balance check
   try {
-    // Multi-balance check
     if (action === 'balance' && (requestedProvider === 'all' || requestedProvider === 'both')) {
       const [wosRes, sfRes] = await Promise.allSettled([
         callProvider(PROVIDERS.worldofsmm, { action: 'balance' }),
@@ -95,12 +125,14 @@ export default async function handler(req, res) {
 
     // If order was placed, log to Supabase PostgreSQL orders table (keeps LikeX ID & Provider Order ID separate)
     if (action === 'add') {
-      const isSuccess = Boolean(data && data.order);
+      const liveOrderId = extractProviderOrderId(data);
+      const liveError = extractProviderError(data);
+      const isSuccess = Boolean(liveOrderId);
       const rawLikeXStr = paramsObj.likeXOrderId ? String(paramsObj.likeXOrderId).replace(/\D/g, '') : '';
       const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
 
       const orderStatus = isSuccess ? (data.status || 'Processing') : 'Queued';
-      const orderErrorNote = data && data.error ? `Error: ${String(data.error).slice(0, 42)}` : null;
+      const orderErrorNote = liveError ? `Error: ${String(liveError).slice(0, 80)}` : null;
 
       const snapshotPayload = {
         rawServiceId: String(paramsObj.service || ''),
@@ -121,7 +153,7 @@ export default async function handler(req, res) {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          Prefer: 'return=representation'
+          Prefer: 'resolution=merge-duplicates'
         },
         body: JSON.stringify({
           id: orderIdNum,
@@ -129,7 +161,8 @@ export default async function handler(req, res) {
           target_url: paramsObj.link || '',
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
-          provider_order_id: isSuccess ? String(data.order) : null,
+          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
+          provider_order_id: liveOrderId || null,
           assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
           status: orderStatus,
           remains: Number(paramsObj.quantity) || 1000,
@@ -138,6 +171,16 @@ export default async function handler(req, res) {
         })
       }).catch(dbErr => {
         console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message);
+      });
+
+      return res.status(200).json({
+        ...data,
+        order: liveOrderId || data?.order || null,
+        providerOrderId: liveOrderId || null,
+        success: isSuccess,
+        error: liveError || data?.error || null,
+        provider: providerKey,
+        providerName: providerConfig.name
       });
     }
 
@@ -162,7 +205,7 @@ export default async function handler(req, res) {
           apikey: SUPABASE_ANON_KEY,
           Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
-          Prefer: 'return=representation'
+          Prefer: 'resolution=merge-duplicates'
         },
         body: JSON.stringify({
           id: orderIdNum,
@@ -170,6 +213,7 @@ export default async function handler(req, res) {
           target_url: paramsObj.link || '',
           quantity: Number(paramsObj.quantity) || 1000,
           charge: Number(paramsObj.charge) || 0,
+          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
           provider_order_id: null,
           assigned_provider_id: requestedProvider === 'socialfans' ? 3 : 2,
           status: 'Queued',
@@ -183,7 +227,7 @@ export default async function handler(req, res) {
             wholesaleCost: Number(paramsObj.wholesaleCost || 0),
             charge: Number(paramsObj.charge || 0),
             email: paramsObj.customerEmail || '',
-            note: `Timeout: ${error.message.slice(0, 40)}`
+            note: `Timeout: ${error.message.slice(0, 60)}`
           }),
           created_at: new Date().toISOString()
         })

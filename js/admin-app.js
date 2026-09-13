@@ -3201,7 +3201,12 @@ const AdminApp = {
               <span style="font-family: var(--font-mono); color: var(--primary); cursor: pointer;" title="Copy LikeX Order ID" onclick="navigator.clipboard.writeText('${displayLikeXId}'); window.store.showToast('LikeX ID copied!', 'success');">#${displayLikeXId}</span>
               <button type="button" class="btn-copy-id" title="Copy LikeX Order ID" onclick="navigator.clipboard.writeText('${displayLikeXId}'); window.store.showToast('LikeX ID copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 13px;">📋</button>
             </h3>
-            <span class="badge ${order.status === 'Completed' ? 'badge-success' : 'badge-primary'}" style="font-weight: 800; font-size: 12px; padding: 3px 10px;">
+            ${order.providerOrderId ? `
+              <span class="badge" style="font-family: var(--font-mono); font-weight: 800; font-size: 12px; padding: 3px 10px; background: rgba(99, 102, 241, 0.12); color: #4338CA; border: 1px solid rgba(99, 102, 241, 0.25);" title="Provider Order ID">
+                Prov ID: #${order.providerOrderId}
+              </span>
+            ` : ''}
+            <span class="badge ${order.status === 'Completed' ? 'badge-success' : (order.status === 'Queued' ? 'badge-warning' : 'badge-primary')}" style="font-weight: 800; font-size: 12px; padding: 3px 10px;">
               ${order.status || 'Processing'}
             </span>
           </div>
@@ -3328,7 +3333,31 @@ const AdminApp = {
               `}
             </span>
           </div>
-          <div style="margin-top: 4px;">
+          <div class="order-data-row">
+            <span class="order-data-label">LikeX Order ID:</span>
+            <span class="order-data-val" style="font-family: var(--font-mono); font-weight: 700; color: var(--text-secondary);">
+              #${displayLikeXId}
+            </span>
+          </div>
+          ${(!order.providerOrderId && (order.upstreamError || order.errorReason)) ? `
+            <div style="margin-top: 8px; padding: 8px 10px; background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.25); border-radius: 10px; font-size: 11.5px; color: #DC2626; line-height: 1.4;">
+              <strong style="display: flex; align-items: center; gap: 4px; margin-bottom: 2px;">
+                <span>⚠️</span>
+                <span>Provider Notice / Reason:</span>
+              </strong>
+              <span>${order.upstreamError || order.errorReason}</span>
+            </div>
+            <button 
+              type="button" 
+              class="btn btn-sm" 
+              style="margin-top: 8px; width: 100%; border-radius: 999px; font-weight: 800; font-size: 12px; background: #10B981; color: white; border: none; padding: 7px 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;"
+              onclick="AdminApp.handleRetryOrder('${order.id}')"
+            >
+              <span>⚡</span>
+              <span>1-Click Retry Dispatch to ${providerName}</span>
+            </button>
+          ` : ''}
+          <div style="margin-top: 6px;">
             <button 
               type="button" 
               class="btn btn-sm btn-outline" 
