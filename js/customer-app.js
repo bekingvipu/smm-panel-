@@ -957,8 +957,8 @@ const CustomerApp = {
       'Instagram High-Drop Followers — No Refill',
       'Instagram Views — No Drop',
       'Instagram Likes — Non-Drop',
-      'Instagram Live — Low Drop',
-      'Instagram Comments / Custom Comments'
+      'Instagram Custom Comment — Non Drop',
+      'Instagram All Service'
     ];
 
     let categories = [];
@@ -981,16 +981,56 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special');
 
     if (isLikeXSpecial && activePackages.length > 0) {
-      // Flagship Order: 1. Followers, 2. Views, 3. Custom Comments
+      // Flagship Order: 1. Views (6288), 2. Likes (3100)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
-        const name = (s.name || '').toLowerCase();
-        if (id === '2868' || (name.includes('follower') && (id.includes('2868') || name.includes('likex special') || name.includes('instagram hq')))) return 1;
-        if (name.includes('likex special') && name.includes('view')) return 2;
-        if (id === '6149' || name.includes('comment')) return 3;
-        return 4;
+        if (id.includes('6288') || (s.name || '').toLowerCase().includes('view')) return 1;
+        if (id.includes('3100') || (s.name || '').toLowerCase().includes('like')) return 2;
+        return 3;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
+    } else if (this.currentCategory === 'Instagram Non-Drop Followers — Refill Guaranteed' && activePackages.length > 0) {
+      // Order: 4237, 7244, 7551
+      const order = ['4237', '4137', '7244', '7551'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
+    } else if (this.currentCategory === 'Instagram Low-Drop Followers — No Refill' && activePackages.length > 0) {
+      // Specified Order: 7405, 4137, 6440, 6481, 7419, 4144, 7426, 7244, 7414, 7418, 7365, 7370, 6479, 2868
+      const order = ['7405', '4137', '6440', '6481', '7419', '4144', '7426', '7244', '7414', '7418', '7365', '7370', '6479', '2868'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
+    } else if (this.currentCategory === 'Instagram Views — No Drop' && activePackages.length > 0) {
+      // Specified Order: 5011, 7294
+      const order = ['5011', '7294'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
+    } else if (this.currentCategory === 'Instagram Likes — Non-Drop' && activePackages.length > 0) {
+      // Specified Order: 4997, 7233, 7235, 7831, 7381
+      const order = ['4997', '7233', '7235', '7831', '7381'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
+    } else if (this.currentCategory === 'Instagram All Service') {
+      // Keep natural order where SocialFans 'Instagram Best Services' are featured at top
     } else if (activePackages.length > 0) {
       // Sort Lowest Price First (Low to High: ascending by cost)
       activePackages.sort((a, b) => {
