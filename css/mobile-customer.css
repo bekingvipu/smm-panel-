@@ -1197,10 +1197,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 104px;
+  min-height: 114px;
   background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #6366f1 100%);
-  border-radius: 18px;
-  padding: 14px 16px;
+  border-radius: 20px;
+  padding: 16px 18px;
   text-decoration: none;
   overflow: hidden;
   box-shadow: 0 10px 25px -5px rgba(79, 70, 229, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.25);
@@ -1214,9 +1214,9 @@
   position: absolute;
   top: -30%;
   right: -5%;
-  width: 130px;
-  height: 130px;
-  background: radial-gradient(circle, rgba(250, 204, 21, 0.22) 0%, rgba(255, 255, 255, 0.08) 40%, transparent 70%);
+  width: 145px;
+  height: 145px;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.25) 0%, rgba(255, 255, 255, 0.08) 45%, transparent 70%);
   border-radius: 50%;
   pointer-events: none;
 }
@@ -1232,12 +1232,13 @@
   flex-direction: column;
   justify-content: space-between;
   z-index: 2;
-  gap: 12px;
+  gap: 14px;
+  max-width: 56%;
 }
 
 .drawer-support-arrow-badge {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: #ffffff;
   color: #4f46e5;
@@ -1259,7 +1260,7 @@
 }
 
 .drawer-support-title {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
   line-height: 1.15;
@@ -1277,10 +1278,10 @@
 
 .drawer-support-mascot-wrap {
   position: absolute;
-  right: 4px;
-  bottom: -4px;
-  width: 104px;
-  height: 108px;
+  right: -2px;
+  bottom: -8px;
+  width: 135px;
+  height: 135px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -1295,12 +1296,12 @@
   border: none;
   border-radius: 0;
   box-shadow: none;
-  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.38));
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .drawer-support-banner:hover .drawer-support-mascot-img {
-  transform: scale(1.08) translateY(-3px);
+  transform: scale(1.06) translateY(-3px);
 }
 
 /* ==========================================================================
