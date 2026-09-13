@@ -1809,11 +1809,14 @@ class SmmStateStore {
     const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
     const foundSvc = activeServices.find(s => String(s.id) === String(serviceId) || String(s.rawId) === String(serviceId));
     if (foundSvc) {
-      targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm');
-      rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('wos-', '').replace('jap-', '').replace(/-likex$/, '');
+      targetProvider = foundSvc.provider || (String(foundSvc.id).startsWith('sf-') ? 'socialfans' : (String(foundSvc.id).startsWith('jap-') ? 'jap' : 'worldofsmm'));
+      rawServiceId = foundSvc.rawId || String(foundSvc.id).replace('sf-', '').replace('wos-', '').replace('jap-', '').replace(/-likex$/, '');
       if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
         serviceName = foundSvc.customerName || foundSvc.name;
       }
+    } else if (String(serviceId).startsWith('sf-')) {
+      targetProvider = 'socialfans';
+      rawServiceId = String(serviceId).replace('sf-', '').replace(/-likex$/, '');
     } else if (String(serviceId).startsWith('wos-')) {
       targetProvider = 'worldofsmm';
       rawServiceId = String(serviceId).replace('wos-', '').replace(/-likex$/, '');
@@ -1833,7 +1836,7 @@ class SmmStateStore {
       }
     }
 
-    const providerDisplayName = targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API');
+    const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : (targetProvider === 'jap' ? 'JustAnotherPanel' : (targetProvider === 'worldofsmm' ? 'WorldOfSMM' : 'Provider API'));
 
     // Dynamic Live Wholesale Rate Lookup to protect profit margin
     let targetWholesaleCost = wholesaleCost;
@@ -1993,7 +1996,7 @@ class SmmStateStore {
               id: orderNum,
               user_id: null,
               service_id: null, // Null prevents foreign key constraint error with customer_services table
-              assigned_provider_id: targetProvider === 'worldofsmm' ? 2 : 1,
+              assigned_provider_id: targetProvider === 'worldofsmm' ? 2 : (targetProvider === 'socialfans' ? 3 : 1),
               target_url: cleanedTarget,
               quantity: Number(quantity),
               charge: totalCost,

@@ -346,27 +346,32 @@ window.SMM_MOCK = {
     // -------------------------------------------------------------
     // FACEBOOK
     // -------------------------------------------------------------
+    // -------------------------------------------------------------
+    // FACEBOOK
+    // -------------------------------------------------------------
     {
-      id: 'fb-1',
+      id: 'sf-4085',
+      rawId: '4085',
       platform: 'facebook',
-      subcategory: 'Facebook Page Followers & Likes',
-      customerName: 'Facebook Page Followers [Real Worldwide Profiles] (₹140 me 1000)',
-      pricePer1k: 1.68, // ₹140.00
+      subcategory: '💎Facebook Profile / Page followers',
+      customerName: 'Facebook Page Followers [Real Worldwide Profiles] (₹79 me 1000)',
+      pricePer1k: 0.83, // ₹79.18
       min: 100,
       max: 100000,
       deliverySpeed: '5K - 10K / Day',
       startTime: '1 - 3 Hours',
       refillSupported: true,
       refillPeriod: '30 Days',
-      description: 'Authentic Facebook page followers and likes. Strengthens business page trust.',
-      japId: '20101',
-      wholesaleCost: 0.72, // ₹60.00 wholesale
-      markupPercent: 133
+      description: 'Authentic Facebook page followers and likes connected via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.5534,
+      markupPercent: 50
     },
     {
-      id: 'fb-2',
+      id: 'sf-2833',
+      rawId: '2833',
       platform: 'facebook',
-      subcategory: 'Facebook Post Likes',
+      subcategory: '💎Facebook Post Likes [s1]',
       customerName: 'Facebook Post Likes [Instant Worldwide] (₹35 me 1000)',
       pricePer1k: 0.42, // ₹35.00
       min: 50,
@@ -375,145 +380,152 @@ window.SMM_MOCK = {
       startTime: '0 - 15 Mins',
       refillSupported: true,
       refillPeriod: '30 Days',
-      description: 'High quality post likes for Facebook status, images, and posts.',
-      japId: '20105',
-      wholesaleCost: 0.18, // ₹15.00 wholesale
-      markupPercent: 133
+      description: 'High quality post likes for Facebook status, images, and posts via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.24,
+      markupPercent: 50
     },
 
     // -------------------------------------------------------------
     // YOUTUBE
     // -------------------------------------------------------------
     {
-      id: 'yt-1',
+      id: 'sf-6452',
+      rawId: '6452',
       platform: 'youtube',
-      subcategory: 'YouTube Views [High Retention 4K]',
-      customerName: 'YouTube Views [High Retention 4K Monetizable] (₹199 me 1000)',
-      pricePer1k: 2.40, // ₹199.00
-      min: 500,
+      subcategory: '📸YouTube Views [ Working After Update ]',
+      customerName: 'YouTube Views [High Retention 4K Monetizable] (₹95 me 1000)',
+      pricePer1k: 1.14, // ₹95.00
+      min: 100,
       max: 500000,
       deliverySpeed: '5K - 10K / Day',
       startTime: '10 - 45 Minutes',
       refillSupported: true,
       refillPeriod: '30 Days',
-      description: 'Monetization-safe views from worldwide recommendations with 3-5 min average watch time.',
-      japId: '30110',
-      wholesaleCost: 1.08, // ₹90.00 wholesale
-      markupPercent: 122
+      description: 'Monetization-safe views from worldwide recommendations via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.66,
+      markupPercent: 50
     },
     {
-      id: 'yt-2',
+      id: 'sf-7427',
+      rawId: '7427',
       platform: 'youtube',
-      subcategory: 'YouTube Subscribers [Monetization Ready]',
-      customerName: 'YouTube Subscribers [Non-Drop Real Accounts] (₹450 me 1000)',
-      pricePer1k: 5.42, // ₹450.00
+      subcategory: '▶️Youtube Best Services👑',
+      customerName: 'YouTube Subscribers [Non-Drop Real Accounts] (₹290 me 1000)',
+      pricePer1k: 3.50,
       min: 50,
       max: 10000,
       deliverySpeed: '100 - 300 / Day',
       startTime: '1 - 6 Hours',
       refillSupported: true,
-      refillPeriod: '60 Days',
-      description: 'Safe organic-style subscribers for YouTube monetization. 60-Day refill warranty.',
-      japId: '30120',
-      wholesaleCost: 2.50, // ₹207 wholesale
-      markupPercent: 117
+      refillPeriod: '30 Days',
+      description: 'Safe organic-style subscribers for YouTube monetization via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 2.20,
+      markupPercent: 50
     },
 
     // -------------------------------------------------------------
     // TIKTOK
     // -------------------------------------------------------------
     {
-      id: 'tt-1',
+      id: 'sf-7469',
+      rawId: '7469',
       platform: 'tiktok',
-      subcategory: 'TikTok Followers [Fast Non-Drop]',
-      customerName: 'TikTok Followers [Fast Delivery Non-Drop] (₹175 me 1000)',
-      pricePer1k: 2.10, // ₹175.00
+      subcategory: '🎵Tiktok Best Services👑',
+      customerName: 'TikTok Views [Fast Non-Drop Algorithm Boost] (₹3 me 1000)',
+      pricePer1k: 0.036,
       min: 100,
-      max: 100000,
-      deliverySpeed: '20K / Day',
-      startTime: '0 - 1 Hour',
-      refillSupported: true,
-      refillPeriod: '30 Days',
-      description: 'Top tier followers for TikTok creator profiles. Enables live streaming qualification.',
-      japId: '40101',
-      wholesaleCost: 0.95, // ₹78.85 wholesale
-      markupPercent: 122
+      max: 500000,
+      deliverySpeed: '500K / Day',
+      startTime: '0 - 15 Mins',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Top tier views for TikTok creator profiles via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.0182,
+      markupPercent: 50
     },
     {
-      id: 'tt-2',
+      id: 'sf-3519',
+      rawId: '3519',
       platform: 'tiktok',
-      subcategory: 'TikTok Likes [ForYou Algorithm]',
-      customerName: 'TikTok Likes [Instant ForYou Algorithm Boost] (₹55 me 1000)',
-      pricePer1k: 0.66, // ₹55.00
+      subcategory: '🎵Tiktok Likes',
+      customerName: 'TikTok Likes [Instant ForYou Algorithm Boost] (₹45 me 1000)',
+      pricePer1k: 0.54,
       min: 100,
       max: 100000,
       deliverySpeed: '50K / Day',
       startTime: 'Instant',
       refillSupported: true,
       refillPeriod: '15 Days',
-      description: 'Fast algorithm likes to push videos onto the TikTok For You Page (FYP).',
-      japId: '40105',
-      wholesaleCost: 0.28, // ₹23.00 wholesale
-      markupPercent: 139
+      description: 'Fast algorithm likes to push videos onto the TikTok FYP via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.32,
+      markupPercent: 50
     },
 
     // -------------------------------------------------------------
     // TELEGRAM
     // -------------------------------------------------------------
     {
-      id: 'tg-1',
+      id: 'sf-7346',
+      rawId: '7346',
       platform: 'telegram',
-      subcategory: 'Telegram Channel Members [Non-Drop]',
-      customerName: 'Telegram Channel Members [Real Non-Drop] (₹95 me 1000)',
-      pricePer1k: 1.14, // ₹95.00
+      subcategory: '🎯Telegram Best Services👑',
+      customerName: 'Telegram Channel Members [Real Non-Drop] (₹85 me 1000)',
+      pricePer1k: 1.02,
       min: 100,
       max: 100000,
       deliverySpeed: '20K / Day',
       startTime: '0 - 30 Mins',
       refillSupported: true,
       refillPeriod: '30 Days',
-      description: 'High retention channel members for Telegram channels and public groups.',
-      japId: '50101',
-      wholesaleCost: 0.48, // ₹40.00 wholesale
-      markupPercent: 137
+      description: 'High retention channel members for Telegram channels via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.5597,
+      markupPercent: 50
     },
     {
-      id: 'tg-2',
+      id: 'sf-2478',
+      rawId: '2478',
       platform: 'telegram',
-      subcategory: 'Telegram Post Views [Instant]',
+      subcategory: '🎯Telegram Views',
       customerName: 'Telegram Post Views [Instant Delivery] (₹10 me 1000)',
-      pricePer1k: 0.12, // ₹10.00
+      pricePer1k: 0.12,
       min: 100,
       max: 500000,
       deliverySpeed: 'Instant',
       startTime: 'Instant',
       refillSupported: false,
       refillPeriod: 'None',
-      description: 'Instant eye views on Telegram channel posts.',
-      japId: '50105',
-      wholesaleCost: 0.024, // ₹2.00 wholesale
-      markupPercent: 400
+      description: 'Instant views on Telegram channel posts via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 0.024,
+      markupPercent: 50
     },
 
     // -------------------------------------------------------------
     // TWITTER / X
     // -------------------------------------------------------------
     {
-      id: 'tw-1',
+      id: 'sf-7467',
+      rawId: '7467',
       platform: 'twitter',
-      subcategory: 'Twitter / X Followers [Real Accounts]',
-      customerName: 'Twitter / X Followers [Real Global Accounts] (₹199 me 1000)',
-      pricePer1k: 2.40, // ₹199.00
+      subcategory: '🎊Twitter Best Services👑',
+      customerName: 'Twitter / X Real Followers [Global HQ Accounts] (₹626 me 1000)',
+      pricePer1k: 7.50,
       min: 50,
       max: 20000,
       deliverySpeed: '5K / Day',
       startTime: '1 - 2 Hours',
       refillSupported: true,
       refillPeriod: '30 Days',
-      description: 'Real profiles with bio, profile pictures, and active tweets.',
-      japId: '60101',
-      wholesaleCost: 1.10, // ₹91.30 wholesale
-      markupPercent: 118
+      description: 'Real profiles with bio, profile pictures, and active tweets via SocialFans API.',
+      provider: 'socialfans',
+      wholesaleCost: 4.3776,
+      markupPercent: 50
     }
   ],
 
