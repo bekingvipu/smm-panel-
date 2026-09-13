@@ -2874,6 +2874,10 @@ class SmmStateStore {
       } catch (e) {}
     }
   }
+
+  dispatchQueuedOrder(orderId) {
+    return this.retrySingleOrder(orderId);
+  }
 }
 
 window.store = new SmmStateStore();

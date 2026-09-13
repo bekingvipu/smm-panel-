@@ -1133,78 +1133,9 @@ const AdminApp = {
     const stats = store.recalculateAdminStats ? store.recalculateAdminStats() : store.data.adminStats;
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const recentOrders = allOrders.slice(0, 5);
-    const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
     const alertConfig = store.getAlertConfig();
 
     return `
-      ${queuedOrders.length > 0 ? `
-        <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
-        <div class="card" style="margin-bottom: 24px; padding: 22px; border: 2px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 18px; box-shadow: 0 8px 24px rgba(239, 68, 68, 0.12);">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 26px;">🚨</span>
-              <div>
-                <h3 style="font-size: 19px; font-weight: 800; color: #DC2626; margin: 0;">
-                  ${queuedOrders.length} Order(s) Queued — Waiting for Provider Top-Up
-                </h3>
-                <p style="font-size: 13px; color: #B45309; margin: 4px 0 0;">
-                  Customer has paid on LikeX. Recharge the target provider server and click "1-Click Dispatch" to execute!
-                </p>
-              </div>
-            </div>
-            <div style="display: flex; gap: 8px;">
-              <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 8px 18px;" onclick="AdminApp.dispatchAllQueuedOrders()">
-                ⚡ 1-Click Dispatch All Queued (${queuedOrders.length})
-              </button>
-            </div>
-          </div>
-
-          <div style="overflow-x: auto;">
-            <table class="sync-data-table" style="font-size: 13px; background: white; border-radius: 12px; overflow: hidden;">
-              <thead>
-                <tr style="background: #FEF2F2;">
-                  <th>Order ID</th>
-                  <th>Target Provider</th>
-                  <th>Service Details</th>
-                  <th>Target Link</th>
-                  <th>Quantity</th>
-                  <th>Customer Paid</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${queuedOrders.map(qo => {
-                  const provName = qo.providerDisplayName || (qo.provider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM');
-                  return `
-                    <tr>
-                      <td style="font-family: var(--font-mono); font-weight: 800; color: #6C5CE7;">#${qo.id}</td>
-                      <td>
-                        <span class="badge" style="background: rgba(239, 68, 68, 0.14); color: #DC2626; font-weight: 800; padding: 4px 10px; border-radius: 8px;">
-                          ${provName}
-                        </span>
-                      </td>
-                      <td style="max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        <strong>${qo.serviceName}</strong>
-                      </td>
-                      <td style="max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                        <a href="${qo.target}" target="_blank" style="color: #0284c7; text-decoration: underline;">${qo.target}</a>
-                      </td>
-                      <td><strong>${Number(qo.quantity).toLocaleString()}</strong></td>
-                      <td><strong style="color: #10B981; font-size: 14px;">${store.formatMoney(qo.amount)}</strong></td>
-                      <td>
-                        <button class="btn btn-sm btn-primary" style="font-size: 12px; padding: 6px 14px; font-weight: 800; border-radius: 8px;" onclick="store.dispatchQueuedOrder('${qo.id}')">
-                          ⚡ 1-Click Dispatch
-                        </button>
-                      </td>
-                    </tr>
-                  `;
-                }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      ` : ''}
-
       <div class="kpi-grid">
         <div class="kpi-card" onclick="store.setAdminTab('orders')" style="cursor: pointer;" title="View Customers & Orders">
           <div class="kpi-card-top">
@@ -1863,7 +1794,11 @@ const AdminApp = {
 
   async dispatchAllQueuedOrders() {
     const allOrders = window.store.getAllAdminOrders ? window.store.getAllAdminOrders() : window.store.data.orders;
-    const queuedOrders = allOrders.filter(o => o && (o.isQueued || o.needsTopup));
+    const queuedOrders = allOrders.filter(o => {
+      if (!o) return false;
+      const st = (o.status || '').toLowerCase();
+      return o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
+    });
     if (queuedOrders.length === 0) {
       window.store.showToast('No queued orders waiting for dispatch.', 'info');
       return;
@@ -1872,13 +1807,16 @@ const AdminApp = {
     window.store.showToast(`⚡ Dispatching ${queuedOrders.length} queued orders to providers...`, 'info');
     let successCount = 0;
     for (const qo of queuedOrders) {
-      const res = await window.store.dispatchQueuedOrder(qo.id);
+      const res = window.store.dispatchQueuedOrder ? await window.store.dispatchQueuedOrder(qo.id) : await window.store.retrySingleOrder(qo.id);
       if (res && res.success) {
         successCount++;
       }
     }
 
     window.store.showToast(`🏁 Finished dispatching: ${successCount}/${queuedOrders.length} orders successfully sent to live servers!`, 'success');
+    if (this.updateAdminOrdersTableView) {
+      this.updateAdminOrdersTableView();
+    }
   },
 
   // CUSTOMER SERVICES & PROFIT % TOOL
@@ -2624,10 +2562,15 @@ const AdminApp = {
 
     let filtered = allOrders;
     if (filter !== 'all') {
-      if (filter === 'partial') {
+      if (filter === 'queued') {
         filtered = filtered.filter(o => {
           const st = (o.status || '').toLowerCase();
-          return st === 'partial' || st === 'queued' || st === 'pending' || o.isQueued || o.isLowBalance || (String(o.id).length <= 5 && st !== 'completed' && st !== 'refunded');
+          return st === 'queued' || o.isQueued || o.needsTopup || o.isLowBalance || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
+        });
+      } else if (filter === 'partial') {
+        filtered = filtered.filter(o => {
+          const st = (o.status || '').toLowerCase();
+          return st === 'partial';
         });
       } else if (filter === 'refunded') {
         filtered = filtered.filter(o => {
@@ -2862,24 +2805,15 @@ const AdminApp = {
 
           <!-- 8. STATUS -->
           <td>
-            ${isLow ? `
-              <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
-                ⚠️ Low Balance (Needs Top-up)
-              </span>
-              <div style="display: flex; gap: 4px; margin-top: 4px;">
-                <button type="button" class="btn btn-xs" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleAdminRefund('${o.id}')" title="Refund exact amount to customer wallet">
-                  💸 Refund
-                </button>
-              </div>
-            ` : (String(o.status).toLowerCase() === 'queued' || o.isQueued || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
+            ${(isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
               <div style="display: flex; flex-direction: column; gap: 4px;">
-                <span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #B45309; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
-                  ⚡ Queued (Action Needed)
+                <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;">
+                  ⚠️ Queued — Waiting for Provider Topup
                 </span>
-                ${o.errorReason ? `<span style="font-size: 10px; color: #DC2626; font-weight: 600; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.errorReason}">${o.errorReason}</span>` : ''}
+                ${(o.errorReason || o.providerResponse) ? `<span style="font-size: 10px; color: #DC2626; font-weight: 600; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${o.errorReason || o.providerResponse}">${o.errorReason || o.providerResponse}</span>` : ''}
                 <div style="display: flex; gap: 4px; margin-top: 2px;">
-                  <button type="button" class="btn btn-xs" style="background: #EEF2FF; color: #4338CA; border: 1px solid #C7D2FE; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleRetryOrder('${o.id}')" title="Retry sending to upstream provider">
-                    🔄 Retry
+                  <button type="button" class="btn btn-xs" style="background: #10B981; color: white; border: none; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="window.store.dispatchQueuedOrder ? window.store.dispatchQueuedOrder('${o.id}') : AdminApp.handleRetryOrder('${o.id}')" title="1-Click Dispatch order to provider">
+                    ⚡ Dispatch
                   </button>
                   <button type="button" class="btn btn-xs" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleAdminRefund('${o.id}')" title="Refund exact amount to customer wallet">
                     💸 Refund
@@ -2954,9 +2888,38 @@ const AdminApp = {
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const filtered = this.getFilteredOrders(store);
     const filter = this.adminOrdersFilter || 'all';
+    const queuedOrders = allOrders.filter(o => {
+      if (!o) return false;
+      const st = (o.status || '').toLowerCase();
+      return o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
+    });
 
     return `
       <div style="display: flex; flex-direction: column; gap: 16px;">
+        ${queuedOrders.length > 0 ? `
+          <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
+          <div class="card" style="margin-bottom: 2px; padding: 18px 20px; border: 1.5px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 16px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 26px;">🚨</span>
+                <div>
+                  <h4 style="font-size: 16.5px; font-weight: 800; color: #DC2626; margin: 0;">
+                    ${queuedOrders.length} Order(s) Queued — Waiting for Provider Top-Up
+                  </h4>
+                  <p style="font-size: 13px; color: #B45309; margin: 3px 0 0;">
+                    Customer payment received. Recharge provider account and click <strong>"1-Click Dispatch All"</strong> or dispatch individual orders below.
+                  </p>
+                </div>
+              </div>
+              <div style="display: flex; gap: 8px;">
+                <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 7px 18px; font-size: 13px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);" onclick="AdminApp.dispatchAllQueuedOrders()">
+                  ⚡ 1-Click Dispatch All Queued (${queuedOrders.length})
+                </button>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
         <!-- Top Toolbar with Direct Live Search and Status Filter Chips -->
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
           <div style="position: relative; flex: 1; min-width: 280px; max-width: 520px;">
@@ -2993,10 +2956,11 @@ const AdminApp = {
         <!-- Filter Chips -->
         <div class="orders-filter-chips">
           <button class="orders-filter-pill ${filter === 'all' ? 'active' : ''}" data-filter="all" onclick="AdminApp.setAdminOrdersFilter('all')">All (${allOrders.length})</button>
+          <button class="orders-filter-pill ${filter === 'queued' ? 'active' : ''}" data-filter="queued" onclick="AdminApp.setAdminOrdersFilter('queued')" style="${queuedOrders.length > 0 ? 'border-color: #EF4444; color: #DC2626; font-weight: 800;' : ''}">🚨 Queued / Waiting Top-Up (${queuedOrders.length})</button>
           <button class="orders-filter-pill ${filter === 'in_progress' ? 'active' : ''}" data-filter="in_progress" onclick="AdminApp.setAdminOrdersFilter('in_progress')">In Progress</button>
           <button class="orders-filter-pill ${filter === 'processing' ? 'active' : ''}" data-filter="processing" onclick="AdminApp.setAdminOrdersFilter('processing')">Processing</button>
           <button class="orders-filter-pill ${filter === 'completed' ? 'active' : ''}" data-filter="completed" onclick="AdminApp.setAdminOrdersFilter('completed')">Completed</button>
-          <button class="orders-filter-pill ${filter === 'partial' ? 'active' : ''}" data-filter="partial" onclick="AdminApp.setAdminOrdersFilter('partial')">⚡ Partial / Queued</button>
+          <button class="orders-filter-pill ${filter === 'partial' ? 'active' : ''}" data-filter="partial" onclick="AdminApp.setAdminOrdersFilter('partial')">⚡ Partial</button>
           <button class="orders-filter-pill ${filter === 'refunded' ? 'active' : ''}" data-filter="refunded" onclick="AdminApp.setAdminOrdersFilter('refunded')">Refunded / Canceled</button>
         </div>
 
