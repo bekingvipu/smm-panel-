@@ -358,39 +358,32 @@ const CustomerApp = {
             </div>
           </div>
 
-          <!-- Section 3: Navigation Links -->
-          <div class="drawer-section">
-            <div class="drawer-section-title">Navigation</div>
-            <ul class="drawer-menu-list">
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('new_order');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">🛒</span> <span>Services & New Order</span></div>
-              </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('earn');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">💰</span> <span>How to Earn Money</span></div>
-                <span class="badge badge-primary" style="font-size: 10px;">Video Guide</span>
-              </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('home');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">⭐</span> <span>About LikeX & Reviews</span></div>
-                <span class="badge badge-success" style="font-size: 10px;">10+ Yrs</span>
-              </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('orders');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">⏱️</span> <span>Orders History</span></div>
-              </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('wallet');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">💳</span> <span>Add Funds / Wallet</span></div>
-              </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); store.setCustomerTab('support');">
-                <div class="drawer-item-left"><span class="drawer-item-icon">💬</span> <span>24/7 Support Desk</span></div>
-              </li>
-              <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); CustomerApp.openNotifications();">
-                <div class="drawer-item-left"><span class="drawer-item-icon">🔔</span> <span>Notifications</span></div>
-                <span class="badge badge-primary" style="font-size: 10px;">New</span>
-              </li>
-            </ul>
+          <!-- Section 3: Support Banner Card (MoreThanPanel Style) -->
+          <div class="drawer-section drawer-support-section" style="margin-top: auto;">
+            <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" 
+               class="drawer-support-banner" 
+               onclick="if(window.PixelTracker) window.PixelTracker.trackContact('telegram');"
+               title="Contact 24/7 Telegram Support">
+              <div class="drawer-support-content">
+                <div class="drawer-support-arrow-badge">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="7" y1="17" x2="17" y2="7"></line>
+                    <polyline points="7 7 17 7 17 17"></polyline>
+                  </svg>
+                </div>
+                <div class="drawer-support-text-wrap">
+                  <div class="drawer-support-title">Support</div>
+                  <div class="drawer-support-sub">Get in touch with us!</div>
+                </div>
+              </div>
+              <div class="drawer-support-mascot-wrap">
+                <img src="assets/support-mascot.jpg" alt="LikeX 24/7 Support Desk" class="drawer-support-mascot-img" />
+              </div>
+            </a>
           </div>
 
           <!-- Section 4: Account Actions -->
-          <div class="drawer-section" style="border-bottom: none; margin-top: auto;">
+          <div class="drawer-section" style="border-bottom: none; padding-top: 10px;">
             ${isLoggedIn ? `
               <button class="btn btn-outline btn-block btn-sm" style="color: var(--error); border-color: var(--error);" onclick="CustomerApp.closeSideDrawer(); window.signOutUser();">
                 Sign Out
