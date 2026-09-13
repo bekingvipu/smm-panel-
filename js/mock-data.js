@@ -80,10 +80,22 @@ window.SMM_DEFAULT_REELS = [
   }
 ];
 
+window.INSTAGRAM_CATEGORIES = [
+  'LikeX Special',
+  'Instagram Non-Drop Followers — Refill Guaranteed',
+  'Instagram Low-Drop Followers — No Refill',
+  'Instagram High-Drop Followers — No Refill',
+  'Instagram Views — No Drop',
+  'Instagram Likes — Non-Drop',
+  'Instagram Live — Low Drop',
+  'Instagram Comments / Custom Comments'
+];
+
 window.SMM_MOCK = {
   currency: 'INR',
   exchangeRate: 95.385,
   isLoggedIn: false, // Default: Guest Mode (Browse without signup)
+  instagramCategories: window.INSTAGRAM_CATEGORIES,
   
   customer: {
     name: 'Guest Visitor',
@@ -137,46 +149,6 @@ window.SMM_MOCK = {
 
   // 2-Level Structured Services (Sub-Category -> Packages with tiered rates)
   customerServices: [
-    // -------------------------------------------------------------
-    // LIKEX SPECIAL VERY GOOD - INSTAGRAM (WOS 2868 & WOS 6149)
-    // -------------------------------------------------------------
-    {
-      id: 'wos-2868-likex',
-      rawId: '2868',
-      platform: 'instagram',
-      subcategory: '🌟 LikeX Special Very Good [Followers, Likes, Views & Comments]',
-      customerName: '🔔 ⭐ Instagram HQ Followers R365 | 100k/Day [Best Seller Since 2021] Low Drop',
-      pricePer1k: 1.7228,
-      min: 10,
-      max: 100000,
-      deliverySpeed: '⚡ 100K/Day [Low Drop]',
-      startTime: '0 - 1 Hour',
-      refillSupported: true,
-      refillPeriod: '365 Days',
-      description: '🌟 LikeX Special VIP High-Quality Non-Drop Followers with 365-Day Refill Guarantee via WorldOfSMM (2868).',
-      wholesaleCost: 1.7228,
-      markupPercent: 50,
-      provider: 'worldofsmm'
-    },
-    {
-      id: 'wos-6149',
-      rawId: '6149',
-      platform: 'instagram',
-      subcategory: '🌟 LikeX Special Very Good [Followers, Likes, Views & Comments]',
-      customerName: '6149 - 🇮🇳LikeX Special Instagram Custom comments [Indian] 2k/day [Non drop]',
-      pricePer1k: 0.45431,
-      min: 10,
-      max: 10000,
-      deliverySpeed: '⚡ Instant - 2K/Day [Non drop]',
-      startTime: '0 - 1 Hour',
-      refillSupported: false,
-      refillPeriod: 'None',
-      description: '🌟 LikeX Special Real Indian Custom Comments connected directly via WorldOfSMM. 2K/Day Non drop.',
-      wholesaleCost: 0.45431,
-      markupPercent: 50,
-      provider: 'worldofsmm'
-    },
-
     // -------------------------------------------------------------
     // FACEBOOK (SocialFans Direct API)
     // -------------------------------------------------------------

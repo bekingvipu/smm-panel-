@@ -950,49 +950,38 @@ const CustomerApp = {
       filteredServices = filteredServices.filter(s => (s.platform || 'other') === plat);
     }
 
-    // Get unique categories and smartly prioritize Followers, Likes, Views
-    const rawCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
-    const categories = rawCategories.sort((a, b) => {
-      const aLower = a.toLowerCase();
-      const bLower = b.toLowerCase();
-      const getPriority = (str) => {
-        if (str.includes('likex special') || str.includes('special very good') || str.includes('special')) return -2;
-        if (str.includes('emergency')) return -1;
-        if (str.includes('cheapest') && str.includes('selling')) return 0;
-        if (str.includes('newly arrived')) return 1;
-        if (str.includes('indian followers')) return 2;
-        if (str.includes('comments indian')) return 3;
-        if (str.includes('random & custom comments')) return 4;
-        if (str.includes('likes [cheapest')) return 5;
-        if (str.includes('shares & saves')) return 6;
-        if (str.includes('country targeted')) return 7;
-        if (str.includes('youtube subscribers')) return 8;
-        if (str.includes('india')) return 9;
-        if (str.includes('followers')) return 10;
-        if (str.includes('likes')) return 11;
-        if (str.includes('views')) return 12;
-        if (str.includes('comments')) return 13;
-        return 14;
-      };
-      const pA = getPriority(aLower);
-      const pB = getPriority(bLower);
-      if (pA !== pB) return pA - pB;
-      return a.localeCompare(b);
-    });
+    const INSTAGRAM_CATEGORIES = [
+      'LikeX Special',
+      'Instagram Non-Drop Followers — Refill Guaranteed',
+      'Instagram Low-Drop Followers — No Refill',
+      'Instagram High-Drop Followers — No Refill',
+      'Instagram Views — No Drop',
+      'Instagram Likes — Non-Drop',
+      'Instagram Live — Low Drop',
+      'Instagram Comments / Custom Comments'
+    ];
+
+    let categories = [];
+    if (plat === 'instagram') {
+      categories = [...INSTAGRAM_CATEGORIES];
+    } else if (plat === 'all') {
+      const otherCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
+      categories = [...INSTAGRAM_CATEGORIES, ...otherCategories.filter(c => !INSTAGRAM_CATEGORIES.includes(c))];
+    } else {
+      const rawCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
+      categories = rawCategories.sort((a, b) => a.localeCompare(b));
+    }
 
     if (!categories.includes(this.currentCategory) && categories.length > 0) {
       this.currentCategory = categories[0];
     }
 
     let activePackages = filteredServices.filter(s => s.category === this.currentCategory);
-    if (activePackages.length === 0 && filteredServices.length > 0) {
-      activePackages = filteredServices;
-    }
 
-    const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special') || (this.currentCategory || '').toLowerCase().includes('special very good');
+    const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special');
 
-    if (isLikeXSpecial) {
-      // User-defined Flagship Order: 1. Followers (2868), 2. Views, 3. Custom Comments (6149)
+    if (isLikeXSpecial && activePackages.length > 0) {
+      // Flagship Order: 1. Followers, 2. Views, 3. Custom Comments
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
         const name = (s.name || '').toLowerCase();
@@ -1002,7 +991,7 @@ const CustomerApp = {
         return 4;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
-    } else {
+    } else if (activePackages.length > 0) {
       // Sort Lowest Price First (Low to High: ascending by cost)
       activePackages.sort((a, b) => {
         const costA = parseFloat(a.cost) || 0;
@@ -1011,12 +1000,12 @@ const CustomerApp = {
       });
     }
 
-    const activeService = activePackages[0] || {};
-    const sellingPrice = store.getSellingPrice(activeService.cost || 0.20);
-    const isCommentService = (activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'));
+    const activeService = activePackages.length > 0 ? activePackages[0] : null;
+    const sellingPrice = activeService ? store.getSellingPrice(activeService.cost || 0.20) : 0;
+    const isCommentService = activeService ? ((activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'))) : false;
     const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom') || (activeService.name || '').toLowerCase().includes('emoji') || (activeService.name || '').toLowerCase().includes('random'));
-    const effectiveMin = isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10);
-    const avgTime = this.getServiceAverageTime(activeService);
+    const effectiveMin = activeService ? (isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10)) : 10;
+    const avgTime = activeService ? this.getServiceAverageTime(activeService) : '—';
 
     const platforms = [
       { id: 'all', label: 'All', icon: '⚡' },
@@ -1039,7 +1028,7 @@ const CustomerApp = {
               <span>Lowest Wholesale Rates Guaranteed</span>
             </span>
             <span class="wholesale-direct-green-badge">
-              ${activeService.refill ? '🛡️ Refill Protected' : '⚡ Wholesale Direct'}
+              ${activeService && activeService.refill ? '🛡️ Refill Protected' : '⚡ Wholesale Direct'}
             </span>
           </div>
 
@@ -1062,6 +1051,8 @@ const CustomerApp = {
             .filter(Boolean);
 
           if (rawIds.length === 0) return '';
+          const matchingRecs = rawIds.map(id => rawServices.find(s => String(s.id) === String(id) || String(s.rawId) === String(id))).filter(Boolean);
+          if (matchingRecs.length === 0) return '';
 
           const stripEmoji = (str) => {
             if (!str) return '';
@@ -1241,27 +1232,27 @@ const CustomerApp = {
 
           <!-- Hidden Native Select for 100% calculation & form compatibility -->
           <select id="new-order-service-select" style="display: none;" onchange="CustomerApp.handleServiceChange(this.value)">
-            ${activePackages.map(s => {
+            ${activePackages.length > 0 ? activePackages.map(s => {
               const p = store.getSellingPrice(s.cost || 0.1);
               const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
               const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
               return `
-                <option value="${s.id}" data-cost="${s.cost}" data-min="${sMin}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${String(s.id) === String(activeService.id) ? 'selected' : ''}>
+                <option value="${s.id}" data-cost="${s.cost}" data-min="${sMin}" data-max="${s.max}" data-refill="${s.refill ? '1' : '0'}" data-name="${s.name}" ${activeService && String(s.id) === String(activeService.id) ? 'selected' : ''}>
                   #${s.id} - ${s.name} (${store.formatMoney(p)}/1K)
                 </option>
               `;
-            }).join('')}
+            }).join('') : `<option value="">No service packages in this category yet</option>`}
           </select>
 
           <!-- Custom Service Package Trigger Card -->
           <div class="custom-dropdown-card" id="custom-service-trigger-card" onclick="CustomerApp.toggleServiceDropdown(event)">
             <div class="custom-dropdown-trigger">
               <div class="trigger-service-info">
-                <span class="service-id-pill" id="trigger-service-id-badge">${String(activeService.rawId || activeService.id || '6808').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '')}</span>
-                <span class="trigger-service-text" id="trigger-service-name-text">${activeService.name || 'Select Service Package'}</span>
+                <span class="service-id-pill" id="trigger-service-id-badge">${activeService ? String(activeService.rawId || activeService.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '') : '—'}</span>
+                <span class="trigger-service-text" id="trigger-service-name-text">${activeService ? activeService.name : 'No service packages in this category yet'}</span>
               </div>
               <div class="trigger-right-badge">
-                <span class="trigger-service-rate" id="trigger-service-rate-text">≈ ${store.formatMoney(sellingPrice)}/1K</span>
+                <span class="trigger-service-rate" id="trigger-service-rate-text">${activeService ? `≈ ${store.formatMoney(sellingPrice)}/1K` : '—'}</span>
                 <svg class="custom-dropdown-chevron" id="custom-service-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                   <polyline points="6 9 12 15 18 9"></polyline>
                 </svg>
@@ -1270,8 +1261,8 @@ const CustomerApp = {
 
             <!-- Custom Service Dropdown List (White Clean Menu with ID Pills & Tags) -->
             <div class="custom-dropdown-menu" id="custom-service-dropdown-menu" style="display: none;">
-              ${activePackages.map(s => {
-                const isSelected = String(s.id) === String(activeService.id);
+              ${activePackages.length > 0 ? activePackages.map(s => {
+                const isSelected = activeService && String(s.id) === String(activeService.id);
                 const p = store.getSellingPrice(s.cost || 0.1);
                 const tags = this.getServiceTags(s);
                 const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
@@ -1291,7 +1282,13 @@ const CustomerApp = {
                     </div>
                   </div>
                 `;
-              }).join('')}
+              }).join('') : `
+                <div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13.5px;">
+                  <div style="font-size: 26px; margin-bottom: 6px;">📂</div>
+                  <strong>No service packages currently in this category.</strong>
+                  <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Services are being updated. Please check back shortly.</div>
+                </div>
+              `}
             </div>
           </div>
         </div>
@@ -1303,25 +1300,25 @@ const CustomerApp = {
               <span>⚡</span>
               <span>Service Guarantee & Live Specs</span>
             </div>
-            <span class="badge ${activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge" style="font-size: 12px; padding: 5px 12px; border-radius: 999px;">
-              ${activeService.refill ? '🛡️ Refill Guarantee Active (365D)' : 'No Refill Warranty'}
+            <span class="badge ${activeService && activeService.refill ? 'badge-success' : 'badge-neutral'}" id="service-detail-refill-badge" style="font-size: 12px; padding: 5px 12px; border-radius: 999px;">
+              ${activeService ? (activeService.refill ? '🛡️ Refill Guarantee Active (365D)' : 'No Refill Warranty') : 'Awaiting Service Config'}
             </span>
           </div>
           <div id="service-detail-name" style="font-size: 14px; font-weight: 800; color: var(--text-main); line-height: 1.4; margin-bottom: 12px;">
-            ${activeService.name || ''}
+            ${activeService ? activeService.name : 'No services configured in this category yet.'}
           </div>
           <div class="vip-spec-grid">
             <div class="spec-tile">
               <span class="spec-tile-label">Wholesale Rate</span>
-              <span class="spec-tile-val" id="service-detail-rate" style="color: var(--primary); font-size: 15px;">${store.formatMoney(sellingPrice)}/1K</span>
+              <span class="spec-tile-val" id="service-detail-rate" style="color: var(--primary); font-size: 15px;">${activeService ? `${store.formatMoney(sellingPrice)}/1K` : '—'}</span>
             </div>
             <div class="spec-tile">
               <span class="spec-tile-label">Service ID</span>
-              <span class="spec-tile-val" id="service-detail-id">#${activeService.id || '—'}</span>
+              <span class="spec-tile-val" id="service-detail-id">${activeService ? `#${activeService.id}` : '—'}</span>
             </div>
             <div class="spec-tile">
               <span class="spec-tile-label">Min Limit</span>
-              <span class="spec-tile-val" id="service-detail-min">${effectiveMin.toLocaleString()}</span>
+              <span class="spec-tile-val" id="service-detail-min">${activeService ? effectiveMin.toLocaleString() : '—'}</span>
             </div>
             <div class="spec-tile" style="border-color: rgba(16, 185, 129, 0.25); background: rgba(16, 185, 129, 0.04);">
               <span class="spec-tile-label" style="color: #059669;">Average Time</span>
@@ -1615,7 +1612,28 @@ const CustomerApp = {
         const store = window.store;
         if (!serviceSelect.options || serviceSelect.selectedIndex < 0) return;
         const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
-        if (!selectedOpt) return;
+        if (!selectedOpt || !selectedOpt.value) {
+          const nameEl = document.getElementById('service-detail-name');
+          if (nameEl) nameEl.textContent = 'No services configured in this category yet.';
+          const rateEl = document.getElementById('service-detail-rate');
+          if (rateEl) rateEl.textContent = '—';
+          const idEl = document.getElementById('service-detail-id');
+          if (idEl) idEl.textContent = '—';
+          const minEl = document.getElementById('service-detail-min');
+          if (minEl) minEl.textContent = '—';
+          const timeEl = document.getElementById('service-detail-time');
+          if (timeEl) timeEl.textContent = '—';
+          const badge = document.getElementById('service-detail-refill-badge');
+          if (badge) {
+            badge.className = 'badge badge-neutral';
+            badge.textContent = 'Awaiting Service Config';
+          }
+          const calcRateEl = document.getElementById('calc-rate-label');
+          if (calcRateEl) calcRateEl.textContent = '—';
+          const calcTotalEl = document.getElementById('calc-total-label');
+          if (calcTotalEl) calcTotalEl.textContent = store.formatMoney(0);
+          return;
+        }
 
         const cost = parseFloat(selectedOpt.getAttribute('data-cost')) || 0.20;
         const rawMin = parseInt(selectedOpt.getAttribute('data-min')) || 10;
@@ -1744,6 +1762,10 @@ const CustomerApp = {
     if (!serviceSelect) return;
     const selectedOpt = serviceSelect.options[serviceSelect.selectedIndex];
     const serviceId = serviceSelect.value;
+    if (!serviceId) {
+      store.showToast('There are no active services in this category yet. Please choose another category or await upcoming service configuration.', 'warning');
+      return;
+    }
     
     let serviceName = selectedOpt ? selectedOpt.getAttribute('data-name') : '';
     if (!serviceName || serviceName.startsWith('Service #') || serviceName === 'Service #null' || serviceName === 'Service #undefined') {
