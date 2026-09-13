@@ -29,6 +29,32 @@ const CustomerApp = {
     `;
   },
 
+  renderTrustpilotBanner() {
+    return `
+      <div class="tp-compact-banner" onclick="CustomerApp.openTrustpilotRewardModal()" title="Review LikeX on Trustpilot & Claim ₹100">
+        <div class="tp-compact-left">
+          <div class="tp-compact-badge">
+            <span class="tp-star-icon">★</span>
+            <span class="tp-brand-name">Trustpilot</span>
+          </div>
+          <div class="tp-compact-text">
+            <div class="tp-compact-title">
+              <span>Review LikeX on Trustpilot</span>
+              <span class="tp-reward-pill">Get ₹100 Bonus 🎁</span>
+            </div>
+            <div class="tp-compact-sub">Share your honest feedback & claim ₹100 directly in your wallet!</div>
+          </div>
+        </div>
+        <div class="tp-compact-right">
+          <button type="button" class="tp-action-btn" onclick="event.stopPropagation(); CustomerApp.openTrustpilotRewardModal();">
+            <span>Claim ₹100</span>
+            <span class="tp-btn-arrow">→</span>
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
   renderMaintenanceScreen(store) {
     const maint = store.getMaintenanceMode ? store.getMaintenanceMode() : (store.data.maintenanceMode || {});
     return `
@@ -1177,6 +1203,9 @@ const CustomerApp = {
           <div class="trust-pill-badge"><span>🔒</span> 24/7 Automated</div>
           <div class="trust-pill-badge"><span>⭐</span> 4.9 Rating</div>
         </div>
+
+        <!-- ⭐ Trustpilot Review & ₹100 Wallet Reward Banner -->
+        ${this.renderTrustpilotBanner()}
 
         <!-- Clean Unified Search Bar -->
         <div class="order-search-box-wrap">
@@ -3891,6 +3920,49 @@ const CustomerApp = {
           </div>
         </div>
 
+        <!-- 🎁 Official Trustpilot ₹100 Mission Task Card -->
+        <div class="earn-tp-mission-card">
+          <div class="earn-tp-badge-row">
+            <span class="earn-tp-badge">⭐ INSTANT WALLET TASK</span>
+            <span class="earn-tp-stars-tag">★ Trustpilot Verified</span>
+          </div>
+          <div class="earn-tp-content">
+            <h3 class="earn-tp-title">Review LikeX on Trustpilot & Get ₹100 Free Wallet Balance</h3>
+            <p class="earn-tp-desc">Apna honest feedback aur review Trustpilot par drop karein. Bas 1 minute ka quick task complete karein aur hamari team aapke LikeX wallet me turant ₹100 balance add kar degi!</p>
+            
+            <div class="earn-tp-steps">
+              <div class="earn-tp-step">
+                <span class="earn-step-num">1</span>
+                <div>
+                  <strong>Submit Honest Review</strong>
+                  <p>Trustpilot par rating & review dein</p>
+                </div>
+              </div>
+              <div class="earn-tp-step">
+                <span class="earn-step-num">2</span>
+                <div>
+                  <strong>Take Screenshot</strong>
+                  <p>Submitted review ka screenshot lein</p>
+                </div>
+              </div>
+              <div class="earn-tp-step">
+                <span class="earn-step-num">3</span>
+                <div>
+                  <strong>Get ₹100 in Wallet</strong>
+                  <p>WhatsApp/TG par bhejein aur cash payein</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="earn-tp-cta-row" style="margin-top: 16px;">
+              <button type="button" class="btn btn-primary earn-tp-btn" onclick="CustomerApp.openTrustpilotRewardModal()">
+                <span>★ Start Review Task & Claim ₹100</span>
+                <span style="font-size: 16px;">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Dedicated Video Tutorial Section (YouTube Unlisted / Public Player) -->
         <div class="wallet-video-tutorial-card earn-video-card" style="border-color: rgba(99, 102, 241, 0.3); text-align: center;">
           <div class="wallet-video-header" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
@@ -4676,6 +4748,90 @@ const CustomerApp = {
   closeModal() {
     const modal = document.getElementById('generic-modal-backdrop');
     if (modal) modal.classList.remove('active');
+  },
+
+  openTrustpilotRewardModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!modal || !sheet) return;
+
+    const user = (window.store && window.store.data && window.store.data.customer) || {};
+    const userIdentifier = user.email || user.username || 'My LikeX Account';
+
+    const waText = encodeURIComponent(`Hi LikeX Support, maine Trustpilot par honest review submit kar diya hai (Account: ${userIdentifier}). Please ye screenshot verify karke mere wallet me ₹100 bonus credit kar dein!`);
+    const waUrl = `https://wa.me/919837371137?text=${waText}`;
+    const tgUrl = `https://t.me/Likex_support`;
+
+    sheet.innerHTML = `
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="background: #00b67a; color: white; width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; box-shadow: 0 2px 6px rgba(0, 182, 122, 0.3);">★</div>
+          <h3 class="modal-title" style="margin: 0; font-size: 18px; font-weight: 800;">Trustpilot ₹100 Bonus</h3>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div style="padding: 16px 4px 8px; display: flex; flex-direction: column; gap: 14px;">
+        
+        <!-- Highlight Card -->
+        <div style="background: linear-gradient(135deg, rgba(0, 182, 122, 0.12), rgba(99, 102, 241, 0.08)); border: 1.5px solid rgba(0, 182, 122, 0.35); border-radius: 16px; padding: 14px 16px; text-align: center;">
+          <div style="font-size: 11px; font-weight: 800; color: #00b67a; text-transform: uppercase; letter-spacing: 0.6px;">⭐ Special Verified Reward</div>
+          <div style="font-size: 20px; font-weight: 900; color: var(--text-main); margin-top: 4px;">Get ₹100 Direct Wallet Cash</div>
+          <p style="font-size: 12.5px; color: var(--text-secondary); margin: 6px 0 0; line-height: 1.45;">Apna honest review Trustpilot par drop karein aur ₹100 instant wallet bonus payein!</p>
+        </div>
+
+        <!-- 3 Simple Steps -->
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <!-- Step 1 -->
+          <div style="display: flex; gap: 12px; align-items: flex-start; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 14px;">
+            <div style="background: #00b67a; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0;">1</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">Trustpilot par Review likhein</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Niche button dabakar direct review form open karein aur rating submit karein.</div>
+              <a href="https://www.trustpilot.com/evaluate/likex.in" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-weight: 800; background: #00b67a; color: #fff; border: none; text-decoration: none; padding: 6px 14px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0, 182, 122, 0.3);">
+                <span>★ Write Review on Trustpilot</span>
+                <span style="font-size: 13px;">↗</span>
+              </a>
+            </div>
+          </div>
+
+          <!-- Step 2 -->
+          <div style="display: flex; gap: 12px; align-items: flex-start; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 14px;">
+            <div style="background: #3B82F6; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0;">2</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">Screenshot Save Karein</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Submit hone ke baad screen ka clear screenshot le lein.</div>
+            </div>
+          </div>
+
+          <!-- Step 3 -->
+          <div style="display: flex; gap: 12px; align-items: flex-start; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 14px; padding: 12px 14px;">
+            <div style="background: #10B981; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0;">3</div>
+            <div style="flex: 1;">
+              <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">Screenshot Bhej Kar ₹100 Payein</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Hamare official WhatsApp ya Telegram support par screenshot share karein. Team turant verify karke aapke wallet me ₹100 add kar degi!</div>
+              
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
+                <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #25D366; color: #fff; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);">
+                  <span>💬 WhatsApp Claim</span>
+                </a>
+                <a href="${tgUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #0088cc; color: #fff; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; box-shadow: 0 2px 6px rgba(0, 136, 204, 0.25);">
+                  <span>✈️ Telegram Claim</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 4px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="CustomerApp.closeModal()" style="border-radius: 10px; font-weight: 700; width: 100%; height: 38px;">
+            Close
+          </button>
+        </div>
+      </div>
+    `;
+
+    modal.classList.add('active');
   },
 
   lockAdminPreview() {
