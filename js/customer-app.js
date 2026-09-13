@@ -1352,10 +1352,10 @@ const CustomerApp = {
         <div class="form-group" id="order-quantity-group">
           <label class="form-label">
             <span style="font-weight: 800;">Order Quantity</span>
-            <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${effectiveMin.toLocaleString()} | Max: ${(activeService.max || 100000).toLocaleString()}</span>
+            <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${activeService ? effectiveMin.toLocaleString() : '—'} | Max: ${activeService ? (activeService.max || 100000).toLocaleString() : '—'}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="${isCommentService ? 50 : 1000}" min="${effectiveMin}" max="${activeService.max || 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" />
-          <div class="qty-steppers-bar" id="qty-steppers-bar" style="${isCustomComment ? 'display: none;' : 'display: flex;'}">
+          <input type="number" class="form-input" id="new-order-quantity" value="${isCommentService ? 50 : 1000}" min="${effectiveMin}" max="${activeService ? (activeService.max || 100000) : 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" ${!activeService ? 'disabled' : ''} />
+          <div class="qty-steppers-bar" id="qty-steppers-bar" style="${isCustomComment || !activeService ? 'display: none;' : 'display: flex;'}">
             ${isCommentService ? `
               <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(50)">50</button>
               <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(100)">100</button>
@@ -1368,7 +1368,7 @@ const CustomerApp = {
               <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(2500)">+2,500</button>
               <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(5000)">+5,000</button>
               <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(10000)">+10,000</button>
-              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(${activeService.max || 100000})" style="color: var(--primary); font-weight: 800;">MAX</button>
+              <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(${activeService ? (activeService.max || 100000) : 100000})" style="color: var(--primary); font-weight: 800;">MAX</button>
             `}
           </div>
         </div>
@@ -1392,7 +1392,7 @@ const CustomerApp = {
         <div class="receipt-calc-card">
           <div class="receipt-row">
             <span>Service Unit Rate:</span>
-            <strong id="calc-rate-label" style="color: var(--text-main); font-family: var(--font-mono);">${store.formatMoney(sellingPrice)} / 1,000</strong>
+            <strong id="calc-rate-label" style="color: var(--text-main); font-family: var(--font-mono);">${activeService ? `${store.formatMoney(sellingPrice)} / 1,000` : '—'}</strong>
           </div>
           <div class="receipt-row">
             <span>Current Wallet Balance:</span>
@@ -1400,20 +1400,22 @@ const CustomerApp = {
           </div>
           <div class="receipt-row total-charge-row">
             <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Total Charge:</span>
-            <span class="receipt-total-amount" id="calc-total-label">${store.formatMoney((sellingPrice / 1000) * (isCommentService ? 50 : 1000))}</span>
+            <span class="receipt-total-amount" id="calc-total-label">${activeService ? store.formatMoney((sellingPrice / 1000) * (isCommentService ? 50 : 1000)) : store.formatMoney(0)}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 2px;">
-            ${store.data.isLoggedIn ? `
+            ${!activeService ? `
+              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">⏳ Category awaiting service setup</span>
+            ` : (store.data.isLoggedIn ? `
               <span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>
             ` : `
               <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">ℹ️ Sign in required to place order</span>
-            `}
+            `)}
           </div>
         </div>
 
         <!-- Submit Button with Refraction Glare Animation -->
-        <button class="btn btn-primary btn-lg btn-block btn-refraction" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()" style="height: 52px; border-radius: 14px; font-size: 16px;">
-          <span>${store.data.isLoggedIn ? '⚡ Confirm & Place Order' : '🔑 Sign In to Place Order'}</span>
+        <button class="btn btn-primary btn-lg btn-block btn-refraction" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()" style="height: 52px; border-radius: 14px; font-size: 16px;" ${!activeService ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
+          <span>${!activeService ? '⏳ Category Awaiting Services' : (store.data.isLoggedIn ? '⚡ Confirm & Place Order' : '🔑 Sign In to Place Order')}</span>
         </button>
       </div>
     `;
@@ -1436,10 +1438,14 @@ const CustomerApp = {
         const chipWidth = activeChip.offsetWidth;
         const containerWidth = scrollContainer.clientWidth;
         const targetScrollLeft = chipLeft - (containerWidth / 2) + (chipWidth / 2);
-        scrollContainer.scrollTo({
-          left: Math.max(0, targetScrollLeft),
-          behavior: 'smooth'
-        });
+        if (typeof scrollContainer.scrollTo === 'function') {
+          scrollContainer.scrollTo({
+            left: Math.max(0, targetScrollLeft),
+            behavior: 'smooth'
+          });
+        } else {
+          scrollContainer.scrollLeft = Math.max(0, targetScrollLeft);
+        }
       }
     }
   },
