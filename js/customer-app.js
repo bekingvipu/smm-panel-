@@ -31,26 +31,8 @@ const CustomerApp = {
 
   renderTrustpilotBanner() {
     return `
-      <div class="tp-compact-banner" onclick="CustomerApp.openTrustpilotRewardModal()" title="Review LikeX on Trustpilot & Claim ₹100">
-        <div class="tp-compact-left">
-          <div class="tp-compact-badge">
-            <span class="tp-star-icon">★</span>
-            <span class="tp-brand-name">Trustpilot</span>
-          </div>
-          <div class="tp-compact-text">
-            <div class="tp-compact-title">
-              <span>Review LikeX on Trustpilot</span>
-              <span class="tp-reward-pill">Get ₹100 Bonus 🎁</span>
-            </div>
-            <div class="tp-compact-sub">Review likhein aur direct wallet me ₹100 payein! ⭐</div>
-          </div>
-        </div>
-        <div class="tp-compact-right">
-          <button type="button" class="tp-action-btn" onclick="event.stopPropagation(); CustomerApp.openTrustpilotRewardModal();">
-            <span>Claim ₹100</span>
-            <span class="tp-btn-arrow">→</span>
-          </button>
-        </div>
+      <div class="tp-image-banner-wrap" onclick="CustomerApp.openTrustpilotRewardModal()" title="Review LikeX on Trustpilot & Claim ₹100 Reward">
+        <img src="assets/trustpilot-reward-banner.png?v=1.0" alt="Review LikeX on Trustpilot & Get ₹100 Cash" class="tp-image-banner" loading="lazy" />
       </div>
     `;
   },
