@@ -42,7 +42,7 @@ const CustomerApp = {
               <span>Review LikeX on Trustpilot</span>
               <span class="tp-reward-pill">Get ₹100 Bonus 🎁</span>
             </div>
-            <div class="tp-compact-sub">Share your honest feedback & claim ₹100 directly in your wallet!</div>
+            <div class="tp-compact-sub">Review likhein aur direct wallet me ₹100 payein! ⭐</div>
           </div>
         </div>
         <div class="tp-compact-right">
