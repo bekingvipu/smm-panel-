@@ -132,7 +132,7 @@ export default async function handler(req, res) {
       const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
 
       const orderStatus = isSuccess ? (data.status || 'Processing') : 'Queued';
-      const orderErrorNote = liveError ? `Error: ${String(liveError).slice(0, 80)}` : null;
+      const orderErrorNote = liveError ? `Error: ${String(liveError).slice(0, 40)}` : null;
 
       const snapshotPayload = {
         rawServiceId: String(paramsObj.service || ''),
@@ -144,34 +144,91 @@ export default async function handler(req, res) {
         wholesaleCost: Number(paramsObj.wholesaleCost || 0),
         charge: Number(paramsObj.charge || 0),
         email: paramsObj.customerEmail || '',
+        name: paramsObj.customerName || '',
         note: orderErrorNote || null
       };
 
-      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          id: orderIdNum,
-          service_id: null, // Null to prevent Foreign Key constraint errors with customer_services table
-          target_url: paramsObj.link || '',
-          quantity: Number(paramsObj.quantity) || 1000,
-          charge: Number(paramsObj.charge) || 0,
-          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
-          provider_order_id: liveOrderId || null,
-          assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
-          status: orderStatus,
-          remains: Number(paramsObj.quantity) || 1000,
-          refill_status: 'SNAPSHOT:' + JSON.stringify(snapshotPayload),
-          created_at: new Date().toISOString()
-        })
-      }).catch(dbErr => {
+      // 1. Resolve or create user_id in public.users
+      let resolvedUserId = null;
+      if (paramsObj.customerEmail) {
+        try {
+          const cleanEmail = String(paramsObj.customerEmail).trim().toLowerCase();
+          const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(cleanEmail)}&select=id`, {
+            headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+          });
+          if (uRes.ok) {
+            const uData = await uRes.json();
+            if (Array.isArray(uData) && uData.length > 0) {
+              resolvedUserId = uData[0].id;
+            } else {
+              const cleanName = paramsObj.customerName || cleanEmail.split('@')[0];
+              const createRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users`, {
+                method: 'POST',
+                headers: {
+                  apikey: SUPABASE_ANON_KEY,
+                  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+                  'Content-Type': 'application/json',
+                  Prefer: 'return=representation'
+                },
+                body: JSON.stringify({
+                  email: cleanEmail,
+                  username: cleanName,
+                  password_hash: 'auth_order_autogen',
+                  role: 'customer'
+                })
+              });
+              if (createRes.ok) {
+                const newU = await createRes.json();
+                if (Array.isArray(newU) && newU.length > 0) {
+                  resolvedUserId = newU[0].id;
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.warn('[LikeX Backend] User ID resolution error:', e);
+        }
+      }
+
+      // 2. target_url is TEXT with no length limit; store clean URL + snapshot delimiter
+      const rawTargetLink = String(paramsObj.link || '').trim();
+      const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
+      const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 45);
+
+      try {
+        const dbRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            id: orderIdNum,
+            user_id: resolvedUserId,
+            service_id: null, // Null to prevent Foreign Key constraint errors with customer_services table
+            target_url: encodedTargetUrl,
+            quantity: Number(paramsObj.quantity) || 1000,
+            charge: Number(paramsObj.charge) || 0,
+            provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
+            provider_order_id: liveOrderId || null,
+            assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
+            status: orderStatus,
+            remains: Number(paramsObj.quantity) || 1000,
+            refill_status: safeRefillStatus,
+            created_at: new Date().toISOString()
+          })
+        });
+        if (!dbRes.ok) {
+          const errTxt = await dbRes.text();
+          console.warn('[LikeX Backend] Supabase order logging notice:', dbRes.status, errTxt);
+        } else {
+          console.log(`[LikeX Backend] Order #${orderIdNum} successfully logged to Supabase.`);
+        }
+      } catch (dbErr) {
         console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message);
-      });
+      }
 
       return res.status(200).json({
         ...data,
@@ -199,39 +256,49 @@ export default async function handler(req, res) {
     if (action === 'add' && paramsObj.likeXOrderId) {
       const rawLikeXStr = String(paramsObj.likeXOrderId).replace(/\D/g, '');
       const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
-      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          id: orderIdNum,
-          service_id: null,
-          target_url: paramsObj.link || '',
-          quantity: Number(paramsObj.quantity) || 1000,
-          charge: Number(paramsObj.charge) || 0,
-          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
-          provider_order_id: null,
-          assigned_provider_id: requestedProvider === 'socialfans' ? 3 : 2,
-          status: 'Queued',
-          refill_status: 'SNAPSHOT:' + JSON.stringify({
-            rawServiceId: String(paramsObj.service || ''),
-            serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
-            serviceName: String(paramsObj.serviceName || ''),
-            category: String(paramsObj.category || ''),
-            platform: String(paramsObj.platform || ''),
-            provider: requestedProvider === 'socialfans' ? 'socialfans' : 'worldofsmm',
-            wholesaleCost: Number(paramsObj.wholesaleCost || 0),
-            charge: Number(paramsObj.charge || 0),
-            email: paramsObj.customerEmail || '',
-            note: `Timeout: ${error.message.slice(0, 60)}`
-          }),
-          created_at: new Date().toISOString()
-        })
-      }).catch(() => {});
+      const snapshotPayload = {
+        rawServiceId: String(paramsObj.service || ''),
+        serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
+        serviceName: String(paramsObj.serviceName || ''),
+        category: String(paramsObj.category || ''),
+        platform: String(paramsObj.platform || ''),
+        provider: requestedProvider === 'socialfans' ? 'socialfans' : 'worldofsmm',
+        wholesaleCost: Number(paramsObj.wholesaleCost || 0),
+        charge: Number(paramsObj.charge || 0),
+        email: paramsObj.customerEmail || '',
+        name: paramsObj.customerName || '',
+        note: `Timeout: ${error.message.slice(0, 35)}`
+      };
+      const rawTargetLink = String(paramsObj.link || '').trim();
+      const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
+      const safeRefillStatus = `Timeout: ${error.message.slice(0, 35)}`;
+
+      try {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            id: orderIdNum,
+            user_id: null,
+            service_id: null,
+            target_url: encodedTargetUrl,
+            quantity: Number(paramsObj.quantity) || 1000,
+            charge: Number(paramsObj.charge) || 0,
+            provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
+            provider_order_id: null,
+            assigned_provider_id: requestedProvider === 'socialfans' ? 3 : 2,
+            status: 'Queued',
+            remains: Number(paramsObj.quantity) || 1000,
+            refill_status: safeRefillStatus,
+            created_at: new Date().toISOString()
+          })
+        });
+      } catch (_) {}
     }
 
     return res.status(500).json({ 

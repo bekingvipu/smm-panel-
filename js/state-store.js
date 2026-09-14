@@ -1353,6 +1353,13 @@ class SmmStateStore {
         providerCost: providerCostVal
       };
 
+      let cleanTargetUrl = String(o.target || '').trim();
+      if (cleanTargetUrl.includes('###LKX_META###')) {
+        cleanTargetUrl = cleanTargetUrl.split('###LKX_META###')[0];
+      } else if (cleanTargetUrl.includes('###')) {
+        cleanTargetUrl = cleanTargetUrl.split('###')[0];
+      }
+
       if (existingIdx === -1) {
         ordersList.push({
           ...o,
@@ -1368,6 +1375,7 @@ class SmmStateStore {
           provider: accurateProv,
           providerDisplayName: accurateProv === 'socialfans' ? 'SocialFans' : 'WorldOfSMM',
           serviceSnapshot: snapshot,
+          target: cleanTargetUrl,
           amount: amountVal,
           cost: providerCostVal,
           providerCost: providerCostVal,
@@ -1439,7 +1447,7 @@ class SmmStateStore {
           quantity: qtyVal || existing.quantity || 1000,
           userEmail: bestEmail,
           customerName: bestCustName,
-          target: o.target || existing.target || '',
+          target: cleanTargetUrl || existing.target || '',
           comments: o.comments || existing.comments || '',
           status: mergedStatus,
           providerStatus: mergedProvStatus,
@@ -1598,9 +1606,26 @@ class SmmStateStore {
         const mapped = supaOrders.map(so => {
           const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : null;
 
-          // 1. Check if refill_status contains encoded snapshot
+          // 1. Check if target_url contains embedded metadata snapshot
+          let cleanTargetUrl = String(so.target_url || '').trim();
           let snapshot = null;
-          if (so.refill_status && String(so.refill_status).startsWith('SNAPSHOT:')) {
+
+          if (cleanTargetUrl.includes('###LKX_META###')) {
+            const parts = cleanTargetUrl.split('###LKX_META###');
+            cleanTargetUrl = parts[0];
+            try {
+              snapshot = JSON.parse(parts[1]);
+            } catch (e) {}
+          } else if (cleanTargetUrl.includes('###')) {
+            const parts = cleanTargetUrl.split('###');
+            cleanTargetUrl = parts[0];
+            try {
+              snapshot = JSON.parse(parts[1]);
+            } catch (e) {}
+          }
+
+          // Legacy fallback: check if refill_status contains encoded snapshot
+          if (!snapshot && so.refill_status && String(so.refill_status).startsWith('SNAPSHOT:')) {
             try {
               snapshot = JSON.parse(String(so.refill_status).replace('SNAPSHOT:', ''));
             } catch (e) {}
@@ -1645,19 +1670,29 @@ class SmmStateStore {
 
           const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (!so.provider_order_id && so.status !== 'Completed' && so.status !== 'Refunded' && so.status !== 'Canceled');
           const finalErrorMsg = snapshot?.note || (so.refill_status && !so.refill_status.startsWith('SNAPSHOT:') ? so.refill_status : '') || null;
+
+          const userEmail = snapshot?.email || matchedUser?.email || '';
+          let customerName = snapshot?.name || matchedUser?.username;
+          if (!customerName || customerName === 'Customer' || customerName === 'Guest') {
+            customerName = matchedUser?.username || (userEmail ? userEmail.split('@')[0] : 'Customer');
+          }
+          if (customerName && customerName.includes('_') && /_[a-f0-9]{5}$/.test(customerName)) {
+            customerName = customerName.replace(/_[a-f0-9]{5}$/, '');
+          }
+
           return {
             id: String(so.id),
             likeXOrderId: String(so.id),
-            serviceId: matchedSvc ? matchedSvc.id : (rawServiceId ? (isSfOrder ? `sf-${rawServiceId}` : `wos-${rawServiceId}`) : 'N/A'),
+            serviceId: snapshot?.serviceId || (matchedSvc ? matchedSvc.id : (rawServiceId ? (isSfOrder ? `sf-${rawServiceId}` : `wos-${rawServiceId}`) : 'N/A')),
             rawServiceId: rawServiceId || 'N/A',
             providerServiceId: rawServiceId || 'N/A',
             serviceName: svcTitle,
             category: snapshot?.category || (matchedSvc?.category || 'Social Growth'),
-            platform: snapshot?.platform || (matchedSvc?.platform || (String(so.target_url || '').includes('instagram') ? 'instagram' : 'smm')),
+            platform: snapshot?.platform || (matchedSvc?.platform || (String(cleanTargetUrl).includes('instagram') ? 'instagram' : 'smm')),
             provider: finalProvider,
             providerDisplayName: finalProvider === 'worldofsmm' ? 'WorldOfSMM' : 'SocialFans',
             providerOrderId: so.provider_order_id || null,
-            target: so.target_url || '',
+            target: cleanTargetUrl,
             quantity: Number(so.quantity) || 1000,
             amount: Number(so.charge) || 0,
             providerCost: Number(so.provider_cost) || snapshot?.wholesaleCost || 0,
@@ -1665,8 +1700,8 @@ class SmmStateStore {
             isQueued: isQueuedOrder,
             errorReason: finalErrorMsg,
             upstreamError: finalErrorMsg,
-            userEmail: matchedUser?.email || snapshot?.email || '',
-            customerName: matchedUser?.username || (matchedUser?.email ? matchedUser.email.split('@')[0] : (snapshot?.email ? snapshot.email.split('@')[0] : 'Customer')),
+            userEmail: userEmail,
+            customerName: customerName,
             createdAt: orderCreatedAt,
             date: this.formatRealDate(orderCreatedAt)
           };
