@@ -114,6 +114,21 @@ class SmmStateStore {
       };
     }
 
+    // Initialize Dynamic Broadcast Notifications
+    try {
+      const savedNotifs = localStorage.getItem('likex_notifications');
+      if (savedNotifs) {
+        this.data.notifications = JSON.parse(savedNotifs);
+      } else {
+        this.data.notifications = (window.SMM_DEFAULT_NOTIFICATIONS && JSON.parse(JSON.stringify(window.SMM_DEFAULT_NOTIFICATIONS))) || [];
+      }
+      const savedReadIds = localStorage.getItem('likex_read_notification_ids');
+      this.readNotificationIds = new Set(savedReadIds ? JSON.parse(savedReadIds) : []);
+    } catch (e) {
+      this.data.notifications = (window.SMM_DEFAULT_NOTIFICATIONS && JSON.parse(JSON.stringify(window.SMM_DEFAULT_NOTIFICATIONS))) || [];
+      this.readNotificationIds = new Set();
+    }
+
     // Initialize Wallet Video Tutorial Config
     try {
       const savedVideo = localStorage.getItem('likex_wallet_tutorial_config');
@@ -603,6 +618,106 @@ class SmmStateStore {
 
     this.notify();
     this.showToast('✅ Support Video settings updated & synced across all devices!', 'success');
+  }
+
+  // --- Broadcast Notifications Management (Admin + Customer) ---
+  getNotifications(activeOnly = false) {
+    const list = Array.isArray(this.data.notifications) ? this.data.notifications : [];
+    const filtered = activeOnly ? list.filter(n => n && n.active !== false) : list;
+    return filtered.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
+
+  getUnreadNotificationCount() {
+    const active = this.getNotifications(true);
+    const readSet = this.readNotificationIds || new Set();
+    return active.filter(n => !readSet.has(String(n.id))).length;
+  }
+
+  markNotificationAsRead(id) {
+    if (!this.readNotificationIds) this.readNotificationIds = new Set();
+    this.readNotificationIds.add(String(id));
+    try {
+      localStorage.setItem('likex_read_notification_ids', JSON.stringify(Array.from(this.readNotificationIds)));
+    } catch (e) {}
+    this.notify();
+  }
+
+  markAllNotificationsAsRead() {
+    if (!this.readNotificationIds) this.readNotificationIds = new Set();
+    const active = this.getNotifications(true);
+    active.forEach(n => this.readNotificationIds.add(String(n.id)));
+    try {
+      localStorage.setItem('likex_read_notification_ids', JSON.stringify(Array.from(this.readNotificationIds)));
+    } catch (e) {}
+    this.notify();
+    this.showToast('✓ All notifications marked as read', 'success');
+  }
+
+  createNotification(notifData) {
+    if (!Array.isArray(this.data.notifications)) this.data.notifications = [];
+    const newNotif = {
+      id: 'notif-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+      title: String(notifData.title || '').trim(),
+      message: String(notifData.message || '').trim(),
+      badge: String(notifData.badge || 'Special Offer').trim(),
+      badgeType: String(notifData.badgeType || 'offer').trim(),
+      actionUrl: String(notifData.actionUrl || '').trim(),
+      actionText: String(notifData.actionText || '').trim(),
+      active: notifData.active !== undefined ? Boolean(notifData.active) : true,
+      createdAt: new Date().toISOString()
+    };
+    this.data.notifications.unshift(newNotif);
+    this._persistNotifications();
+    this.notify();
+    this.showToast('✅ Notification published successfully & synced across all devices!', 'success');
+    return newNotif;
+  }
+
+  updateNotification(id, updatedData) {
+    if (!Array.isArray(this.data.notifications)) return false;
+    const idx = this.data.notifications.findIndex(n => String(n.id) === String(id));
+    if (idx === -1) return false;
+
+    this.data.notifications[idx] = {
+      ...this.data.notifications[idx],
+      title: updatedData.title !== undefined ? String(updatedData.title).trim() : this.data.notifications[idx].title,
+      message: updatedData.message !== undefined ? String(updatedData.message).trim() : this.data.notifications[idx].message,
+      badge: updatedData.badge !== undefined ? String(updatedData.badge).trim() : this.data.notifications[idx].badge,
+      badgeType: updatedData.badgeType !== undefined ? String(updatedData.badgeType).trim() : this.data.notifications[idx].badgeType,
+      actionUrl: updatedData.actionUrl !== undefined ? String(updatedData.actionUrl).trim() : this.data.notifications[idx].actionUrl,
+      actionText: updatedData.actionText !== undefined ? String(updatedData.actionText).trim() : this.data.notifications[idx].actionText,
+      active: updatedData.active !== undefined ? Boolean(updatedData.active) : this.data.notifications[idx].active
+    };
+    this._persistNotifications();
+    this.notify();
+    this.showToast('✅ Notification updated & synced across all devices!', 'success');
+    return true;
+  }
+
+  toggleNotificationStatus(id) {
+    if (!Array.isArray(this.data.notifications)) return;
+    const notif = this.data.notifications.find(n => String(n.id) === String(id));
+    if (notif) {
+      notif.active = !notif.active;
+      this._persistNotifications();
+      this.notify();
+      this.showToast(`Notification is now ${notif.active ? 'ACTIVE (Published)' : 'INACTIVE (Unpublished)'}`, 'info');
+    }
+  }
+
+  deleteNotification(id) {
+    if (!Array.isArray(this.data.notifications)) return;
+    this.data.notifications = this.data.notifications.filter(n => String(n.id) !== String(id));
+    this._persistNotifications();
+    this.notify();
+    this.showToast('Notification deleted successfully', 'info');
+  }
+
+  _persistNotifications() {
+    try {
+      localStorage.setItem('likex_notifications', JSON.stringify(this.data.notifications));
+    } catch (e) {}
+    this.saveCloudConfig({ notifications: this.data.notifications });
   }
 
   saveCatalogCustomizations() {
@@ -1137,6 +1252,8 @@ class SmmStateStore {
             updateIfDifferent('recommendedFollowers', 'likex_recommended_followers_config', { ...this.data.recommendedFollowers, ...item.value });
           } else if (item.key === 'support_video' && item.value) {
             updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...item.value });
+          } else if (item.key === 'notifications' && Array.isArray(item.value)) {
+            updateIfDifferent('notifications', 'likex_notifications', item.value);
           } else if (item.key === 'global_markup' && item.value !== undefined) {
             const markupVal = Number(item.value);
             if (markupVal && markupVal >= 25 && markupVal !== this.data.adminStats.globalMarkupPercent) {
@@ -1211,6 +1328,9 @@ class SmmStateStore {
           }
           if (parsed.support_video) {
             updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...parsed.support_video });
+          }
+          if (parsed.notifications && Array.isArray(parsed.notifications)) {
+            updateIfDifferent('notifications', 'likex_notifications', parsed.notifications);
           }
         } catch (e) {}
       }
@@ -2167,6 +2287,27 @@ class SmmStateStore {
     this.currency = curr || 'INR';
     localStorage.setItem('smm_currency', this.currency);
     this.notify();
+  }
+
+  // Format wallet balance strictly to maximum 2 decimal places (e.g. ₹18.24)
+  formatWalletBalance(amountInUsd) {
+    const isNegative = Number(amountInUsd) < 0;
+    const absUsd = Math.abs(Number(amountInUsd) || 0);
+    if (absUsd === 0) return this.currency === 'INR' ? '₹0.00' : '$0.00';
+
+    if (this.currency === 'INR') {
+      const inrRate = this.data.exchangeRate || 95.385;
+      const inrVal = absUsd * inrRate;
+      const formatted = inrVal.toLocaleString('en-IN', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      });
+      return (isNegative ? '-₹' : '₹') + formatted;
+    }
+    return (isNegative ? '-$' : '$') + absUsd.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
   }
 
   formatMoney(amountInUsd, decimals = 2) {

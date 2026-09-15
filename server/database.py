@@ -198,6 +198,21 @@ def init_db():
     );
     """)
 
+    # 11. Broadcast Notifications Table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS notifications (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT NOT NULL,
+        badge TEXT NOT NULL DEFAULT 'Special Offer',
+        badge_type TEXT NOT NULL DEFAULT 'offer',
+        action_url TEXT DEFAULT '',
+        action_text TEXT DEFAULT '',
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
     conn.commit()
 
     # Check if seeded

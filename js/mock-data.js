@@ -80,6 +80,42 @@ window.SMM_DEFAULT_REELS = [
   }
 ];
 
+window.SMM_DEFAULT_NOTIFICATIONS = [
+  {
+    id: 'notif-1',
+    title: '🔥 Special Offer',
+    message: 'Recharge your wallet today and get extra bonus balance instantly!',
+    badge: 'Special Offer',
+    badgeType: 'offer',
+    actionUrl: 'wallet',
+    actionText: 'Add Funds Now',
+    active: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 25).toISOString()
+  },
+  {
+    id: 'notif-2',
+    title: '⚡ Important Update',
+    message: 'Instagram services are now processing faster with automated instant start delivery.',
+    badge: 'Service Update',
+    badgeType: 'update',
+    actionUrl: 'new_order',
+    actionText: 'View Services',
+    active: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString()
+  },
+  {
+    id: 'notif-3',
+    title: '👑 24/7 VIP Help Desk Active',
+    message: 'Need help with your orders or refilling? Connect with our dedicated support executive on WhatsApp.',
+    badge: 'Support',
+    badgeType: 'info',
+    actionUrl: 'support',
+    actionText: 'Open Support',
+    active: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString()
+  }
+];
+
 window.INSTAGRAM_CATEGORIES = [
   'LikeX Special',
   'Instagram 👑 Non-Drop Followers — Refill Guaranteed',

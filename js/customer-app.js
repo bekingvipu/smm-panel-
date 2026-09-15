@@ -203,83 +203,67 @@ const CustomerApp = {
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
     else contentHtml = this.renderNewOrderTab(store);
 
+    const unreadCount = store.getUnreadNotificationCount ? store.getUnreadNotificationCount() : 0;
+    const formattedBalance = store.formatWalletBalance ? store.formatWalletBalance(store.data.customer.balance) : (store.currency === 'INR' ? '₹0.00' : '$0.00');
+
     container.innerHTML = `
       ${adminPreviewBannerHtml}
-      <!-- Desktop Header (Screens >= 768px) -->
-      <nav class="desktop-navbar">
-        <div class="desktop-nav-brand" onclick="store.setCustomerTab('new_order')" title="LikeX Home">
-          <img src="assets/likex-logo-transparent.png" alt="LikeX" class="desktop-brand-logo-img" />
-        </div>
-
-        <div class="desktop-nav-links">
-          <a class="desktop-nav-link ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
-            <span>🛒</span>
-            <span>Services & Order</span>
-          </a>
-          <a class="desktop-nav-link ${tab === 'earn' ? 'active' : ''}" onclick="store.setCustomerTab('earn')">
-            <span>💰</span>
-            <span>How to Earn</span>
-          </a>
-          <a class="desktop-nav-link ${tab === 'home' ? 'active' : ''}" onclick="store.setCustomerTab('home')">
-            <span>⊞</span>
-            <span>Dashboard</span>
-          </a>
-          <a class="desktop-nav-link ${tab === 'orders' ? 'active' : ''}" onclick="store.setCustomerTab('orders')">
-            <span>⏱️</span>
-            <span>Orders History</span>
-          </a>
-          <a class="desktop-nav-link ${tab === 'wallet' ? 'active' : ''}" onclick="store.setCustomerTab('wallet')">
-            <span>💳</span>
-            <span>Add Funds</span>
-          </a>
-          <a class="desktop-nav-link ${tab === 'support' ? 'active' : ''}" onclick="store.setCustomerTab('support')">
-            <span>💬</span>
-            <span>Support</span>
-          </a>
-        </div>
-
-        <div class="desktop-nav-actions">
-          <div class="header-balance-pill" onclick="store.setCustomerTab('wallet')" title="Click to Add Funds">
-            <span class="header-balance-val">${isLoggedIn ? store.formatMoney(store.data.customer.balance) : '₹0'}</span>
-            <span class="add-plus-badge">＋</span>
-          </div>
-
-          <button class="drawer-hamburger-btn" onclick="CustomerApp.openSideDrawer()" title="Menu & Settings">
-            <span>☰</span>
-          </button>
-
-          ${isLoggedIn ? `
-            <img src="${store.data.customer.avatar}" alt="Avatar" class="customer-avatar" onclick="CustomerApp.openProfileModal()" title="Account Profile" />
-          ` : `
-            <button class="btn btn-primary btn-sm" onclick="CustomerApp.openAuthModal('login')">
-              Sign In
+      
+      <!-- Modern Premium LikeX SaaS Capsule Header -->
+      <header class="likex-premium-header">
+        <div class="likex-header-inner">
+          
+          <!-- Left: Menu Trigger (☰) + LikeX Brand Logo -->
+          <div class="likex-header-left">
+            <button class="likex-header-icon-btn likex-hamburger-btn" onclick="CustomerApp.openSideDrawer()" aria-label="Open Navigation Menu" title="Menu & Settings">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="4" y1="6" x2="20" y2="6"></line>
+                <line x1="4" y1="12" x2="20" y2="12"></line>
+                <line x1="4" y1="18" x2="20" y2="18"></line>
+              </svg>
             </button>
-          `}
-        </div>
-      </nav>
-
-      <!-- Streamlined Mobile Header (Zero Clutter) -->
-      <header class="customer-header">
-        <div class="customer-header-left">
-          <button class="drawer-hamburger-btn" onclick="CustomerApp.openSideDrawer()" title="Menu">
-            ☰
-          </button>
-          <div class="customer-brand-name" onclick="store.setCustomerTab('new_order')" style="display: flex; align-items: center; cursor: pointer;" title="LikeX Home">
-            <img src="assets/likex-logo-transparent.png" alt="LikeX" class="mobile-brand-logo-img" />
-          </div>
-        </div>
-
-        <div class="customer-header-actions">
-          ${isLoggedIn ? `
-            <div class="header-balance-pill" onclick="store.setCustomerTab('wallet')" title="Click to Add Funds">
-              <span class="header-balance-val">${store.formatMoney(store.data.customer.balance)}</span>
-              <span class="add-plus-badge">＋</span>
+            <div class="likex-brand-logo-wrap" onclick="store.setCustomerTab('new_order')" title="LikeX — Direct Wholesale SMM">
+              <img src="assets/likex-logo-transparent.png" alt="LikeX" class="likex-brand-logo-img" />
             </div>
-          ` : `
-            <button class="btn btn-primary btn-sm" style="padding: 6px 14px; font-size: 13px; font-weight: 700; border-radius: 9999px;" onclick="CustomerApp.openAuthModal('login')">
-              Sign In
+          </div>
+
+          <!-- Right: Gradient Wallet Balance Capsule + Dynamic Notification Bell -->
+          <div class="likex-header-right">
+            
+            <!-- Compact Gradient Wallet Balance Capsule (Strictly max 2 decimals) -->
+            <div class="likex-wallet-capsule" onclick="store.setCustomerTab('wallet')" title="Click to Add Funds / View Wallet">
+              <div class="likex-wallet-icon-box">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
+                  <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
+                  <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
+                </svg>
+              </div>
+              <div class="likex-wallet-divider"></div>
+              <div class="likex-wallet-info">
+                <span class="likex-wallet-amount">${formattedBalance}</span>
+                <span class="likex-wallet-label">Wallet Balance</span>
+              </div>
+              <div class="likex-wallet-add-btn" title="Add Funds">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Dynamic Notification Bell Icon with Unread Badge Counter -->
+            <button class="likex-header-icon-btn likex-bell-btn" onclick="CustomerApp.openNotifications()" aria-label="Notifications" title="System Notifications & Broadcasts">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              ${unreadCount > 0 ? `
+                <span class="likex-notif-badge" id="header-unread-badge">${unreadCount > 9 ? '9+' : unreadCount}</span>
+              ` : ''}
             </button>
-          `}
+
+          </div>
         </div>
       </header>
 
@@ -4805,28 +4789,150 @@ const CustomerApp = {
   openNotifications() {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
-    const orders = window.store.data.orders || [];
+    const store = window.store;
+    if (!modal || !sheet || !store) return;
+
+    const notifs = store.getNotifications ? store.getNotifications(true) : [];
+    const readSet = store.readNotificationIds || new Set();
+    const unreadCount = notifs.filter(n => !readSet.has(String(n.id))).length;
+
+    const formatTime = (isoStr) => {
+      if (!isoStr) return 'Recently';
+      try {
+        const diffMs = Date.now() - new Date(isoStr).getTime();
+        const diffMins = Math.floor(diffMs / (1000 * 60));
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins}m ago`;
+        const diffHours = Math.floor(diffMins / (1000 * 60 * 60));
+        if (diffHours < 24) return `${diffHours}h ago`;
+        const diffDays = Math.floor(diffHours / 24);
+        if (diffDays === 1) return 'Yesterday';
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return new Date(isoStr).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' });
+      } catch (e) {
+        return 'Recently';
+      }
+    };
 
     sheet.innerHTML = `
-      <div class="modal-header">
-        <h3 class="modal-title">Notifications</h3>
-        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
-      </div>
-      <div style="display: flex; flex-direction: column; gap: 10px;">
-        ${orders.length > 0 ? orders.slice(0, 4).map(o => `
-          <div class="card" style="padding: 14px; border-left: 4px solid var(--primary);">
-            <div style="font-weight: 700;">Order #${o.id} is ${o.status}</div>
-            <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">${o.date || 'Recently'}</div>
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, rgba(108, 92, 231, 0.15), rgba(79, 70, 229, 0.2)); color: var(--primary); display: flex; align-items: center; justify-content: center; font-size: 18px;">
+            🔔
           </div>
-        `).join('') : `
-          <div class="card" style="text-align: center; padding: 24px 16px; color: var(--text-muted);">
-            No new notifications.
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <h3 class="modal-title" style="margin: 0; font-size: 18px; font-weight: 800;">Notifications</h3>
+              ${unreadCount > 0 ? `
+                <span class="badge" style="background: #EF4444; color: white; font-size: 11px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                  ${unreadCount} New
+                </span>
+              ` : ''}
+            </div>
+            <p style="font-size: 12px; color: var(--text-secondary); margin: 2px 0 0 0;">Latest announcements, special offers & service updates</p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          ${unreadCount > 0 ? `
+            <button class="btn btn-sm btn-ghost" style="font-size: 12px; font-weight: 700; color: var(--primary); padding: 4px 10px;" onclick="CustomerApp.markAllNotificationsRead()" title="Mark all as read">
+              ✓ Mark all read
+            </button>
+          ` : ''}
+          <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+        </div>
+      </div>
+
+      <div class="likex-notifs-container" style="max-height: 480px; overflow-y: auto; padding: 14px 4px; display: flex; flex-direction: column; gap: 12px;">
+        ${notifs.length > 0 ? notifs.map(n => {
+          const isUnread = !readSet.has(String(n.id));
+          const timeStr = formatTime(n.createdAt);
+          
+          let badgeBg = 'rgba(108, 92, 231, 0.12)';
+          let badgeColor = '#6C5CE7';
+          let badgeIcon = '📢';
+
+          if (n.badgeType === 'offer' || (n.title && n.title.includes('🔥'))) {
+            badgeBg = 'rgba(239, 68, 68, 0.12)';
+            badgeColor = '#EF4444';
+            badgeIcon = '🔥';
+          } else if (n.badgeType === 'update' || (n.title && n.title.includes('⚡'))) {
+            badgeBg = 'rgba(245, 158, 11, 0.14)';
+            badgeColor = '#D97706';
+            badgeIcon = '⚡';
+          } else if (n.badgeType === 'info' || (n.title && n.title.includes('👑'))) {
+            badgeBg = 'rgba(59, 130, 246, 0.12)';
+            badgeColor = '#2563EB';
+            badgeIcon = '👑';
+          }
+
+          return `
+            <div class="likex-notif-card ${isUnread ? 'unread' : 'read'}" onclick="CustomerApp.handleNotificationClick('${n.id}', '${n.actionUrl || ''}')" style="cursor: pointer; position: relative; border-radius: 14px; padding: 14px 16px; transition: all 0.2s ease; border: 1.5px solid ${isUnread ? 'rgba(108, 92, 231, 0.28)' : 'var(--border-color)'}; background: ${isUnread ? 'rgba(108, 92, 231, 0.04)' : 'var(--bg-surface)'}; box-shadow: ${isUnread ? '0 4px 14px rgba(108, 92, 231, 0.08)' : 'none'};">
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; gap: 8px;">
+                <div style="display: inline-flex; align-items: center; gap: 6px; background: ${badgeBg}; color: ${badgeColor}; font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 999px;">
+                  <span>${badgeIcon}</span>
+                  <span>${n.badge || 'Update'}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <span style="font-size: 11.5px; color: var(--text-muted); font-weight: 600;">${timeStr}</span>
+                  ${isUnread ? `
+                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #EF4444; display: inline-block;" title="Unread"></span>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div style="font-weight: 800; font-size: 14.5px; color: var(--text-main); margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                ${n.title || 'Notification'}
+              </div>
+
+              <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.45; word-break: break-word;">
+                ${n.message || ''}
+              </div>
+
+              ${n.actionUrl || n.actionText ? `
+                <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                  <button class="btn btn-sm btn-primary" style="font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 999px;" onclick="event.stopPropagation(); CustomerApp.handleNotificationClick('${n.id}', '${n.actionUrl || ''}')">
+                    ${n.actionText || 'View Details'} →
+                  </button>
+                </div>
+              ` : ''}
+
+            </div>
+          `;
+        }).join('') : `
+          <div style="text-align: center; padding: 40px 20px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 10px;">
+            <div style="font-size: 36px;">🎉</div>
+            <div style="font-weight: 800; font-size: 16px; color: var(--text-main);">You're all caught up!</div>
+            <div style="font-size: 13px; max-width: 260px;">No new broadcast notifications right now. Check back soon for exciting offers.</div>
           </div>
         `}
       </div>
     `;
 
     modal.classList.add('active');
+  },
+
+  markAllNotificationsRead() {
+    if (window.store && window.store.markAllNotificationsAsRead) {
+      window.store.markAllNotificationsAsRead();
+      this.openNotifications();
+    }
+  },
+
+  handleNotificationClick(id, actionUrl) {
+    if (window.store && window.store.markNotificationAsRead) {
+      window.store.markNotificationAsRead(id);
+    }
+    if (actionUrl) {
+      this.closeModal();
+      if (actionUrl === 'wallet' || actionUrl === 'new_order' || actionUrl === 'earn' || actionUrl === 'orders' || actionUrl === 'support' || actionUrl === 'home') {
+        window.store.setCustomerTab(actionUrl);
+      } else if (actionUrl.startsWith('http://') || actionUrl.startsWith('https://')) {
+        window.open(actionUrl, '_blank');
+      }
+    } else {
+      this.openNotifications();
+    }
   },
 
   openModal() {

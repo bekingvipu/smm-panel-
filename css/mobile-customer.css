@@ -8,39 +8,260 @@
   position: relative;
 }
 
-/* Mobile Customer Header (Floating Rounded Island with Frosted Glassmorphism) */
-.customer-header {
+/* ==========================================================================
+   LikeX Modern Premium SaaS Capsule Header
+   ========================================================================== */
+.likex-premium-header {
   position: sticky;
   top: max(8px, env(safe-area-inset-top, 8px));
-  z-index: 900;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 8px 14px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.78) !important;
-  backdrop-filter: blur(24px) saturate(180%) !important;
-  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-  border: 1.5px solid rgba(108, 92, 231, 0.16) !important;
-  box-shadow: 0 8px 28px -4px rgba(108, 92, 231, 0.12), 0 2px 6px rgba(0, 0, 0, 0.02) !important;
-  will-change: transform;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
+  z-index: 950;
+  width: calc(100% - 20px);
+  max-width: 1240px;
+  margin: 8px auto 0 auto;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-theme="dark"] .customer-header {
-  background: rgba(14, 16, 27, 0.82) !important;
+.likex-header-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.88) !important;
   backdrop-filter: blur(24px) saturate(180%) !important;
   -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
-  border: 1.5px solid rgba(139, 124, 246, 0.24) !important;
+  border: 1.5px solid rgba(108, 92, 231, 0.14) !important;
+  box-shadow: 0 8px 26px -4px rgba(108, 92, 231, 0.11), 0 2px 6px rgba(0, 0, 0, 0.02) !important;
+  border-radius: 9999px;
+  padding: 6px 12px;
+  min-height: 56px;
+  box-sizing: border-box;
+  will-change: transform;
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+}
+
+[data-theme="dark"] .likex-header-inner {
+  background: rgba(14, 17, 28, 0.86) !important;
+  backdrop-filter: blur(24px) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+  border: 1.5px solid rgba(139, 124, 246, 0.22) !important;
   box-shadow: 0 10px 32px rgba(0, 0, 0, 0.55) !important;
 }
 
-@media (min-width: 768px) {
-  .customer-header {
-    display: none !important;
+.likex-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.likex-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Circular Header Action Buttons (Menu ☰ & Bell 🔔) */
+.likex-header-icon-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #f4f5fa;
+  border: 1px solid rgba(108, 92, 231, 0.08);
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+  padding: 0;
+}
+
+[data-theme="dark"] .likex-header-icon-btn {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #f1f5f9;
+}
+
+.likex-header-icon-btn:hover {
+  background: rgba(108, 92, 231, 0.12);
+  color: #6C5CE7;
+  transform: scale(1.04);
+}
+
+.likex-header-icon-btn:active {
+  transform: scale(0.96);
+}
+
+/* LikeX Brand Logo in Header */
+.likex-brand-logo-wrap {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+}
+
+.likex-brand-logo-img {
+  height: 33px;
+  width: auto;
+  max-width: 140px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(108, 92, 231, 0.12));
+  transition: transform 0.2s ease;
+}
+
+.likex-brand-logo-wrap:hover .likex-brand-logo-img {
+  transform: scale(1.02);
+}
+
+/* LikeX Gradient Wallet Balance Capsule */
+.likex-wallet-capsule {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #6C5CE7 0%, #4F46E5 100%) !important;
+  color: #ffffff;
+  padding: 5px 8px 5px 14px;
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.32), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+}
+
+.likex-wallet-capsule:hover {
+  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 6px 22px rgba(99, 102, 241, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.likex-wallet-capsule:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.likex-wallet-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.likex-wallet-divider {
+  width: 1px;
+  height: 22px;
+  background: rgba(255, 255, 255, 0.25);
+  margin: 0 1px;
+  flex-shrink: 0;
+}
+
+.likex-wallet-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  justify-content: center;
+}
+
+.likex-wallet-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.likex-wallet-label {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.likex-wallet-add-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #6C5CE7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  transition: transform 0.18s ease;
+}
+
+.likex-wallet-capsule:hover .likex-wallet-add-btn {
+  transform: rotate(90deg) scale(1.05);
+}
+
+/* Notification Badge Counter */
+.likex-notif-badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #EF4444;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
+  line-height: 1;
+}
+
+[data-theme="dark"] .likex-notif-badge {
+  border-color: #0e111c;
+}
+
+/* Small Screens Responsive Refinement */
+@media (max-width: 420px) {
+  .likex-premium-header {
+    width: calc(100% - 16px);
+    margin: 6px auto 0 auto;
+  }
+  .likex-header-inner {
+    padding: 5px 8px;
+    min-height: 52px;
+    gap: 8px;
+  }
+  .likex-header-left {
+    gap: 8px;
+  }
+  .likex-header-right {
+    gap: 7px;
+  }
+  .likex-header-icon-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .likex-brand-logo-img {
+    height: 27px;
+    max-width: 105px;
+  }
+  .likex-wallet-capsule {
+    padding: 4px 6px 4px 10px;
+    gap: 7px;
+  }
+  .likex-wallet-amount {
+    font-size: 13.5px;
+  }
+  .likex-wallet-label {
+    font-size: 8.5px;
+  }
+  .likex-wallet-add-btn {
+    width: 22px;
+    height: 22px;
   }
 }
 

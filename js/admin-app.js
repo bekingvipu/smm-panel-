@@ -214,6 +214,7 @@ const AdminApp = {
 
     let contentHtml = '';
     if (tab === 'dashboard') contentHtml = this.renderDashboard(store);
+    else if (tab === 'notifications') contentHtml = this.renderNotificationsManager(store);
     else if (tab === 'about_reels') contentHtml = this.renderAboutReelsManager(store);
     else if (tab === 'wallet_settings') contentHtml = this.renderWalletSettings(store);
     else if (tab === 'alerts') contentHtml = this.renderAlertsManager(store);
@@ -241,6 +242,10 @@ const AdminApp = {
             <li class="admin-nav-item ${tab === 'dashboard' ? 'active' : ''}" onclick="store.setAdminTab('dashboard')">
               <span class="nav-icon">📊</span>
               <span>Dashboard</span>
+            </li>
+            <li class="admin-nav-item ${tab === 'notifications' ? 'active' : ''}" onclick="store.setAdminTab('notifications')">
+              <span class="nav-icon">📢</span>
+              <span>Notifications</span>
             </li>
             <li class="admin-nav-item ${tab === 'about_reels' ? 'active' : ''}" onclick="store.setAdminTab('about_reels')">
               <span class="nav-icon">🎬</span>
@@ -334,6 +339,7 @@ const AdminApp = {
 
   getTabTitle(tab) {
     if (tab === 'dashboard') return 'Dashboard';
+    if (tab === 'notifications') return 'Notifications & Customer Broadcast Manager';
     if (tab === 'about_reels') return 'About LikeX YouTube Reels & Proofs Manager';
     if (tab === 'wallet_settings') return 'Wallet Video Tutorial & Payment Settings';
     if (tab === 'alerts') return 'Low Balance Alerts & Multi-Channel Gateway';
@@ -344,6 +350,248 @@ const AdminApp = {
     if (tab === 'orders') return 'All Orders Master Table';
     if (tab === 'support') return 'Support Ticket Queue';
     return 'Admin Console';
+  },
+
+  // NOTIFICATIONS & BROADCASTS MANAGER (ADMIN PANEL)
+  renderNotificationsManager(store) {
+    const notifs = store.getNotifications ? store.getNotifications(false) : (store.data.notifications || []);
+    const activeCount = notifs.filter(n => n && n.active !== false).length;
+
+    const formatTime = (isoStr) => {
+      if (!isoStr) return 'Recently';
+      try {
+        const d = new Date(isoStr);
+        return d.toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      } catch (e) {
+        return 'Recently';
+      }
+    };
+
+    return `
+      <div style="display: flex; flex-direction: column; gap: 24px; max-width: 1100px;">
+        
+        <!-- Header Banner -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(108, 92, 231, 0.12), rgba(79, 70, 229, 0.08)); border: 1.5px solid rgba(108, 92, 231, 0.3); padding: 24px; border-radius: 20px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+            <div>
+              <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(108, 92, 231, 0.15); color: #6C5CE7; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; text-transform: uppercase;">
+                <span>📢</span>
+                <span>Customer Broadcast Center</span>
+              </div>
+              <h2 style="font-size: 24px; font-weight: 900; color: var(--text-main); margin-top: 8px; margin-bottom: 4px;">
+                Manage Broadcast Notifications
+              </h2>
+              <p style="font-size: 14px; color: var(--text-secondary); margin: 0;">
+                Create, edit, toggle ON/OFF, and publish notifications. These dynamically appear under the 🔔 icon in the customer header with unread badge counters.
+              </p>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <span class="badge" style="background: #6C5CE7; color: white; font-size: 13px; font-weight: 800; padding: 6px 14px; border-radius: 999px;">
+                ${activeCount} Active Published
+              </span>
+              <button class="btn btn-secondary btn-sm" onclick="AdminApp.resetDefaultNotifications()" title="Restore official demo notifications">
+                🔄 Restore Defaults
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Two Column Grid: Form (Left) & Active List (Right) -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px;">
+          
+          <!-- 1. Create New Notification Card -->
+          <div class="card" style="padding: 24px; border-radius: 20px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <span style="font-size: 22px;">➕</span>
+              <div>
+                <h3 style="font-size: 17px; font-weight: 800; margin: 0; color: var(--text-main);">Create New Notification</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">Publish announcement or offer to all user headers</p>
+              </div>
+            </div>
+
+            <form onsubmit="AdminApp.handleCreateNotification(event)" style="display: flex; flex-direction: column; gap: 14px;">
+              
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Notification Title: *</label>
+                <input 
+                  type="text" 
+                  id="admin-new-notif-title" 
+                  class="form-input" 
+                  placeholder="e.g. 🔥 Special Offer or ⚡ Important Update" 
+                  required 
+                  style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                />
+              </div>
+
+              <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Message / Description: *</label>
+                <textarea 
+                  id="admin-new-notif-message" 
+                  class="form-input" 
+                  placeholder="e.g. Recharge your wallet today and get extra bonus!" 
+                  required 
+                  rows="3"
+                  style="border-radius: 12px; font-size: 13px; resize: vertical;"
+                ></textarea>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Badge Type:</label>
+                  <select id="admin-new-notif-badge-type" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px; font-weight: 700;">
+                    <option value="offer">🔥 Special Offer</option>
+                    <option value="update">⚡ Service Update</option>
+                    <option value="info">👑 VIP Notice</option>
+                    <option value="announcement">📢 Announcement</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Custom Badge Text:</label>
+                  <input 
+                    type="text" 
+                    id="admin-new-notif-badge-text" 
+                    class="form-input" 
+                    placeholder="e.g. Special Offer" 
+                    value="Special Offer"
+                    style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                  />
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Action Target Tab (Optional):</label>
+                  <select id="admin-new-notif-action-url" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px;">
+                    <option value="">None (Just text)</option>
+                    <option value="wallet">💳 Add Funds (Wallet)</option>
+                    <option value="new_order">🛒 Services & Order</option>
+                    <option value="support">💬 VIP Support</option>
+                    <option value="earn">💰 How to Earn</option>
+                    <option value="orders">⏱️ Orders History</option>
+                  </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Action Button Text:</label>
+                  <input 
+                    type="text" 
+                    id="admin-new-notif-action-text" 
+                    class="form-input" 
+                    placeholder="e.g. Add Funds Now" 
+                    style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+                  />
+                </div>
+              </div>
+
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle); padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+                <div>
+                  <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">Publish Immediately (ON)</div>
+                  <div style="font-size: 11.5px; color: var(--text-secondary);">Visible to all customers immediately upon saving</div>
+                </div>
+                <input type="checkbox" id="admin-new-notif-active" checked style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;" />
+              </div>
+
+              <button type="submit" class="btn btn-primary btn-block" style="min-height: 44px; border-radius: 12px; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                <span>🚀 Publish Broadcast Notification</span>
+              </button>
+            </form>
+          </div>
+
+          <!-- 2. Manage Existing Notifications List -->
+          <div class="card" style="padding: 24px; border-radius: 20px; border: 1.5px solid var(--border-color); display: flex; flex-direction: column; gap: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-size: 22px;">📋</span>
+                <div>
+                  <h3 style="font-size: 17px; font-weight: 800; margin: 0; color: var(--text-main);">All Broadcast Notifications</h3>
+                  <p style="font-size: 12px; color: var(--text-secondary); margin: 0;">${notifs.length} total notifications</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; max-height: 520px; overflow-y: auto; padding-right: 4px;">
+              ${notifs.length > 0 ? notifs.map(n => {
+                const isActive = n.active !== false;
+                return `
+                  <div style="border: 1.5px solid ${isActive ? 'rgba(108, 92, 231, 0.3)' : 'var(--border-color)'}; background: ${isActive ? 'rgba(108, 92, 231, 0.03)' : 'var(--bg-subtle)'}; border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; opacity: ${isActive ? '1' : '0.65'}; transition: all 0.2s ease;">
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="badge" style="background: ${isActive ? '#10B981' : '#6B7280'}; color: white; font-size: 10.5px; font-weight: 800; padding: 2px 8px; border-radius: 999px;">
+                          ${isActive ? '🟢 PUBLISHED (ON)' : '⚪ UNPUBLISHED (OFF)'}
+                        </span>
+                        <span class="badge" style="background: rgba(108, 92, 231, 0.12); color: #6C5CE7; font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px;">
+                          ${n.badge || 'Update'}
+                        </span>
+                      </div>
+                      <span style="font-size: 11.5px; color: var(--text-muted);">${formatTime(n.createdAt)}</span>
+                    </div>
+
+                    <div style="font-weight: 800; font-size: 15px; color: var(--text-main);">
+                      ${n.title}
+                    </div>
+
+                    <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.4;">
+                      ${n.message}
+                    </div>
+
+                    ${n.actionUrl ? `
+                      <div style="font-size: 11.5px; color: var(--primary); font-weight: 600;">
+                        🔗 Action Button: <strong>${n.actionText || 'View'}</strong> → <code>${n.actionUrl}</code>
+                      </div>
+                    ` : ''}
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-color); padding-top: 10px; margin-top: 4px; gap: 8px; flex-wrap: wrap;">
+                      
+                      <!-- Toggle ON/OFF Switch -->
+                      <button 
+                        class="btn btn-sm ${isActive ? 'btn-secondary' : 'btn-primary'}" 
+                        style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 12px;" 
+                        onclick="AdminApp.toggleNotification('${n.id}')"
+                        title="Toggle notification active status"
+                      >
+                        ${isActive ? '⏸️ Turn OFF' : '▶️ Turn ON (Publish)'}
+                      </button>
+
+                      <div style="display: flex; gap: 8px;">
+                        <button 
+                          class="btn btn-sm btn-secondary" 
+                          style="font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 12px;" 
+                          onclick="AdminApp.openEditNotificationModal('${n.id}')"
+                          title="Edit Title & Description"
+                        >
+                          ✏️ Edit
+                        </button>
+
+                        <button 
+                          class="btn btn-sm btn-outline" 
+                          style="font-size: 12px; font-weight: 700; color: var(--error); border-color: var(--error); border-radius: 999px; padding: 4px 10px;" 
+                          onclick="AdminApp.deleteNotification('${n.id}')"
+                          title="Delete notification"
+                        >
+                          🗑️ Delete
+                        </button>
+                      </div>
+
+                    </div>
+
+                  </div>
+                `;
+              }).join('') : `
+                <div style="text-align: center; padding: 40px 16px; color: var(--text-muted);">
+                  No notifications created yet. Use the form on the left to publish your first notification!
+                </div>
+              `}
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    `;
   },
 
   // ABOUT LIKEX YOUTUBE REELS & SHORTS SHOWCASE MANAGER
@@ -1180,6 +1428,17 @@ const AdminApp = {
           </div>
           <div class="kpi-label">WorldOfSMM Balance</div>
           <div class="kpi-value">$${(Number(stats.providerBalance) || 0).toFixed(2)} USD</div>
+        </div>
+
+        <div class="kpi-card" onclick="store.setAdminTab('notifications')" style="cursor: pointer;" title="Manage Customer Broadcast Notifications">
+          <div class="kpi-card-top">
+            <div class="kpi-icon-box" style="background: rgba(108, 92, 231, 0.15); color: #6C5CE7;">📢</div>
+            <span class="badge badge-success">Dynamic</span>
+          </div>
+          <div class="kpi-label">Broadcast Notifications</div>
+          <div class="kpi-value" style="font-size: 16.5px; color: #6C5CE7;">
+            ${(store.data.notifications || []).filter(n => n.active !== false).length} Active Live
+          </div>
         </div>
 
         <div class="kpi-card" onclick="store.setAdminTab('alerts')" style="cursor: pointer;" title="Manage WhatsApp & Gmail Low Balance Alerts">
@@ -4417,6 +4676,222 @@ const AdminApp = {
       message: msg
     });
     this.render(document.getElementById('screen-container'));
+  },
+
+  // --- Notification Manager Handlers ---
+  openEditNotificationModal(id) {
+    const store = window.store;
+    const notifs = store.getNotifications ? store.getNotifications(false) : (store.data.notifications || []);
+    const notif = notifs.find(n => String(n.id) === String(id));
+    if (!notif) return;
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!modal || !sheet) return;
+
+    sheet.innerHTML = `
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 20px;">✏️</span>
+          <h3 class="modal-title" style="margin: 0; font-size: 18px; font-weight: 800;">Edit Notification</h3>
+        </div>
+        <button class="modal-close" onclick="AdminApp.closeModal()">&times;</button>
+      </div>
+
+      <form onsubmit="AdminApp.handleUpdateNotification(event, '${notif.id}')" style="display: flex; flex-direction: column; gap: 14px; padding: 14px 4px;">
+        
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Notification Title: *</label>
+          <input 
+            type="text" 
+            id="admin-edit-notif-title" 
+            class="form-input" 
+            value="${notif.title || ''}" 
+            required 
+            style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+          />
+        </div>
+
+        <div class="form-group" style="margin-bottom: 0;">
+          <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Message / Description: *</label>
+          <textarea 
+            id="admin-edit-notif-message" 
+            class="form-input" 
+            required 
+            rows="3"
+            style="border-radius: 12px; font-size: 13px; resize: vertical;"
+          >${notif.message || ''}</textarea>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Badge Type:</label>
+            <select id="admin-edit-notif-badge-type" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px; font-weight: 700;">
+              <option value="offer" ${notif.badgeType === 'offer' ? 'selected' : ''}>🔥 Special Offer</option>
+              <option value="update" ${notif.badgeType === 'update' ? 'selected' : ''}>⚡ Service Update</option>
+              <option value="info" ${notif.badgeType === 'info' ? 'selected' : ''}>👑 VIP Notice</option>
+              <option value="announcement" ${notif.badgeType === 'announcement' ? 'selected' : ''}>📢 Announcement</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Badge Text:</label>
+            <input 
+              type="text" 
+              id="admin-edit-notif-badge-text" 
+              class="form-input" 
+              value="${notif.badge || 'Update'}"
+              style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+            />
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Action Target Tab:</label>
+            <select id="admin-edit-notif-action-url" class="form-select" style="min-height: 44px; border-radius: 12px; font-size: 12.5px;">
+              <option value="" ${!notif.actionUrl ? 'selected' : ''}>None (Just text)</option>
+              <option value="wallet" ${notif.actionUrl === 'wallet' ? 'selected' : ''}>💳 Add Funds (Wallet)</option>
+              <option value="new_order" ${notif.actionUrl === 'new_order' ? 'selected' : ''}>🛒 Services & Order</option>
+              <option value="support" ${notif.actionUrl === 'support' ? 'selected' : ''}>💬 VIP Support</option>
+              <option value="earn" ${notif.actionUrl === 'earn' ? 'selected' : ''}>💰 How to Earn</option>
+              <option value="orders" ${notif.actionUrl === 'orders' ? 'selected' : ''}>⏱️ Orders History</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Action Button Text:</label>
+            <input 
+              type="text" 
+              id="admin-edit-notif-action-text" 
+              class="form-input" 
+              value="${notif.actionText || ''}"
+              placeholder="e.g. Add Funds Now" 
+              style="min-height: 44px; border-radius: 12px; font-size: 13px;"
+            />
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-subtle); padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border-color);">
+          <div>
+            <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">Publish Status (ON/OFF)</div>
+            <div style="font-size: 11.5px; color: var(--text-secondary);">Is this notification actively published?</div>
+          </div>
+          <input type="checkbox" id="admin-edit-notif-active" ${notif.active !== false ? 'checked' : ''} style="width: 20px; height: 20px; accent-color: var(--primary); cursor: pointer;" />
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 6px;">
+          <button type="button" class="btn btn-secondary" style="flex: 1; min-height: 44px; border-radius: 12px;" onclick="AdminApp.closeModal()">
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary" style="flex: 2; min-height: 44px; border-radius: 12px; font-weight: 800;">
+            ✓ Save Changes
+          </button>
+        </div>
+
+      </form>
+    `;
+
+    modal.classList.add('active');
+  },
+
+  handleCreateNotification(event) {
+    if (event) event.preventDefault();
+    const title = (document.getElementById('admin-new-notif-title')?.value || '').trim();
+    const message = (document.getElementById('admin-new-notif-message')?.value || '').trim();
+    const badgeType = document.getElementById('admin-new-notif-badge-type')?.value || 'offer';
+    const badge = (document.getElementById('admin-new-notif-badge-text')?.value || '').trim() || 'Update';
+    const actionUrl = document.getElementById('admin-new-notif-action-url')?.value || '';
+    const actionText = (document.getElementById('admin-new-notif-action-text')?.value || '').trim();
+    const active = Boolean(document.getElementById('admin-new-notif-active')?.checked);
+
+    if (!title || !message) {
+      if (window.store) window.store.showToast('Please enter both Title and Message', 'error');
+      return;
+    }
+
+    if (window.store && window.store.createNotification) {
+      window.store.createNotification({
+        title,
+        message,
+        badgeType,
+        badge,
+        actionUrl,
+        actionText,
+        active
+      });
+      // Clear form
+      const titleEl = document.getElementById('admin-new-notif-title');
+      const msgEl = document.getElementById('admin-new-notif-message');
+      if (titleEl) titleEl.value = '';
+      if (msgEl) msgEl.value = '';
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleUpdateNotification(event, id) {
+    if (event) event.preventDefault();
+    const title = (document.getElementById('admin-edit-notif-title')?.value || '').trim();
+    const message = (document.getElementById('admin-edit-notif-message')?.value || '').trim();
+    const badgeType = document.getElementById('admin-edit-notif-badge-type')?.value || 'offer';
+    const badge = (document.getElementById('admin-edit-notif-badge-text')?.value || '').trim() || 'Update';
+    const actionUrl = document.getElementById('admin-edit-notif-action-url')?.value || '';
+    const actionText = (document.getElementById('admin-edit-notif-action-text')?.value || '').trim();
+    const active = Boolean(document.getElementById('admin-edit-notif-active')?.checked);
+
+    if (!title || !message) {
+      if (window.store) window.store.showToast('Please enter both Title and Message', 'error');
+      return;
+    }
+
+    if (window.store && window.store.updateNotification) {
+      window.store.updateNotification(id, {
+        title,
+        message,
+        badgeType,
+        badge,
+        actionUrl,
+        actionText,
+        active
+      });
+      this.closeModal();
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  toggleNotification(id) {
+    if (window.store && window.store.toggleNotificationStatus) {
+      window.store.toggleNotificationStatus(id);
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  deleteNotification(id) {
+    if (!confirm('Are you sure you want to delete this notification?')) return;
+    if (window.store && window.store.deleteNotification) {
+      window.store.deleteNotification(id);
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  resetDefaultNotifications() {
+    if (!confirm('Restore default LikeX demo notifications?')) return;
+    if (window.store) {
+      window.store.data.notifications = (window.SMM_DEFAULT_NOTIFICATIONS && JSON.parse(JSON.stringify(window.SMM_DEFAULT_NOTIFICATIONS))) || [];
+      window.store._persistNotifications();
+      window.store.notify();
+      window.store.showToast('✓ Default notifications restored & synced!', 'success');
+    }
+    this.render(document.getElementById('screen-container'));
+  },
+
+  closeModal() {
+    if (window.CustomerApp && window.CustomerApp.closeModal) {
+      window.CustomerApp.closeModal();
+    } else {
+      const modal = document.getElementById('generic-modal-backdrop');
+      if (modal) modal.classList.remove('active');
+    }
   }
 };
 

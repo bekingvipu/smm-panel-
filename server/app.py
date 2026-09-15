@@ -4,6 +4,7 @@ import os
 import sys
 import urllib.parse
 import re
+import time
 
 # Add parent directory to sys.path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -225,6 +226,29 @@ class SmmApiHandler(http.server.SimpleHTTPRequestHandler):
                 """)
                 return self._send_json([dict(row) for row in cursor.fetchall()])
 
+            # 11. Customer Notifications (Active Only)
+            elif path == '/api/customer/notifications':
+                cursor.execute("""
+                SELECT id, title, message, badge, badge_type as badgeType,
+                       action_url as actionUrl, action_text as actionText,
+                       is_active as active, created_at as createdAt
+                FROM notifications
+                WHERE is_active = 1
+                ORDER BY created_at DESC;
+                """)
+                return self._send_json([dict(row) for row in cursor.fetchall()])
+
+            # 12. Admin All Notifications
+            elif path == '/api/admin/notifications':
+                cursor.execute("""
+                SELECT id, title, message, badge, badge_type as badgeType,
+                       action_url as actionUrl, action_text as actionText,
+                       is_active as active, created_at as createdAt
+                FROM notifications
+                ORDER BY created_at DESC;
+                """)
+                return self._send_json([dict(row) for row in cursor.fetchall()])
+
             else:
                 return self._send_json({"error": "Endpoint not found"}, 404)
 
@@ -418,6 +442,45 @@ class SmmApiHandler(http.server.SimpleHTTPRequestHandler):
                 """, (target_provider_id, target_provider_id, service_id))
                 conn.commit()
 
+                return self._send_json({"success": True})
+
+            # 9. Admin: Create/Update Notification
+            elif path == '/api/admin/notifications':
+                notif_id = body.get('id', f"notif-{int(time.time()*1000)}")
+                title = body.get('title', '').strip()
+                message = body.get('message', '').strip()
+                badge = body.get('badge', 'Special Offer').strip()
+                badge_type = body.get('badgeType', 'offer').strip()
+                action_url = body.get('actionUrl', '').strip()
+                action_text = body.get('actionText', '').strip()
+                is_active = 1 if body.get('active', True) else 0
+
+                if not title or not message:
+                    return self._send_json({"error": "Title and Message are required."}, 400)
+
+                cursor.execute("""
+                INSERT INTO notifications (id, title, message, badge, badge_type, action_url, action_text, is_active)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(id) DO UPDATE SET
+                    title = excluded.title,
+                    message = excluded.message,
+                    badge = excluded.badge,
+                    badge_type = excluded.badge_type,
+                    action_url = excluded.action_url,
+                    action_text = excluded.action_text,
+                    is_active = excluded.is_active;
+                """, (notif_id, title, message, badge, badge_type, action_url, action_text, is_active))
+                conn.commit()
+
+                return self._send_json({"success": True, "id": notif_id})
+
+            # 10. Admin: Delete Notification
+            elif path == '/api/admin/notifications/delete':
+                notif_id = body.get('id')
+                if not notif_id:
+                    return self._send_json({"error": "Notification ID is required."}, 400)
+                cursor.execute("DELETE FROM notifications WHERE id = ?;", (notif_id,))
+                conn.commit()
                 return self._send_json({"success": True})
 
             else:
