@@ -82,13 +82,15 @@ window.SMM_DEFAULT_REELS = [
 
 window.INSTAGRAM_CATEGORIES = [
   'LikeX Special',
-  'Instagram Non-Drop Followers — Refill Guaranteed',
-  'Instagram Low-Drop Followers — No Refill',
-  'Instagram High-Drop Followers — No Refill',
-  'Instagram Views — No Drop',
-  'Instagram Likes — Non-Drop',
-  'Instagram Custom Comment — Non Drop',
-  'Instagram All Service'
+  'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+  'Instagram 👑 Low-Drop Followers — No Refill',
+  'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
+  'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
+  'Instagram 👑 High-Drop Followers — No Refill',
+  'Instagram 👑 Views — Non-Drop',
+  'Instagram 👑 Likes — Non-Drop',
+  'Instagram 👑 Comment / Custom Comment — No Drop',
+  'Instagram 👑 All Service'
 ];
 
 window.SMM_MOCK = {
@@ -196,16 +198,16 @@ window.SMM_MOCK = {
       id: 'sf-4137',
       rawId: '4137',
       platform: 'instagram',
-      subcategory: 'Instagram Non-Drop Followers — Refill Guaranteed',
+      subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: '👑👑Instagram Followers [ Premium Top Quality & 100% Non-Drop] 365days RG - 80k/d Speed',
       pricePer1k: 3.01,
-      min: 10,
+      min: 100,
       max: 100000,
       deliverySpeed: '⚡ 80K/Day Speed',
       startTime: '0 - 15 Mins',
       refillSupported: true,
       refillPeriod: '365 Days',
-      description: 'Top tier Instagram followers with 365 days Refill Guarantee via SocialFans (4237/4137).',
+      description: 'Top tier Instagram followers with 365 days Refill Guarantee via SocialFans (4137).',
       provider: 'socialfans',
       wholesaleCost: 2.0067,
       markupPercent: 50
@@ -214,7 +216,7 @@ window.SMM_MOCK = {
       id: 'sf-7244',
       rawId: '7244',
       platform: 'instagram',
-      subcategory: 'Instagram Non-Drop Followers — Refill Guaranteed',
+      subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: 'Insta Followers [Good & No-Drop] [All Flag] 365days RG - 50k/D',
       pricePer1k: 2.625,
       min: 10,
@@ -232,7 +234,7 @@ window.SMM_MOCK = {
       id: 'wos-7551',
       rawId: '7551',
       platform: 'instagram',
-      subcategory: 'Instagram Non-Drop Followers — Refill Guaranteed',
+      subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: 'Instagram Followers [ Max 50k ] | HQ | Low Drop | Instant Start | 365 Days ♻️ | 100K/day 🔥 Suggested',
       pricePer1k: 2.74,
       min: 100,
@@ -246,6 +248,42 @@ window.SMM_MOCK = {
       wholesaleCost: 1.827,
       markupPercent: 50
     },
+    {
+      id: 'sf-7365',
+      rawId: '7365',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      customerName: '👑Instagram Followers [ High Quality & 100% Non-Drop] 365days RG - 80k/d Speed',
+      pricePer1k: 3.56,
+      min: 100,
+      max: 100000,
+      deliverySpeed: '⚡ 80K/Day Speed',
+      startTime: 'Instant',
+      refillSupported: true,
+      refillPeriod: '365 Days',
+      description: 'High quality non-drop Instagram followers with 365 days refill via SocialFans (7365).',
+      provider: 'socialfans',
+      wholesaleCost: 2.375877,
+      markupPercent: 50
+    },
+    {
+      id: 'sf-7419',
+      rawId: '7419',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      customerName: '👑👑Instagram 🇮🇳Mixed Indian Followers [ Non-Drop] [ 365 Days RG ] 80k/day',
+      pricePer1k: 3.27,
+      min: 100,
+      max: 100000,
+      deliverySpeed: '⚡ 80K/Day Speed',
+      startTime: 'Instant',
+      refillSupported: true,
+      refillPeriod: '365 Days',
+      description: 'Mixed Indian non-drop followers with 365 days refill guarantee via SocialFans (7419).',
+      provider: 'socialfans',
+      wholesaleCost: 2.179279,
+      markupPercent: 50
+    },
 
     // -------------------------------------------------------------
     // INSTAGRAM - LOW-DROP FOLLOWERS (NO REFILL)
@@ -254,7 +292,7 @@ window.SMM_MOCK = {
       id: 'wos-2868',
       rawId: '2868',
       platform: 'instagram',
-      subcategory: 'Instagram Low-Drop Followers — No Refill',
+      subcategory: 'Instagram 👑 Low-Drop Followers — No Refill',
       customerName: '🔔 ⭐ Instagram HQ Followers R365 | 100k/Day [Best Seller Since 2021] Low Drop',
       pricePer1k: 2.835,
       min: 100,
@@ -270,13 +308,111 @@ window.SMM_MOCK = {
     },
 
     // -------------------------------------------------------------
-    // INSTAGRAM - VIEWS (NO DROP)
+    // INSTAGRAM - INDIAN FOLLOWERS — LOW DROP — NO REFILL
+    // -------------------------------------------------------------
+    {
+      id: 'wos-1838',
+      rawId: '1838',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
+      customerName: '🇮🇳Instagram Indian Followers 365 Days Refill 100k/day [Over Delivery]',
+      pricePer1k: 2.835,
+      min: 100,
+      max: 100000,
+      deliverySpeed: '⚡ 100K/Day',
+      startTime: '0 - 1 Hour',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Indian followers with high speed delivery via WorldOfSMM (1838).',
+      provider: 'worldofsmm',
+      wholesaleCost: 1.89,
+      markupPercent: 50
+    },
+    {
+      id: 'wos-6947',
+      rawId: '6947',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
+      customerName: '👑🇮🇳Instagram Followers [Premium Indian] [R365] [10k-20k/day]',
+      pricePer1k: 5.10,
+      min: 50,
+      max: 50000,
+      deliverySpeed: '⚡ 10K-20K/Day',
+      startTime: '0 - 1 Hour',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Premium active Indian followers via WorldOfSMM (6947).',
+      provider: 'worldofsmm',
+      wholesaleCost: 3.40,
+      markupPercent: 50
+    },
+    {
+      id: 'wos-7369',
+      rawId: '7369',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
+      customerName: '👑Instagram Followers [Real Active Indian] [R60] [50k/day]',
+      pricePer1k: 5.19,
+      min: 10,
+      max: 100000,
+      deliverySpeed: '⚡ 50K/Day',
+      startTime: '0 - 30 Mins',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Real active Indian profile followers via WorldOfSMM (7369).',
+      provider: 'worldofsmm',
+      wholesaleCost: 3.46,
+      markupPercent: 50
+    },
+
+    // -------------------------------------------------------------
+    // INSTAGRAM - INDIAN FOLLOWERS — NO GUARANTEE
+    // -------------------------------------------------------------
+    {
+      id: 'wos-6939',
+      rawId: '6939',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
+      customerName: '🇮🇳Instagram Indian Followers [HQ Accounts][10k/day]🚀',
+      pricePer1k: 1.12,
+      min: 100,
+      max: 300000,
+      deliverySpeed: '⚡ 10K/Day',
+      startTime: 'Instant',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Budget-friendly Indian HQ accounts followers via WorldOfSMM (6939).',
+      provider: 'worldofsmm',
+      wholesaleCost: 0.7454,
+      markupPercent: 50
+    },
+    {
+      id: 'wos-7259',
+      rawId: '7259',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
+      customerName: '🇮🇳Instagram Indian HQ Mix Followers [All Flag][10k/day] Story Acc + Post [NR]20k/day🚀',
+      pricePer1k: 2.07,
+      min: 10,
+      max: 50000,
+      deliverySpeed: '⚡ 20K/Day',
+      startTime: '0 - 30 Mins',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Indian HQ mix followers with story accounts via WorldOfSMM (7259).',
+      provider: 'worldofsmm',
+      wholesaleCost: 1.38,
+      markupPercent: 50
+    },
+
+    // -------------------------------------------------------------
+    // INSTAGRAM - VIEWS (NON-DROP)
     // -------------------------------------------------------------
     {
       id: 'sf-5011',
       rawId: '5011',
       platform: 'instagram',
-      subcategory: 'Instagram Views — No Drop',
+      subcategory: 'Instagram 👑 Views — Non-Drop',
       customerName: '👑👑🎯👁️Instagram Cheap Reel Views [Working Server] 2M/day',
       pricePer1k: 0.00787,
       min: 100,
@@ -294,7 +430,7 @@ window.SMM_MOCK = {
       id: 'sf-7294',
       rawId: '7294',
       platform: 'instagram',
-      subcategory: 'Instagram Views — No Drop',
+      subcategory: 'Instagram 👑 Views — Non-Drop',
       customerName: '👁️Instagram Video Views [ Good Speed ] [Instant Start] - 5M/Day',
       pricePer1k: 0.00325,
       min: 100,
@@ -308,6 +444,24 @@ window.SMM_MOCK = {
       wholesaleCost: 0.00217,
       markupPercent: 50
     },
+    {
+      id: 'wos-7637',
+      rawId: '7637',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 Views — Non-Drop',
+      customerName: '🎞️Instagram Video Views with Viewers [Instant] [10M/day] [IGTV+Post] Premium',
+      pricePer1k: 0.0288,
+      min: 100,
+      max: 2147483647,
+      deliverySpeed: '⚡ 10M/Day',
+      startTime: 'Instant',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Ultra fast video views with impression viewers via WorldOfSMM (7637).',
+      provider: 'worldofsmm',
+      wholesaleCost: 0.0192,
+      markupPercent: 50
+    },
 
     // -------------------------------------------------------------
     // INSTAGRAM - LIKES (NON-DROP)
@@ -316,7 +470,7 @@ window.SMM_MOCK = {
       id: 'sf-4997',
       rawId: '4997',
       platform: 'instagram',
-      subcategory: 'Instagram Likes — Non-Drop',
+      subcategory: 'Instagram 👑 Likes — Non-Drop',
       customerName: '👑❣️Instagram Likes [High Quality & Non-drop ] - 50k/day',
       pricePer1k: 0.111,
       min: 10,
@@ -332,13 +486,49 @@ window.SMM_MOCK = {
     },
 
     // -------------------------------------------------------------
-    // INSTAGRAM - CUSTOM COMMENT (NON DROP)
+    // INSTAGRAM - COMMENT / CUSTOM COMMENT (NO DROP)
     // -------------------------------------------------------------
+    {
+      id: 'wos-6087',
+      rawId: '6087',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
+      customerName: 'Instagram Custom Comments [Non Drop] 10k/day [Cheapest] Q1',
+      pricePer1k: 0.468,
+      min: 10,
+      max: 10000,
+      deliverySpeed: '⚡ 10K/Day',
+      startTime: '0 - 1 Hour',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'Custom comments with user-defined comment text via WorldOfSMM (6087).',
+      provider: 'worldofsmm',
+      wholesaleCost: 0.312,
+      markupPercent: 50
+    },
+    {
+      id: 'wos-6085',
+      rawId: '6085',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
+      customerName: 'Instagram Random Comments [Non Drop] 10k/day [Eng]',
+      pricePer1k: 0.641,
+      min: 10,
+      max: 100000,
+      deliverySpeed: '⚡ 10K/Day',
+      startTime: '0 - 1 Hour',
+      refillSupported: false,
+      refillPeriod: 'None',
+      description: 'English random natural comments via WorldOfSMM (6085).',
+      provider: 'worldofsmm',
+      wholesaleCost: 0.4275,
+      markupPercent: 50
+    },
     {
       id: 'wos-6433',
       rawId: '6433',
       platform: 'instagram',
-      subcategory: 'Instagram Custom Comment — Non Drop',
+      subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
       customerName: '🇮🇳Instagram Indian Mix Random Comments [10k/day] Non Drop',
       pricePer1k: 0.855,
       min: 1,
@@ -347,7 +537,7 @@ window.SMM_MOCK = {
       startTime: '0 - 1 Hour',
       refillSupported: false,
       refillPeriod: 'None',
-      description: 'Indian mix non-drop custom & random comments via WorldOfSMM (6433).',
+      description: 'Indian mix non-drop random comments via WorldOfSMM (6433).',
       provider: 'worldofsmm',
       wholesaleCost: 0.57,
       markupPercent: 50

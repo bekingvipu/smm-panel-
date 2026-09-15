@@ -953,13 +953,15 @@ const CustomerApp = {
 
     const INSTAGRAM_CATEGORIES = [
       'LikeX Special',
-      'Instagram Non-Drop Followers — Refill Guaranteed',
-      'Instagram Low-Drop Followers — No Refill',
-      'Instagram High-Drop Followers — No Refill',
-      'Instagram Views — No Drop',
-      'Instagram Likes — Non-Drop',
-      'Instagram Custom Comment — Non Drop',
-      'Instagram All Service'
+      'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      'Instagram 👑 Low-Drop Followers — No Refill',
+      'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
+      'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
+      'Instagram 👑 High-Drop Followers — No Refill',
+      'Instagram 👑 Views — Non-Drop',
+      'Instagram 👑 Likes — Non-Drop',
+      'Instagram 👑 Comment / Custom Comment — No Drop',
+      'Instagram 👑 All Service'
     ];
 
     let categories = [];
@@ -990,58 +992,80 @@ const CustomerApp = {
         return 3;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
-    } else if (this.currentCategory === 'Instagram Non-Drop Followers — Refill Guaranteed' && activePackages.length > 0) {
-      // Order: 4137, 7244, 7551
-      const order = ['4137', '7244', '7551'];
+    } else if ((this.currentCategory || '').includes('Non-Drop Followers — Refill Guaranteed') && activePackages.length > 0) {
+      // Order: 4137, 7244, 7551, 7365, 7419
+      const order = ['4137', '7244', '7551', '7365', '7419'];
       activePackages.sort((a, b) => {
-        const idxA = order.indexOf(String(a.rawId || a.id || ''));
-        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         if (idxA !== -1) return -1;
         if (idxB !== -1) return 1;
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
-    } else if (this.currentCategory === 'Instagram Low-Drop Followers — No Refill' && activePackages.length > 0) {
-      // Specified Order: 7405, 4137, 6440, 6481, 7419, 4144, 7426, 7244, 7414, 7418, 7365, 7370, 6479, 2868
-      const order = ['7405', '4137', '6440', '6481', '7419', '4144', '7426', '7244', '7414', '7418', '7365', '7370', '6479', '2868'];
+    } else if ((this.currentCategory || '').includes('Low-Drop Followers — No Refill') && !(this.currentCategory || '').includes('Indian') && activePackages.length > 0) {
+      // Specified Order: 7405, 6440, 6481, 4144, 7426, 7414, 7418, 7370, 6479, 2868
+      const order = ['7405', '6440', '6481', '4144', '7426', '7414', '7418', '7370', '6479', '2868'];
       activePackages.sort((a, b) => {
-        const idxA = order.indexOf(String(a.rawId || a.id || ''));
-        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         if (idxA !== -1) return -1;
         if (idxB !== -1) return 1;
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
-    } else if (this.currentCategory === 'Instagram Views — No Drop' && activePackages.length > 0) {
-      // Specified Order: 5011, 7294
-      const order = ['5011', '7294'];
+    } else if ((this.currentCategory || '').includes('Indian Followers — Low Drop — No Refill') && activePackages.length > 0) {
+      // Specified Order: 1838, 6947, 7369
+      const order = ['1838', '6947', '7369'];
       activePackages.sort((a, b) => {
-        const idxA = order.indexOf(String(a.rawId || a.id || ''));
-        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
+    } else if ((this.currentCategory || '').includes('Indian Followers — No Guarantee') && activePackages.length > 0) {
+      // Specified Order: 6939, 7259
+      const order = ['6939', '7259'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
+      });
+    } else if ((this.currentCategory || '').includes('Views — Non-Drop') && activePackages.length > 0) {
+      // Specified Order: 5011, 7294, 7637
+      const order = ['5011', '7294', '7637'];
+      activePackages.sort((a, b) => {
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
-    } else if (this.currentCategory === 'Instagram Likes — Non-Drop' && activePackages.length > 0) {
+    } else if ((this.currentCategory || '').includes('Likes — Non-Drop') && activePackages.length > 0) {
       // Specified Order: 4997, 7233, 7235, 7831, 7381
       const order = ['4997', '7233', '7235', '7831', '7381'];
       activePackages.sort((a, b) => {
-        const idxA = order.indexOf(String(a.rawId || a.id || ''));
-        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
-    } else if (this.currentCategory === 'Instagram Custom Comment — Non Drop' && activePackages.length > 0) {
-      // Flagship WorldOfSMM ID 6433
-      const order = ['6433'];
+    } else if ((this.currentCategory || '').includes('Comment / Custom Comment — No Drop') && activePackages.length > 0) {
+      // Specified Order: 6087 (Custom Comments), 6085 (Random Comments), 6433 (Indian Mix)
+      const order = ['6087', '6085', '6433'];
       activePackages.sort((a, b) => {
-        const idxA = order.indexOf(String(a.rawId || a.id || ''));
-        const idxB = order.indexOf(String(b.rawId || b.id || ''));
+        const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
+        const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
         if (idxA !== -1 && idxB !== -1) return idxA - idxB;
         if (idxA !== -1) return -1;
         if (idxB !== -1) return 1;
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
-    } else if (this.currentCategory === 'Instagram All Service') {
+    } else if ((this.currentCategory || '').includes('All Service')) {
       // Keep natural order where SocialFans 'Instagram Best Services' are featured at top
     } else if (activePackages.length > 0) {
       // Sort Lowest Price First (Low to High: ascending by cost)
@@ -1055,7 +1079,7 @@ const CustomerApp = {
     const activeService = activePackages.length > 0 ? activePackages[0] : null;
     const sellingPrice = activeService ? store.getSellingPrice(activeService.cost || 0.20) : 0;
     const isCommentService = activeService ? ((activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'))) : false;
-    const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom') || (activeService.name || '').toLowerCase().includes('emoji') || (activeService.name || '').toLowerCase().includes('random'));
+    const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom'));
     const effectiveMin = activeService ? (isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10)) : 10;
     const avgTime = activeService ? this.getServiceAverageTime(activeService) : '—';
 
@@ -1718,7 +1742,7 @@ const CustomerApp = {
 
         const isCatSpecial = (CustomerApp.currentCategory || '').toLowerCase().includes('likex special') || (CustomerApp.currentCategory || '').toLowerCase().includes('special very good');
         const isComment = name.toLowerCase().includes('comment') || (!isCatSpecial && (CustomerApp.currentCategory || '').toLowerCase().includes('comment'));
-        const isCustomComment = isComment && (name.toLowerCase().includes('custom') || name.toLowerCase().includes('emoji') || name.toLowerCase().includes('random'));
+        const isCustomComment = isComment && (name.toLowerCase().includes('custom'));
         const min = isComment ? Math.max(50, rawMin) : rawMin;
 
         if (commentsGroup) {
@@ -1863,7 +1887,7 @@ const CustomerApp = {
     
     const isCatSpecial = (CustomerApp.currentCategory || '').toLowerCase().includes('likex special') || (CustomerApp.currentCategory || '').toLowerCase().includes('special very good');
     const isComment = (serviceName || '').toLowerCase().includes('comment') || (!isCatSpecial && (CustomerApp.currentCategory || '').toLowerCase().includes('comment'));
-    const isCustomComment = isComment && ((serviceName || '').toLowerCase().includes('custom') || (serviceName || '').toLowerCase().includes('emoji') || (serviceName || '').toLowerCase().includes('random'));
+    const isCustomComment = isComment && ((serviceName || '').toLowerCase().includes('custom'));
     const min = isComment ? Math.max(50, rawMin) : rawMin;
 
     let comments = '';

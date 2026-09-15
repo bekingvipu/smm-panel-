@@ -755,7 +755,7 @@ class SmmStateStore {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
       const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
-      const isProtectedCat = s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
+      const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
         const liveInfo = this.getLiveRateInfo(sId, rId, prov);
         const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
@@ -775,7 +775,7 @@ class SmmStateStore {
       const sId = String(s.id);
       const rId = String(s.rawId || '');
       const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
-      const isProtectedCat = s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
+      const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
         const liveInfo = this.getLiveRateInfo(sId, rId, prov);
         const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
