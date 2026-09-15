@@ -783,4 +783,40 @@
   border: 1px solid rgba(56, 189, 248, 0.2);
 }
 
+/* Admin Orders Multi-Select & Bulk Actions */
+.admin-bulk-action-bar {
+  animation: slideDownBulk 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDownBulk {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-danger-soft {
+  background: rgba(239, 68, 68, 0.1);
+  color: #DC2626;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  transition: all 0.2s ease;
+}
+
+.btn-danger-soft:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+  border-color: #DC2626;
+}
+
+.admin-order-row-checkbox,
+#admin-orders-master-checkbox {
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+
+
 

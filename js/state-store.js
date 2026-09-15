@@ -88,6 +88,14 @@ class SmmStateStore {
       this.catalogCustomizations.disabledServiceIds.delete('wos-6433');
     }
 
+    // Initialize Admin deleted/archived orders Set (safe hide from admin view only)
+    try {
+      const savedDeleted = localStorage.getItem('likex_admin_deleted_orders');
+      this.adminDeletedOrderIds = new Set(savedDeleted ? JSON.parse(savedDeleted) : []);
+    } catch (e) {
+      this.adminDeletedOrderIds = new Set();
+    }
+
     // Initialize Live Announcement Ticker
     try {
       const savedAnnounce = localStorage.getItem('likex_announcement_config');
@@ -1495,8 +1503,63 @@ class SmmStateStore {
       }
     } catch (e) {}
 
-    ordersList.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
-    return ordersList;
+    let finalOrders = ordersList;
+    // Filter out deleted/hidden orders for admin console view without touching customer orders
+    if (this.adminDeletedOrderIds && this.adminDeletedOrderIds.size > 0) {
+      finalOrders = ordersList.filter(o => {
+        const id = String(o.id || '').trim();
+        const lxId = String(o.likeXOrderId || '').trim();
+        const provId = String(o.providerOrderId || '').trim();
+
+        if (this.adminDeletedOrderIds.has(id)) return false;
+        if (lxId && this.adminDeletedOrderIds.has(lxId)) return false;
+        if (provId && this.adminDeletedOrderIds.has(provId)) return false;
+        if (id && this.adminDeletedOrderIds.has(id.replace(/^LX/i, ''))) return false;
+        if (lxId && this.adminDeletedOrderIds.has(lxId.replace(/^LX/i, ''))) return false;
+        return true;
+      });
+    }
+
+    finalOrders.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+    return finalOrders;
+  }
+
+  // Admin soft-delete / hide orders from Admin Console (100% safe — customer orders & provider processing untouched)
+  adminDeleteOrders(orderIds) {
+    if (!Array.isArray(orderIds) || orderIds.length === 0) return { success: false, count: 0 };
+    if (!this.adminDeletedOrderIds) this.adminDeletedOrderIds = new Set();
+
+    let addedCount = 0;
+    orderIds.forEach(id => {
+      const sId = String(id || '').trim();
+      if (sId) {
+        this.adminDeletedOrderIds.add(sId);
+        this.adminDeletedOrderIds.add(sId.replace(/^LX/i, ''));
+        addedCount++;
+      }
+    });
+
+    try {
+      localStorage.setItem('likex_admin_deleted_orders', JSON.stringify([...this.adminDeletedOrderIds]));
+    } catch (e) {}
+
+    this.recalculateAdminStats();
+    this.notify();
+    return { success: true, count: addedCount };
+  }
+
+  adminDeleteOrder(orderId) {
+    return this.adminDeleteOrders([orderId]);
+  }
+
+  adminRestoreDeletedOrders() {
+    this.adminDeletedOrderIds = new Set();
+    try {
+      localStorage.removeItem('likex_admin_deleted_orders');
+    } catch (e) {}
+    this.recalculateAdminStats();
+    this.notify();
+    return { success: true };
   }
 
   // Get accurate count of registered customers
@@ -1579,13 +1642,14 @@ class SmmStateStore {
     try {
       let dataChanged = false;
 
-      // 1. Fetch users from Supabase first
+      // 1. Fetch users from Supabase with balance & spent
       const { data: supaUsers } = await window.supabaseClient
         .from('users')
-        .select('id, email, username, role');
+        .select('id, email, username, role, balance, spent');
 
       const userMap = new Map();
       if (supaUsers && supaUsers.length > 0) {
+        this.data.users = supaUsers;
         const prevUsers = localStorage.getItem('likex_supabase_users');
         const newUsersStr = JSON.stringify(supaUsers);
         if (prevUsers !== newUsersStr) {
@@ -1809,6 +1873,20 @@ class SmmStateStore {
         return Number(u.balance);
       }
     }
+
+    // 5. Check likex_supabase_users cached in localStorage
+    try {
+      const supaUsers = JSON.parse(localStorage.getItem('likex_supabase_users') || '[]');
+      if (Array.isArray(supaUsers)) {
+        const u = supaUsers.find(usr => 
+          (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
+          (usr.id && String(usr.id) === str)
+        );
+        if (u && u.balance !== undefined && u.balance !== null) {
+          return Number(u.balance);
+        }
+      }
+    } catch (e) {}
 
     return null;
   }

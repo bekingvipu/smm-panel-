@@ -2519,8 +2519,127 @@ const AdminApp = {
     this.updateAdminOrdersTableView();
   },
 
-  setAdminOrdersFilter(filter) {
-    this.adminOrdersFilter = filter;
+  selectedOrderIds: new Set(),
+
+  renderAdminOrdersBulkBar() {
+    const count = this.selectedOrderIds ? this.selectedOrderIds.size : 0;
+    if (count === 0) return '';
+    return `
+      <div class="admin-bulk-action-bar" style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #1E1B4B, #312E81); color: white; padding: 12px 18px; border-radius: 14px; box-shadow: 0 6px 20px rgba(49, 46, 129, 0.28); margin-bottom: 8px; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 20px;">☑️</span>
+          <span style="font-weight: 800; font-size: 14px; letter-spacing: 0.2px;">
+            ${count} ${count === 1 ? 'Order' : 'Orders'} Selected
+          </span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <button 
+            type="button" 
+            class="btn btn-sm" 
+            onclick="AdminApp.deleteSelectedOrders()" 
+            style="background: #EF4444; color: white; font-weight: 800; border-radius: 999px; padding: 8px 18px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 10px rgba(239, 68, 68, 0.35); font-size: 13px;"
+          >
+            <span>🗑️</span>
+            <span>Delete Selected (${count})</span>
+          </button>
+          <button 
+            type="button" 
+            class="btn btn-sm btn-outline" 
+            onclick="AdminApp.clearSelectedOrders()" 
+            style="color: white; border-color: rgba(255, 255, 255, 0.4); border-radius: 999px; font-weight: 700; padding: 7px 16px; font-size: 12.5px; background: rgba(255,255,255,0.08);"
+          >
+            ✕ Deselect All
+          </button>
+        </div>
+      </div>
+    `;
+  },
+
+  toggleSelectAllOrders(event) {
+    const checked = event.target.checked;
+    const store = window.store;
+    const filtered = this.getFilteredOrders(store);
+
+    if (!this.selectedOrderIds) this.selectedOrderIds = new Set();
+
+    if (checked) {
+      filtered.forEach(o => this.selectedOrderIds.add(String(o.id)));
+    } else {
+      this.selectedOrderIds.clear();
+    }
+    this.updateAdminOrdersTableView();
+  },
+
+  toggleSelectOrder(orderId, event) {
+    if (event) event.stopPropagation();
+    if (!this.selectedOrderIds) this.selectedOrderIds = new Set();
+    const sId = String(orderId);
+    if (this.selectedOrderIds.has(sId)) {
+      this.selectedOrderIds.delete(sId);
+    } else {
+      this.selectedOrderIds.add(sId);
+    }
+    this.updateAdminOrdersTableView();
+  },
+
+  clearSelectedOrders() {
+    if (this.selectedOrderIds) this.selectedOrderIds.clear();
+    this.updateAdminOrdersTableView();
+  },
+
+  deleteSelectedOrders() {
+    const ids = Array.from(this.selectedOrderIds || []);
+    if (ids.length === 0) {
+      window.store.showToast('No orders selected for deletion.', 'info');
+      return;
+    }
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!modal || !sheet) return;
+
+    sheet.className = 'modal-sheet';
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: #DC2626; display: flex; align-items: center; gap: 8px;">
+          <span>🗑️</span>
+          <span>Delete ${ids.length} Selected Order(s)?</span>
+        </h3>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+      <div style="padding: 10px 0;">
+        <p style="font-size: 14px; color: var(--text-main); margin-bottom: 12px; line-height: 1.5;">
+          Are you sure you want to remove <strong>${ids.length} order(s)</strong> from the Admin Console view?
+        </p>
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 10px; padding: 12px; font-size: 12.5px; color: #065F46; margin-bottom: 16px;">
+          🛡️ <strong>Safety Guarantee:</strong> Customer accounts, active order delivery, provider processing, and wallet history are 100% protected and unaffected. This action only cleans your admin panel view.
+        </div>
+        <div style="display: flex; gap: 10px; justify-content: flex-end;">
+          <button type="button" class="btn btn-outline" onclick="CustomerApp.closeModal()" style="border-radius: 10px; font-weight: 700;">
+            Cancel
+          </button>
+          <button type="button" class="btn btn-danger" onclick="AdminApp.confirmDeleteOrders(${JSON.stringify(ids).replace(/"/g, '&quot;')})" style="background: #DC2626; color: white; border-radius: 10px; font-weight: 800; padding: 8px 20px; border: none; cursor: pointer;">
+            Yes, Delete from Admin 🗑️
+          </button>
+        </div>
+      </div>
+    `;
+    modal.classList.add('active');
+  },
+
+  deleteSingleOrder(orderId, event) {
+    if (event) event.stopPropagation();
+    this.selectedOrderIds = new Set([String(orderId)]);
+    this.deleteSelectedOrders();
+  },
+
+  confirmDeleteOrders(ids) {
+    const store = window.store;
+    if (!store) return;
+    const res = store.adminDeleteOrders(ids);
+    if (this.selectedOrderIds) this.selectedOrderIds.clear();
+    CustomerApp.closeModal();
+    store.showToast(`${res.count || ids.length} order(s) removed from Admin Console. 🧹`, 'success');
     this.updateAdminOrdersTableView();
   },
 
@@ -2733,8 +2852,22 @@ const AdminApp = {
       const delivered = Math.max(0, qty - remains);
       const progressPct = qty > 0 ? Math.min(100, Math.max(0, Math.round((delivered / qty) * 100))) : 0;
 
+      const isSelected = this.selectedOrderIds && this.selectedOrderIds.has(String(o.id));
       return `
-        <tr style="cursor: pointer;" onclick="AdminApp.openOrderDetailsModal('${o.id}', event)">
+        <tr style="cursor: pointer; ${isSelected ? 'background: rgba(99, 102, 241, 0.08);' : ''}" onclick="AdminApp.openOrderDetailsModal('${o.id}', event)">
+          <!-- 0. SELECT CHECKBOX -->
+          <td style="text-align: center; padding-left: 12px; padding-right: 6px; width: 42px;" onclick="event.stopPropagation()">
+            <input 
+              type="checkbox" 
+              class="admin-order-row-checkbox" 
+              data-order-id="${o.id}" 
+              ${isSelected ? 'checked' : ''} 
+              onchange="AdminApp.toggleSelectOrder('${o.id}', event)" 
+              style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" 
+              title="Select order #${displayLikeXId}"
+            />
+          </td>
+
           <!-- 1. LIKEX ORDER ID & CREATION TIME -->
           <td>
             <div style="display: flex; flex-direction: column; gap: 3px;" onclick="event.stopPropagation()">
@@ -2935,6 +3068,15 @@ const AdminApp = {
               >
                 🔄
               </button>
+              <button 
+                type="button" 
+                class="btn btn-xs" 
+                onclick="AdminApp.deleteSingleOrder('${o.id}', event)" 
+                style="border-radius: 8px; font-weight: 700; padding: 4px 7px; font-size: 11px; background: rgba(239, 68, 68, 0.1); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.25); cursor: pointer;" 
+                title="Delete this order from Admin Console"
+              >
+                🗑️
+              </button>
             </div>
           </td>
         </tr>
@@ -2948,6 +3090,8 @@ const AdminApp = {
     const countEl = document.getElementById('admin-orders-count-label');
     const clearBtn = document.getElementById('admin-orders-clear-btn');
     const searchInput = document.getElementById('admin-orders-search-input');
+    const bulkContainer = document.getElementById('admin-orders-bulk-bar-container');
+    const masterCb = document.getElementById('admin-orders-master-checkbox');
 
     if (!tbody) {
       const screenContainer = document.getElementById('screen-container');
@@ -2959,6 +3103,17 @@ const AdminApp = {
     const filtered = this.getFilteredOrders(store);
 
     tbody.innerHTML = this.renderAdminOrderRows(filtered, store);
+
+    if (bulkContainer) {
+      bulkContainer.innerHTML = this.renderAdminOrdersBulkBar();
+    }
+
+    if (masterCb) {
+      const hasSelected = this.selectedOrderIds && this.selectedOrderIds.size > 0;
+      const allSelected = filtered.length > 0 && filtered.every(o => this.selectedOrderIds && this.selectedOrderIds.has(String(o.id)));
+      masterCb.checked = allSelected;
+      masterCb.indeterminate = hasSelected && !allSelected;
+    }
 
     if (countEl) {
       countEl.innerText = `Showing ${filtered.length} of ${allOrders.length} Orders`;
@@ -2993,8 +3148,16 @@ const AdminApp = {
       return o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
     });
 
+    const hasSelected = this.selectedOrderIds && this.selectedOrderIds.size > 0;
+    const allSelected = filtered.length > 0 && filtered.every(o => this.selectedOrderIds && this.selectedOrderIds.has(String(o.id)));
+
     return `
-      <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Dynamic Bulk Action Bar for Selected Orders -->
+        <div id="admin-orders-bulk-bar-container">
+          ${this.renderAdminOrdersBulkBar()}
+        </div>
+
         ${queuedOrders.length > 0 ? `
           <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
           <div class="card" style="margin-bottom: 2px; padding: 18px 20px; border: 1.5px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 16px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);">
@@ -3073,6 +3236,16 @@ const AdminApp = {
             <table class="sync-data-table">
               <thead>
                 <tr>
+                  <th style="width: 42px; text-align: center; padding-left: 12px; padding-right: 6px;">
+                    <input 
+                      type="checkbox" 
+                      id="admin-orders-master-checkbox" 
+                      ${allSelected ? 'checked' : ''} 
+                      onchange="AdminApp.toggleSelectAllOrders(event)" 
+                      style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" 
+                      title="Select / Deselect all visible orders"
+                    />
+                  </th>
                   <th style="min-width: 150px;">LIKEX ORDER & DATE</th>
                   <th style="min-width: 160px;">CUSTOMER</th>
                   <th style="min-width: 230px;">SERVICE</th>
@@ -3080,7 +3253,7 @@ const AdminApp = {
                   <th style="min-width: 170px;">TARGET & QTY</th>
                   <th style="min-width: 140px;">CHARGE / COST / PROFIT</th>
                   <th style="min-width: 140px;">STATUS & PROGRESS</th>
-                  <th style="min-width: 100px;">ACTIONS</th>
+                  <th style="min-width: 110px;">ACTIONS</th>
                 </tr>
               </thead>
               <tbody id="admin-orders-table-body">
@@ -3243,7 +3416,7 @@ const AdminApp = {
           </div>
           <div class="order-data-row">
             <span class="order-data-label">User Wallet Balance:</span>
-            <span class="order-data-val" style="color: var(--primary); font-weight: 800;">${currentWalletBalStr}</span>
+            <span class="order-data-val" id="order-detail-user-wallet-balance" style="color: var(--primary); font-weight: 800;">${currentWalletBalStr}</span>
           </div>
           ${balAtOrderStr ? `
             <div class="order-data-row">
@@ -3505,6 +3678,25 @@ const AdminApp = {
     `;
 
     CustomerApp.openModal();
+
+    // Dynamically fetch live customer wallet balance from Supabase users table / local store
+    if (!isGuest && custEmail && window.supabaseClient) {
+      window.supabaseClient
+        .from('users')
+        .select('balance')
+        .eq('email', custEmail.toLowerCase())
+        .limit(1)
+        .then(({ data, error }) => {
+          if (!error && data && data.length > 0 && data[0].balance !== null && data[0].balance !== undefined) {
+            const liveBal = Number(data[0].balance);
+            const el = document.getElementById('order-detail-user-wallet-balance');
+            if (el && store && store.formatMoney) {
+              el.textContent = store.formatMoney(liveBal);
+            }
+          }
+        })
+        .catch(() => {});
+    }
   },
 
   /* ==========================================================

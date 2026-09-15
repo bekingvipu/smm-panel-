@@ -929,6 +929,7 @@ const CustomerApp = {
     const rawServices = store.getActiveServices ? store.getActiveServices() : (window.JAP_SERVICES || []);
     const plat = this.currentPlatform || 'instagram';
     const query = (this.searchQuery || '').trim().toLowerCase();
+    const cleanQuery = query.replace(/^#/, '').trim();
 
     // Exclude unwanted services/categories: JAP EXCLUSIVE and AI Growth Package
     const isExcluded = (s) => {
@@ -941,12 +942,58 @@ const CustomerApp = {
 
     let filteredServices = rawServices.filter(s => !isExcluded(s));
 
-    if (query) {
-      filteredServices = filteredServices.filter(s => 
-        String(s.id).includes(query) || 
-        (s.name || '').toLowerCase().includes(query) ||
-        (s.category || '').toLowerCase().includes(query)
+    // Helper functions for matching service IDs
+    const getCleanServiceId = (s) => String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '').trim().toLowerCase();
+    const getFullServiceId = (s) => String(s.id || '').trim().toLowerCase();
+    const getRawServiceId = (s) => String(s.rawId || '').trim().toLowerCase();
+    const getProviderServiceId = (s) => String(s.provider_service_id || s.providerServiceId || s.service || '').trim().toLowerCase();
+
+    let exactMatchedService = null;
+
+    if (cleanQuery) {
+      // 1. Direct Exact ID match check across ALL services in the catalog
+      exactMatchedService = filteredServices.find(s => 
+        getCleanServiceId(s) === cleanQuery ||
+        getFullServiceId(s) === cleanQuery ||
+        getRawServiceId(s) === cleanQuery ||
+        (getProviderServiceId(s) && getProviderServiceId(s) === cleanQuery)
       );
+
+      if (exactMatchedService) {
+        // Auto-switch active category & platform to match the exact service
+        this.currentCategory = exactMatchedService.category;
+        if (exactMatchedService.platform) {
+          this.currentPlatform = exactMatchedService.platform;
+        }
+      }
+
+      // 2. Filter matching services across ALL categories & platforms
+      const queryTokens = cleanQuery.split(/\s+/).filter(Boolean);
+      filteredServices = filteredServices.filter(s => {
+        const cleanId = getCleanServiceId(s);
+        const fullId = getFullServiceId(s);
+        const rawId = getRawServiceId(s);
+        const provId = getProviderServiceId(s);
+        const name = (s.name || '').toLowerCase();
+        const cat = (s.category || '').toLowerCase();
+
+        const isDirectMatch = cleanId === cleanQuery ||
+               fullId === cleanQuery ||
+               rawId === cleanQuery ||
+               (provId && provId === cleanQuery) ||
+               cleanId.includes(cleanQuery) ||
+               fullId.includes(cleanQuery) ||
+               rawId.includes(cleanQuery) ||
+               (provId && provId.includes(cleanQuery)) ||
+               name.includes(cleanQuery) ||
+               cat.includes(cleanQuery);
+
+        const isTokenMatch = queryTokens.length > 1 && queryTokens.every(tok => 
+          name.includes(tok) || cat.includes(tok) || cleanId.includes(tok) || fullId.includes(tok)
+        );
+
+        return isDirectMatch || isTokenMatch;
+      });
     } else if (plat !== 'all') {
       filteredServices = filteredServices.filter(s => (s.platform || 'other') === plat);
     }
@@ -965,7 +1012,20 @@ const CustomerApp = {
     ];
 
     let categories = [];
-    if (plat === 'instagram') {
+    if (cleanQuery) {
+      // When searching, populate categories dynamically from all search matches
+      const matchingCats = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
+      categories = matchingCats;
+
+      // If an exact match exists, prioritize its category at index 0
+      if (exactMatchedService && categories.includes(exactMatchedService.category)) {
+        categories = [exactMatchedService.category, ...categories.filter(c => c !== exactMatchedService.category)];
+      }
+
+      if (categories.length > 0 && (!this.currentCategory || !categories.includes(this.currentCategory))) {
+        this.currentCategory = exactMatchedService ? exactMatchedService.category : categories[0];
+      }
+    } else if (plat === 'instagram') {
       categories = [...INSTAGRAM_CATEGORIES];
     } else if (plat === 'all') {
       const otherCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
@@ -980,7 +1040,6 @@ const CustomerApp = {
     }
 
     let activePackages = filteredServices.filter(s => s.category === this.currentCategory);
-
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special');
 
     if (isLikeXSpecial && activePackages.length > 0) {
@@ -1074,6 +1133,14 @@ const CustomerApp = {
         const costB = parseFloat(b.cost) || 0;
         return costA - costB;
       });
+    }
+
+    // If query has exact match, prioritize it at the top of activePackages after all sorting
+    if (cleanQuery && exactMatchedService && activePackages.some(s => s.id === exactMatchedService.id)) {
+      activePackages = [
+        exactMatchedService,
+        ...activePackages.filter(s => s.id !== exactMatchedService.id)
+      ];
     }
 
     const activeService = activePackages.length > 0 ? activePackages[0] : null;
@@ -1559,6 +1626,10 @@ const CustomerApp = {
     this.scrollActivePlatformIntoView(this.currentPlatform || 'instagram');
   },
 
+  handleServiceChange(serviceId) {
+    this.selectServicePackageItem(null, serviceId);
+  },
+
   getServiceTags(service) {
     if (!service) return [];
     const tags = [];
@@ -1637,17 +1708,17 @@ const CustomerApp = {
       serviceSelect.value = serviceId;
       serviceSelect.dispatchEvent(new Event('change'));
     }
-    const rawServices = window.mockServices || [];
-    const store = window.store;
+    const rawServices = (window.store && window.store.getActiveServices ? window.store.getActiveServices() : (window.JAP_SERVICES || window.mockServices || []));
+    const store = window.store || {};
     const s = rawServices.find(item => String(item.id) === String(serviceId));
     if (s) {
-      const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '');
+      const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
       const badge = document.getElementById('trigger-service-id-badge');
       if (badge) badge.textContent = cleanId;
       const text = document.getElementById('trigger-service-name-text');
       if (text) text.textContent = s.name;
       const rate = document.getElementById('trigger-service-rate-text');
-      if (rate) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1)) + '/1K';
+      if (rate && store.getSellingPrice && store.formatMoney) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1)) + '/1K';
 
       if (window.PixelTracker) {
         window.PixelTracker.trackViewContent({
