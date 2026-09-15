@@ -1956,9 +1956,9 @@ const CustomerApp = {
       }, { silent: true });
 
       if (res && res.success) {
-        // Track Purchase
+        // Track Order Fulfillment / Custom Event (prevents inflating Meta Ads Sales conversion numbers on internal wallet orders)
         if (window.PixelTracker) {
-          window.PixelTracker.trackPurchase({
+          window.PixelTracker.trackOrderPlaced({
             orderId: res.providerOrderId || res.orderId,
             likeXOrderId: res.orderId,
             amount: res.totalCost || totalCost,
@@ -2300,6 +2300,18 @@ const CustomerApp = {
           utr: data.utr || orderId,
           newBalance: window.store.data.customer.balance
         });
+
+        // Track Real Verified Purchase on payment confirmation
+        if (window.PixelTracker) {
+          window.PixelTracker.trackPurchase({
+            orderId: data.utr || orderId,
+            amount: amount,
+            serviceName: 'LikeX Wallet Deposit',
+            currency: 'INR',
+            email: window.store.data.customer?.email,
+            phone: window.store.data.customer?.phone
+          });
+        }
 
         window.store.showToast('🎉 Payment Confirmed! ₹' + amount + ' added to wallet.', 'success');
         return;

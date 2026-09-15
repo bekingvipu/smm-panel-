@@ -47,6 +47,42 @@ const PixelTracker = {
   },
 
   /**
+   * Set user properties for Advanced Matching (improves Event Match Quality from 6/10 to 8+/10)
+   */
+  setUser(userData = {}) {
+    if (!userData) return;
+    const cleanEmail = (userData.email || '').trim().toLowerCase();
+    const cleanPhone = (userData.phone || '').trim().replace(/[^0-9]/g, '');
+    const cleanName = (userData.name || '').trim();
+
+    const advancedMatching = {};
+    if (cleanEmail && cleanEmail.includes('@') && !cleanEmail.includes('customer@likex.in') && !cleanEmail.includes('alex@')) {
+      advancedMatching.em = cleanEmail;
+    }
+    if (cleanPhone && cleanPhone.length >= 10) {
+      advancedMatching.ph = cleanPhone;
+    }
+    if (cleanName && cleanName !== 'Guest Visitor') {
+      const parts = cleanName.split(' ');
+      advancedMatching.fn = parts[0] ? parts[0].toLowerCase() : '';
+      if (parts.length > 1) {
+        advancedMatching.ln = parts.slice(1).join(' ').toLowerCase();
+      }
+    }
+
+    if (Object.keys(advancedMatching).length > 0) {
+      try {
+        if (typeof window !== 'undefined' && typeof window.fbq === 'function') {
+          window.fbq('init', this.pixelId || this.defaultPixelId, advancedMatching);
+          console.log('[PixelTracker] Advanced matching updated with user data');
+        }
+      } catch (e) {
+        console.warn('[PixelTracker] Could not set advanced matching:', e);
+      }
+    }
+  },
+
+  /**
    * Track PageView / Screen Navigation
    * @param {string} pageName 
    * @param {string} url 
@@ -80,7 +116,7 @@ const PixelTracker = {
   },
 
   /**
-   * Track InitiateCheckout (When customer starts placing an order)
+   * Track InitiateCheckout (When customer starts placing an order or opens deposit)
    */
   trackInitiateCheckout({ serviceName, categoryName, amount, quantity, serviceId, targetLink } = {}) {
     const val = Number(amount) || 0;
@@ -108,25 +144,96 @@ const PixelTracker = {
   },
 
   /**
-   * Track Purchase (When order is successfully placed or funds added)
+   * Check if a purchase / order ID was already tracked (prevents duplicate fires on refresh)
    */
-  trackPurchase({ orderId, amount, serviceName, quantity, currency = 'INR' } = {}) {
+  isPurchaseTracked(orderId) {
+    if (!orderId) return false;
+    try {
+      const stored = localStorage.getItem('likex_tracked_purchases');
+      const list = stored ? JSON.parse(stored) : [];
+      return list.includes(String(orderId));
+    } catch (e) {
+      return false;
+    }
+  },
+
+  /**
+   * Mark purchase / order ID as tracked in storage
+   */
+  markPurchaseTracked(orderId) {
+    if (!orderId) return;
+    try {
+      const stored = localStorage.getItem('likex_tracked_purchases');
+      const list = stored ? JSON.parse(stored) : [];
+      if (!list.includes(String(orderId))) {
+        list.push(String(orderId));
+        // Keep last 100 orders only
+        if (list.length > 100) list.shift();
+        localStorage.setItem('likex_tracked_purchases', JSON.stringify(list));
+      }
+    } catch (e) {}
+  },
+
+  /**
+   * Track Real Purchase (Fired ONLY on verified payment / wallet deposit confirmation)
+   * Includes deduplication key { eventID: orderId } to prevent duplicate pixel fires.
+   */
+  trackPurchase({ orderId, amount, serviceName = 'LikeX Wallet Deposit', quantity = 1, currency = 'INR', email, phone } = {}) {
     const val = Number(amount) || 0;
-    this.fbqSafe('track', 'Purchase', {
-      content_name: serviceName || 'LikeX Order Placement',
-      content_ids: orderId ? [String(orderId)] : ['likex_order_' + Date.now()],
+    if (val <= 0) return;
+
+    const dedupeId = orderId ? String(orderId).trim() : `lkx_${Date.now()}`;
+
+    // Deduplication check: prevent multiple fires on page reload or re-render
+    if (orderId && this.isPurchaseTracked(dedupeId)) {
+      console.log(`[PixelTracker] Duplicate purchase event prevented for ID: ${dedupeId}`);
+      return;
+    }
+
+    // Set advanced matching if email/phone provided
+    if (email || phone) {
+      this.setUser({ email, phone });
+    }
+
+    const eventParams = {
+      content_name: serviceName,
+      content_ids: [dedupeId],
       content_type: 'product',
       value: Number(val.toFixed(2)),
       currency: currency,
       num_items: Number(quantity) || 1,
-      order_id: orderId ? String(orderId) : undefined
+      order_id: dedupeId
+    };
+
+    // Pass eventID as 4th parameter for Meta CAPI & browser pixel deduplication
+    this.fbqSafe('track', 'Purchase', eventParams, { eventID: dedupeId });
+    this.markPurchaseTracked(dedupeId);
+
+    console.log(`[PixelTracker] Verified Purchase Tracked: ₹${val} (EventID: ${dedupeId})`);
+  },
+
+  /**
+   * Track SMM Order Placed from wallet (Custom event so it doesn't inflate Meta Sales conversion numbers)
+   */
+  trackOrderPlaced({ orderId, amount, serviceName, quantity } = {}) {
+    const val = Number(amount) || 0;
+    this.fbqSafe('trackCustom', 'OrderPlaced', {
+      content_name: serviceName || 'LikeX Service Order',
+      content_ids: orderId ? [String(orderId)] : ['likex_order_' + Date.now()],
+      value: Number(val.toFixed(2)),
+      currency: 'INR',
+      quantity: Number(quantity) || 1
     });
   },
 
   /**
    * Track Lead / CompleteRegistration (Customer Sign-In / Registration)
    */
-  trackLead({ method = 'web', userId = '' } = {}) {
+  trackLead({ method = 'web', userId = '', email = '', phone = '' } = {}) {
+    if (email || phone) {
+      this.setUser({ email, phone });
+    }
+
     this.fbqSafe('track', 'CompleteRegistration', {
       registration_method: method,
       status: 'success',

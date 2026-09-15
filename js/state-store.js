@@ -1963,7 +1963,14 @@ class SmmStateStore {
     if (window.PixelTracker) {
       window.PixelTracker.trackLead({
         method: 'login_or_register',
-        userId: email
+        userId: email,
+        email: email,
+        phone: this.data.customer?.phone || ''
+      });
+      window.PixelTracker.setUser({
+        email: email,
+        name: this.data.customer?.name,
+        phone: this.data.customer?.phone
       });
     }
 
@@ -3353,6 +3360,18 @@ class SmmStateStore {
       } catch (err) {
         console.warn('[LikeX Anti-Fraud] Supabase UTR registration warning:', err);
       }
+    }
+
+    // Trigger verified purchase for manual UTR credit (with deduplication)
+    if (window.PixelTracker && amountInInr > 0) {
+      window.PixelTracker.trackPurchase({
+        orderId: `UTR-${cleanUtr}`,
+        amount: amountInInr,
+        serviceName: 'Manual UTR Wallet Deposit',
+        currency: 'INR',
+        email: this.data.customer?.email,
+        phone: this.data.customer?.phone
+      });
     }
   }
 
