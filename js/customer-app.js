@@ -4012,42 +4012,69 @@ const CustomerApp = {
         <!-- 🎁 Official Trustpilot ₹100 Mission Task Card -->
         <div class="earn-tp-mission-card">
           <div class="earn-tp-badge-row">
-            <span class="earn-tp-badge">⭐ INSTANT WALLET TASK</span>
-            <span class="earn-tp-stars-tag">★ Trustpilot Verified</span>
+            <div class="earn-tp-badge">
+              <span class="earn-tp-pulse-dot"></span>
+              <span>⭐ INSTANT WALLET TASK</span>
+            </div>
+            <div class="earn-tp-tags-group">
+              <span class="earn-tp-reward-tag">
+                <span class="earn-tp-reward-icon">🎁</span>
+                <span>Get <strong>₹100 Free</strong></span>
+              </span>
+              <span class="earn-tp-stars-tag">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.784 1.399 8.163L12 18.896l-7.333 3.861 1.399-8.163-5.934-5.784 8.2-1.192z"/>
+                </svg>
+                <span>Trustpilot Verified</span>
+              </span>
+            </div>
           </div>
+          
           <div class="earn-tp-content">
-            <h3 class="earn-tp-title">Review LikeX on Trustpilot & Get ₹100 Free Wallet Balance</h3>
-            <p class="earn-tp-desc">Apna honest feedback aur review Trustpilot par drop karein. Bas 1 minute ka quick task complete karein aur hamari team aapke LikeX wallet me turant ₹100 balance add kar degi!</p>
+            <div class="earn-tp-header-block">
+              <h3 class="earn-tp-title">
+                Review LikeX on Trustpilot &amp; Get <span class="earn-tp-title-highlight">₹100 Free Wallet Balance</span>
+              </h3>
+              <p class="earn-tp-desc">
+                Apna honest feedback aur review Trustpilot par drop karein. Bas 1 minute ka quick task complete karein aur LikeX wallet me turant ₹100 direct balance add karwayein!
+              </p>
+            </div>
             
             <div class="earn-tp-steps">
               <div class="earn-tp-step">
-                <span class="earn-step-num">1</span>
-                <div>
-                  <strong>Submit Honest Review</strong>
-                  <p>Trustpilot par rating & review dein</p>
+                <div class="earn-step-badge">1</div>
+                <div class="earn-step-body">
+                  <strong class="earn-step-title">Submit Honest Review</strong>
+                  <p class="earn-step-desc">Trustpilot link open karke rating &amp; feedback submit karein</p>
                 </div>
               </div>
               <div class="earn-tp-step">
-                <span class="earn-step-num">2</span>
-                <div>
-                  <strong>Take Screenshot</strong>
-                  <p>Submitted review ka screenshot lein</p>
+                <div class="earn-step-badge">2</div>
+                <div class="earn-step-body">
+                  <strong class="earn-step-title">Take Screenshot</strong>
+                  <p class="earn-step-desc">Submitted review ka clear screenshot lein</p>
                 </div>
               </div>
               <div class="earn-tp-step">
-                <span class="earn-step-num">3</span>
-                <div>
-                  <strong>Get ₹100 in Wallet</strong>
-                  <p>WhatsApp/TG par bhejein aur cash payein</p>
+                <div class="earn-step-badge">3</div>
+                <div class="earn-step-body">
+                  <strong class="earn-step-title">Get ₹100 in Wallet</strong>
+                  <p class="earn-step-desc">WhatsApp / TG support par bhejein aur cash payein</p>
                 </div>
               </div>
             </div>
 
-            <div class="earn-tp-cta-row" style="margin-top: 16px;">
-              <button type="button" class="btn btn-primary earn-tp-btn" onclick="CustomerApp.openTrustpilotRewardModal()">
-                <span>★ Start Review Task & Claim ₹100</span>
-                <span style="font-size: 16px;">→</span>
+            <div class="earn-tp-cta-row">
+              <button type="button" class="btn earn-tp-btn" onclick="CustomerApp.openTrustpilotRewardModal()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 .587l3.668 7.431 8.2 1.192-5.934 5.784 1.399 8.163L12 18.896l-7.333 3.861 1.399-8.163-5.934-5.784 8.2-1.192z"/>
+                </svg>
+                <span>Start Review Task &amp; Claim ₹100</span>
+                <span class="earn-tp-arrow">→</span>
               </button>
+              <div class="earn-tp-guarantee">
+                <span>🛡️ Verified Support Payout • Instant Within 5-15 Mins</span>
+              </div>
             </div>
           </div>
         </div>
