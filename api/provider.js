@@ -354,13 +354,20 @@ export default async function handler(req, res) {
         note: orderErrorNote || null
       };
 
-      // 5. Authoritative Order Persistence into Supabase orders table
+      // 5. Fast Non-blocking Order Logging into Supabase orders table
       const rawTargetLink = String(paramsObj.link || '').trim();
       const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
       const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 45);
 
-      try {
-        const orderInsertPayload = {
+      const logPromise = fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
           id: orderIdNum,
           user_id: userId,
           service_id: null,
@@ -374,43 +381,14 @@ export default async function handler(req, res) {
           remains: Number(paramsObj.quantity) || 1000,
           refill_status: safeRefillStatus,
           created_at: new Date().toISOString()
-        };
+        })
+      }).catch(dbErr => console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message));
 
-        const dbRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?on_conflict=id`, {
-          method: 'POST',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates,return=representation'
-          },
-          body: JSON.stringify(orderInsertPayload)
-        });
-
-        if (!dbRes.ok) {
-          const errDetail = await dbRes.text().catch(() => '');
-          console.error('[LikeX Backend] Supabase order logging notice (status ' + dbRes.status + '):', errDetail);
-          // Fallback without explicit ID if table primary key constraint rejects manual ID
-          if (dbRes.status === 400 || dbRes.status === 409) {
-            const fallbackPayload = { ...orderInsertPayload };
-            delete fallbackPayload.id;
-            await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-              method: 'POST',
-              headers: {
-                apikey: SUPABASE_ANON_KEY,
-                Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                Prefer: 'return=minimal'
-              },
-              body: JSON.stringify(fallbackPayload)
-            }).catch(e => console.error('[LikeX Backend] Fallback insert error:', e.message));
-          }
-        } else {
-          console.log('[LikeX Backend] Order #' + orderIdNum + ' (Provider #' + (liveOrderId || 'Queued') + ') saved to Supabase successfully.');
-        }
-      } catch (dbErr) {
-        console.error('[LikeX Backend] Supabase order logging network error:', dbErr.message);
-      }
+      // Wait max 50ms so client receives immediate snappy response
+      await Promise.race([
+        logPromise,
+        new Promise(resolve => setTimeout(resolve, 50))
+      ]);
 
       return res.status(200).json({
         ...providerData,

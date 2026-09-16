@@ -1124,29 +1124,13 @@ class SmmStateStore {
       this.syncOrdersStatus(true);
     } catch (e) {}
 
-    // Setup Supabase Realtime listener for live orders across all devices
-    if (window.supabaseClient && window.supabaseClient.channel && !this._ordersRealtimeSubscribed) {
-      try {
-        this._ordersRealtimeSubscribed = true;
-        window.supabaseClient
-          .channel('public:orders:live_sync')
-          .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
-            console.log('[LikeX Realtime] Order table event received:', payload.eventType);
-            this.syncSupabaseDataForAdmin();
-          })
-          .subscribe();
-      } catch (e) {
-        console.warn('[LikeX Realtime] Channel subscription notice:', e.message);
-      }
-    }
-
-    // Background poller for live Supabase orders every 5 seconds (Admin console only)
+    // Background poller for live Supabase orders every 10 seconds (Admin console only)
     if (!this._adminOrderPoller) {
       this._adminOrderPoller = setInterval(() => {
         if (this.persona === 'admin') {
           this.syncSupabaseDataForAdmin();
         }
-      }, 5000);
+      }, 10000);
     }
   }
 
@@ -1749,6 +1733,8 @@ class SmmStateStore {
       if (supaOrders && supaOrders.length > 0) {
         const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
         const mapped = supaOrders.map(so => {
+          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : (snapshot?.email ? userMap.get(String(snapshot.email).toLowerCase()) : null);
+
           // 1. Check if target_url contains embedded metadata snapshot
           let cleanTargetUrl = String(so.target_url || '').trim();
           let snapshot = null;
@@ -1773,8 +1759,6 @@ class SmmStateStore {
               snapshot = JSON.parse(String(so.refill_status).replace('SNAPSHOT:', ''));
             } catch (e) {}
           }
-
-          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : (snapshot?.email ? userMap.get(String(snapshot.email).toLowerCase()) : null);
 
           let rawServiceId = snapshot?.rawServiceId || (so.service_id ? String(so.service_id) : null);
           let svcTitle = snapshot?.serviceName || null;
@@ -1869,12 +1853,9 @@ class SmmStateStore {
         }
       }
 
-      if (this.persona === 'admin') {
-        this.data.orders = this.getAllAdminOrders();
-      }
       this.recalculateAdminStats();
-      if (this.persona === 'admin') {
-        this.notify(true);
+      if (dataChanged && this.persona === 'admin') {
+        this.notify();
       }
     } catch (err) {
       console.warn('[LikeX Admin] Supabase admin sync error:', err);
@@ -2214,69 +2195,6 @@ class SmmStateStore {
               }
             })
             .catch(() => {});
-
-          // 3. Fetch authoritative orders for customer from Supabase
-          window.supabaseClient
-            .from('orders')
-            .select('*')
-            .or(`user_id.eq.${u.id},target_url.ilike.%${cleanEmail}%`)
-            .order('created_at', { ascending: false })
-            .then(({ data: cloudOrders, error: ordErr }) => {
-              if (!ordErr && Array.isArray(cloudOrders) && cloudOrders.length > 0) {
-                const activeServices = (this.getActiveServices ? this.getActiveServices() : window.JAP_SERVICES) || [];
-                cloudOrders.forEach(co => {
-                  let cleanTargetUrl = String(co.target_url || '').trim();
-                  let snapshot = null;
-                  if (cleanTargetUrl.includes('###LKX_META###')) {
-                    const parts = cleanTargetUrl.split('###LKX_META###');
-                    cleanTargetUrl = parts[0];
-                    try { snapshot = JSON.parse(parts[1]); } catch (e) {}
-                  } else if (cleanTargetUrl.includes('###')) {
-                    const parts = cleanTargetUrl.split('###');
-                    cleanTargetUrl = parts[0];
-                    try { snapshot = JSON.parse(parts[1]); } catch (e) {}
-                  }
-
-                  let rawServiceId = snapshot?.rawServiceId || (co.service_id ? String(co.service_id) : null);
-                  let svcTitle = snapshot?.serviceName || null;
-                  if (!svcTitle) {
-                    const matchedSvc = activeServices.find(s => 
-                      (rawServiceId && (String(s.rawId) === String(rawServiceId) || String(s.id) === String(rawServiceId))) ||
-                      (co.service_id && (String(s.id) === String(co.service_id) || String(s.rawId) === String(co.service_id)))
-                    );
-                    if (matchedSvc) svcTitle = matchedSvc.customerName || matchedSvc.name;
-                  }
-                  if (!svcTitle) svcTitle = `Social Growth Service #${rawServiceId || co.id}`;
-
-                  const orderObj = {
-                    id: co.provider_order_id ? String(co.provider_order_id) : String(co.id),
-                    likeXOrderId: `LX${co.id}`,
-                    providerOrderId: co.provider_order_id || null,
-                    serviceId: snapshot?.serviceId || rawServiceId,
-                    rawServiceId: rawServiceId,
-                    serviceName: svcTitle,
-                    category: snapshot?.category || 'Social Growth',
-                    platform: snapshot?.platform || 'instagram',
-                    provider: snapshot?.provider || 'worldofsmm',
-                    providerName: 'LikeX Automated Server',
-                    serviceSnapshot: snapshot,
-                    target: cleanTargetUrl,
-                    quantity: Number(co.quantity) || 1000,
-                    amount: Number(co.charge) || 0,
-                    status: co.status || 'Processing',
-                    createdAt: co.created_at ? new Date(co.created_at).getTime() : Date.now(),
-                    date: this.formatRealDate(co.created_at ? new Date(co.created_at).getTime() : Date.now()),
-                    userEmail: cleanEmail
-                  };
-                  this.updateOrderInAllStorages(orderObj);
-                });
-                this.data.customer.ordersCount = this.data.orders.length;
-                this.data.customer.spent = this.data.orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
-                this.saveUserData();
-                this.notify();
-              }
-            })
-            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -2419,9 +2337,6 @@ class SmmStateStore {
       url.searchParams.set('tab', tab);
       window.history.replaceState(null, '', url);
     } catch (e) {}
-    if (tab === 'orders' || tab === 'dashboard' || tab === 'customers') {
-      this.syncSupabaseDataForAdmin();
-    }
     this.notify();
   }
 
@@ -2734,7 +2649,6 @@ class SmmStateStore {
 
       // Update order in memory and all persistent storages cleanly
       this.updateOrderInAllStorages(newOrder);
-      this.saveOrderToSupabase(newOrder);
 
       // Track customer registration if not present
       try {
@@ -2844,7 +2758,6 @@ class SmmStateStore {
         order.refillReason = `Dispatched to ${providerDisplayName} (Provider Order #${liveProvId})`;
 
         this.updateOrderInAllStorages(order);
-        this.saveOrderToSupabase(order);
         this.triggerAlert({
           type: 'live_order',
           orderId: String(liveProvId),
@@ -2871,7 +2784,6 @@ class SmmStateStore {
         order.refillReason = `Queued: ${errMsg}`;
 
         this.updateOrderInAllStorages(order);
-        this.saveOrderToSupabase(order);
         this.triggerAlert({
           type: 'queued_order',
           orderId: finalOrderId,
@@ -2902,7 +2814,6 @@ class SmmStateStore {
       order.status = 'Queued';
       order.lastUpdatedAt = Date.now();
       this.updateOrderInAllStorages(order);
-      this.saveOrderToSupabase(order);
 
       this.notify();
       return {
@@ -4058,61 +3969,9 @@ class SmmStateStore {
         const uIdx = uOrders.findIndex(matchesOrder);
         if (uIdx >= 0) {
           uOrders[uIdx] = { ...uOrders[uIdx], ...updatedOrder };
-        } else {
-          uOrders.unshift(updatedOrder);
+          localStorage.setItem(key, JSON.stringify(uOrders));
         }
-        localStorage.setItem(key, JSON.stringify(uOrders));
       } catch (e) {}
-    }
-  }
-
-  // Dual-layer client-side Supabase order backup
-  async saveOrderToSupabase(order) {
-    if (!window.supabaseClient || !order) return;
-    try {
-      const rawLikeXStr = order.likeXOrderId ? String(order.likeXOrderId).replace(/\D/g, '') : (order.id ? String(order.id).replace(/\D/g, '') : '');
-      const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
-
-      const snapshotPayload = order.serviceSnapshot || {
-        rawServiceId: String(order.rawServiceId || order.providerServiceId || ''),
-        serviceId: String(order.serviceId || ''),
-        serviceName: order.serviceName || 'Social Growth Service',
-        category: order.category || 'Social Growth',
-        platform: order.platform || 'instagram',
-        provider: order.provider || 'worldofsmm',
-        wholesaleCost: Number(order.wholesaleRate || order.wholesaleCost || 0),
-        charge: Number(order.amount || order.charge || 0),
-        email: order.userEmail || '',
-        name: order.customerName || 'Customer',
-        customerCode: order.customerId || order.customerCode || null,
-        walletBalanceBeforeOrder: order.walletBalanceBeforeOrder,
-        walletBalanceAtOrder: order.walletBalanceAtOrder,
-        walletBalanceAfter: order.walletBalanceAfter
-      };
-
-      const rawTarget = String(order.target || '').split('###')[0].trim();
-      const encodedTargetUrl = `${rawTarget}###LKX_META###${JSON.stringify(snapshotPayload)}`;
-      const safeRefillStatus = String(order.errorReason || order.upstreamError || 'Standard').slice(0, 45);
-
-      await window.supabaseClient
-        .from('orders')
-        .upsert({
-          id: orderIdNum,
-          user_id: order.customerUserId || null,
-          service_id: null,
-          target_url: encodedTargetUrl,
-          quantity: Number(order.quantity) || 1000,
-          charge: Number(order.amount || order.charge) || 0,
-          provider_cost: Number(order.providerCost || order.cost) || 0,
-          provider_order_id: order.providerOrderId || null,
-          assigned_provider_id: order.provider === 'socialfans' ? 3 : 2,
-          status: order.status || 'Processing',
-          remains: Number(order.remains !== undefined ? order.remains : order.quantity) || 1000,
-          refill_status: safeRefillStatus,
-          created_at: new Date(order.createdAt || Date.now()).toISOString()
-        }, { onConflict: 'id' });
-    } catch (e) {
-      console.warn('[LikeX StateStore] Dual-layer Supabase order backup notice:', e.message);
     }
   }
 
