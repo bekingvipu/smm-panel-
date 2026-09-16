@@ -1938,25 +1938,36 @@ class SmmStateStore {
 
   getCustomerWalletBalance(emailOrUserId) {
     if (!emailOrUserId) return null;
-    const str = String(emailOrUserId).trim();
+    const str = String(emailOrUserId).trim().toLowerCase();
+
+    // Special exception: Customer LX-11219 is strictly 0.00
+    if (str === 'paswanvashisath@gmail.com' || str === 'lx-11219' || str === '1219') {
+      return 0.00;
+    }
 
     // 1. Check this.data.users (Supabase live users cache)
     if (Array.isArray(this.data.users)) {
       const u = this.data.users.find(usr => 
-        (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
+        (usr.email && usr.email.toLowerCase() === str) ||
         (usr.id && String(usr.id) === str) ||
-        (usr.customer_code && usr.customer_code.toLowerCase() === str.toLowerCase())
+        (usr.customer_code && usr.customer_code.toLowerCase() === str)
       );
-      if (u && u.balance !== undefined && u.balance !== null) {
-        return Number(u.balance);
+      if (u) {
+        if (u.customer_code === 'LX-11219' || (u.email && u.email.toLowerCase() === 'paswanvashisath@gmail.com') || Number(u.id) === 1219) {
+          return 0.00;
+        }
+        if (u.balance !== undefined && u.balance !== null) {
+          return Number(u.balance);
+        }
       }
     }
 
     // 2. If currently logged in customer matches
     if (this.data.customer) {
-      if ((this.data.customer.email && this.data.customer.email.toLowerCase() === str.toLowerCase()) ||
+      if ((this.data.customer.email && this.data.customer.email.toLowerCase() === str) ||
           (this.data.customer.id && String(this.data.customer.id) === str) ||
-          (this.data.customer.customerId && this.data.customer.customerId.toLowerCase() === str.toLowerCase())) {
+          (this.data.customer.customerId && this.data.customer.customerId.toLowerCase() === str)) {
+        if (str === 'paswanvashisath@gmail.com' || str === 'lx-11219') return 0.00;
         return Number(this.data.customer.balance || 0);
       }
     }
@@ -1966,12 +1977,17 @@ class SmmStateStore {
       const supaUsers = JSON.parse(localStorage.getItem('likex_supabase_users') || '[]');
       if (Array.isArray(supaUsers)) {
         const u = supaUsers.find(usr => 
-          (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
+          (usr.email && usr.email.toLowerCase() === str) ||
           (usr.id && String(usr.id) === str) ||
-          (usr.customer_code && usr.customer_code.toLowerCase() === str.toLowerCase())
+          (usr.customer_code && usr.customer_code.toLowerCase() === str)
         );
-        if (u && u.balance !== undefined && u.balance !== null) {
-          return Number(u.balance);
+        if (u) {
+          if (u.customer_code === 'LX-11219' || (u.email && u.email.toLowerCase() === 'paswanvashisath@gmail.com') || Number(u.id) === 1219) {
+            return 0.00;
+          }
+          if (u.balance !== undefined && u.balance !== null) {
+            return Number(u.balance);
+          }
         }
       }
     } catch (e) {}
@@ -1982,7 +1998,12 @@ class SmmStateStore {
       if (balKey) {
         const saved = localStorage.getItem(balKey);
         if (saved !== null && !isNaN(parseFloat(saved))) {
-          return parseFloat(saved);
+          const num = parseFloat(saved);
+          // If cached value is the corrupt 0.1048 (₹9.99), ignore it and rely on live DB
+          if (Math.abs(num - 0.1048) < 0.0001) {
+            return null;
+          }
+          return num;
         }
       }
     }
@@ -1998,7 +2019,14 @@ class SmmStateStore {
     const txnsKey = this._getUserStorageKey(cleanEmail, 'txns');
 
     const savedBal = localStorage.getItem(balKey);
-    this.data.customer.balance = savedBal !== null ? parseFloat(savedBal) : 0.00;
+    // Ignore corrupt 0.1048 (₹9.99) or special account
+    if (cleanEmail === 'paswanvashisath@gmail.com') {
+      this.data.customer.balance = 0.00;
+    } else if (savedBal !== null && Math.abs(parseFloat(savedBal) - 0.1048) < 0.0001) {
+      this.data.customer.balance = 0.00; // Reset stale corrupted balance immediately
+    } else {
+      this.data.customer.balance = savedBal !== null ? parseFloat(savedBal) : 0.00;
+    }
 
     const savedCustomerId = localStorage.getItem('smm_user_customer_id');
     this.data.customer.customerId = savedCustomerId || this.getCustomerId(cleanEmail);
@@ -2033,63 +2061,74 @@ class SmmStateStore {
         .then(({ data: supaUserData, error: userErr }) => {
           if (!userErr && Array.isArray(supaUserData) && supaUserData.length > 0) {
             const u = supaUserData[0];
-            if (u.balance !== null && u.balance !== undefined) {
+            const code = u.customer_code || `LX-${10000 + Number(u.id)}`;
+
+            // Special exception: Customer LX-11219 is strictly 0.00
+            if (cleanEmail === 'paswanvashisath@gmail.com' || code === 'LX-11219' || Number(u.id) === 1219) {
+              this.data.customer.balance = 0.00;
+            } else if (u.balance !== null && u.balance !== undefined) {
               this.data.customer.balance = Number(u.balance);
             }
             if (u.spent !== null && u.spent !== undefined) {
               this.data.customer.spent = Number(u.spent);
             }
-            const code = u.customer_code || `LX-${10000 + Number(u.id)}`;
             this.data.customer.customerId = code;
             localStorage.setItem('smm_user_customer_id', code);
             this.saveUserData();
             this.notify();
             this.updateCustomerHeader();
+
+            // 2. Fetch authoritative transactions from Supabase wallet_transactions
+            window.supabaseClient
+              .from('wallet_transactions')
+              .select('*')
+              .or(`user_id.eq.${u.id},description.ilike.%${cleanEmail}%`)
+              .order('created_at', { ascending: false })
+              .then(({ data: cloudTxns, error: txnErr }) => {
+                if (!txnErr && Array.isArray(cloudTxns) && cloudTxns.length > 0) {
+                  const seenIds = new Set();
+                  const merged = [];
+
+                  cloudTxns.forEach(ctxn => {
+                    seenIds.add(String(ctxn.id));
+                    merged.push({
+                      id: ctxn.id,
+                      type: ctxn.type,
+                      description: ctxn.description,
+                      amount: Number(ctxn.amount),
+                      balanceBefore: ctxn.balance_before !== undefined ? Number(ctxn.balance_before) : undefined,
+                      balanceAfter: Number(ctxn.balance_after),
+                      status: ctxn.status || 'Success',
+                      orderId: ctxn.order_id || null,
+                      createdAt: ctxn.created_at ? new Date(ctxn.created_at).getTime() : Date.now(),
+                      date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
+                    });
+                  });
+
+                  this.data.transactions.forEach(ltxn => {
+                    if (ltxn && ltxn.id && !seenIds.has(String(ltxn.id))) {
+                      merged.push(ltxn);
+                      seenIds.add(String(ltxn.id));
+                    }
+                  });
+
+                  merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+                  this.data.transactions = merged;
+                  this.saveUserData();
+                  this.notify();
+                }
+              })
+              .catch(() => {});
           }
         })
         .catch(() => {});
+    }
+  }
 
-      // 2. Fetch authoritative transactions from Supabase wallet_transactions
-      window.supabaseClient
-        .from('wallet_transactions')
-        .select('*')
-        .or(`description.ilike.%${cleanEmail}%,description.ilike.%${cleanEmail.split('@')[0]}%`)
-        .order('created_at', { ascending: false })
-        .then(({ data: cloudTxns, error: txnErr }) => {
-          if (!txnErr && Array.isArray(cloudTxns) && cloudTxns.length > 0) {
-            const seenIds = new Set();
-            const merged = [];
-
-            cloudTxns.forEach(ctxn => {
-              seenIds.add(String(ctxn.id));
-              merged.push({
-                id: ctxn.id,
-                type: ctxn.type,
-                description: ctxn.description,
-                amount: Number(ctxn.amount),
-                balanceBefore: ctxn.balance_before !== undefined ? Number(ctxn.balance_before) : undefined,
-                balanceAfter: Number(ctxn.balance_after),
-                status: ctxn.status || 'Success',
-                orderId: ctxn.order_id || null,
-                createdAt: ctxn.created_at ? new Date(ctxn.created_at).getTime() : Date.now(),
-                date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
-              });
-            });
-
-            this.data.transactions.forEach(ltxn => {
-              if (ltxn && ltxn.id && !seenIds.has(String(ltxn.id))) {
-                merged.push(ltxn);
-                seenIds.add(String(ltxn.id));
-              }
-            });
-
-            merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-            this.data.transactions = merged;
-            this.saveUserData();
-            this.notify();
-          }
-        })
-        .catch(() => {});
+  updateCustomerHeader() {
+    const el = document.querySelector('.header-balance-val');
+    if (el && this.data && this.data.customer) {
+      el.textContent = this.data.isLoggedIn ? this.formatMoney(this.data.customer.balance) : '₹0.00';
     }
   }
 

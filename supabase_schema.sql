@@ -478,15 +478,18 @@ UPDATE public.users
 SET customer_code = 'LX-' || (10000 + id)
 WHERE customer_code IS NULL OR customer_code = '';
 
--- 3. Reconcile balances for existing customers:
--- Remove fake 240.50 default. If user has genuine deposits in wallet_transactions, set balance = deposits - orders.
--- If user never deposited, set balance = 0.00.
-UPDATE public.users u
-SET balance = COALESCE((
-    SELECT ROUND(SUM(wt.amount), 4)
-    FROM public.wallet_transactions wt
-    WHERE wt.user_id = u.id AND wt.status = 'Success'
-), 0.00)
-WHERE u.role = 'customer';
+-- 3. Re-link any legacy/orphaned transactions where user_id was 999/1 by matching [email]
+UPDATE public.wallet_transactions wt
+SET user_id = u.id
+FROM public.users u
+WHERE (wt.user_id = 999 OR wt.user_id = 1 OR wt.user_id IS NULL)
+  AND wt.description ILIKE '%[' || u.email || ']%'
+  AND (wt.user_id IS DISTINCT FROM u.id);
+
+-- 4. Special account exception: LX-11219 (paswanvashisath@gmail.com) strictly 0.00
+UPDATE public.users
+SET balance = 0.0000
+WHERE customer_code = 'LX-11219' OR lower(trim(email)) = 'paswanvashisath@gmail.com';
+
 
 

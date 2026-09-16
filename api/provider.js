@@ -157,7 +157,12 @@ export default async function handler(req, res) {
       }
 
       const customerCode = user.customer_code || `LX-${10000 + user.id}`;
-      const userBalanceBefore = Number(user.balance || 0);
+      let userBalanceBefore = Number(user.balance || 0);
+
+      // Strict enforcement: Customer LX-11219 (paswanvashisath@gmail.com) final balance is 0.00
+      if (customerEmail === 'paswanvashisath@gmail.com' || customerCode === 'LX-11219' || Number(user.id) === 1219) {
+        userBalanceBefore = 0;
+      }
 
       // 2. Strict Balance Verification BEFORE contacting provider
       if (userBalanceBefore < orderCharge) {
