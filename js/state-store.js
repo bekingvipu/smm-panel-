@@ -71,8 +71,13 @@ class SmmStateStore {
       const savedCustom = localStorage.getItem('likex_catalog_customizations_v4');
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
+        // Ensure core flagship services (like 6288 in LikeX Special) are never polluted with stale local costs
+        const cleanAdded = (parsed.addedServices || []).filter(s => {
+          const id = String(s.id || s.rawId || '');
+          return !id.includes('6288') && (s.category || '') !== 'LikeX Special';
+        });
         this.catalogCustomizations = {
-          addedServices: parsed.addedServices || [],
+          addedServices: cleanAdded,
           disabledServiceIds: new Set(parsed.disabledServiceIds || [])
         };
       } else {
@@ -82,8 +87,10 @@ class SmmStateStore {
       this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
     }
 
-    // Ensure official core services (e.g. World of SMM 6433) are never suppressed by stale localStorage
+    // Ensure official core services (e.g. World of SMM 6288 & 6433) are never suppressed by stale localStorage
     if (this.catalogCustomizations && this.catalogCustomizations.disabledServiceIds) {
+      this.catalogCustomizations.disabledServiceIds.delete('6288');
+      this.catalogCustomizations.disabledServiceIds.delete('wos-6288');
       this.catalogCustomizations.disabledServiceIds.delete('6433');
       this.catalogCustomizations.disabledServiceIds.delete('wos-6433');
     }
@@ -291,30 +298,30 @@ class SmmStateStore {
       this.data.claimedUtrs = {};
     }
 
-    // Initialize Live Provider Rates Auto-Sync Engine (v4: strictly provider-scoped keys)
+    // Purge ALL legacy and stale localStorage rate caches immediately so customer prices never freeze
     try {
       localStorage.removeItem('likex_live_rates_cache');
       localStorage.removeItem('likex_live_rates_cache_v2');
       localStorage.removeItem('likex_live_rates_cache_v3');
-      const savedRates = localStorage.getItem('likex_live_rates_cache_v4');
-      this.liveRatesCache = savedRates ? JSON.parse(savedRates) : {};
-    } catch (e) {
-      this.liveRatesCache = {};
-    }
-    this.lastRatesSyncTime = Number(localStorage.getItem('likex_last_rates_sync_time_v4') || 0);
+      localStorage.removeItem('likex_live_rates_cache_v4');
+      localStorage.removeItem('likex_last_rates_sync_time_v4');
+    } catch (e) {}
+    this.liveRatesCache = {};
+    this.lastRatesSyncTime = 0;
     this.isSyncingLiveRates = false;
+    this.data.serviceOverrides = {};
 
     this.initServerSync();
 
-    // Recurring automatic background sync of live provider rates every 30 minutes
+    // Recurring automatic background sync of live provider rates every 30 minutes (memory-only)
     setInterval(() => {
       this.syncLiveRates(false);
     }, 30 * 60 * 1000);
 
-    // Recurring background sync of global cloud settings (margin %, maintenance) every 20 seconds across all devices
+    // Recurring background sync of global cloud settings (margin %, service overrides, maintenance) every 15 seconds across all devices
     setInterval(() => {
       this.syncGlobalSiteSettings();
-    }, 20 * 1000);
+    }, 15 * 1000);
   }
 
   extractYouTubeEmbedUrl(url) {
@@ -652,6 +659,8 @@ class SmmStateStore {
         disabledServiceIds: Array.from(this.catalogCustomizations.disabledServiceIds)
       };
       localStorage.setItem('likex_catalog_customizations_v4', JSON.stringify(payload));
+      // Cloud sync to Supabase so all devices receive catalog updates uniformly
+      this.saveCloudConfig({ catalog_customizations: payload });
     } catch (e) {}
     this.notify();
   }
@@ -774,15 +783,9 @@ class SmmStateStore {
       }
 
       this.lastRatesSyncTime = now;
-      try {
-        localStorage.setItem('likex_live_rates_cache_v4', JSON.stringify(this.liveRatesCache));
-        localStorage.setItem('likex_last_rates_sync_time_v4', String(now));
-      } catch (e) {}
 
-      // Notify UI of updated prices for admin views or when explicitly forced
-      if (this.persona === 'admin' || force) {
-        this.notify();
-      }
+      // Notify UI of updated rates
+      this.notify();
       return { success: true, updatedCount, timestamp: now };
     } catch (err) {
       console.warn('[LikeX Rate Sync] Error syncing live provider rates:', err);
@@ -794,47 +797,61 @@ class SmmStateStore {
 
   getActiveServices() {
     const base = window.JAP_SERVICES || [];
-    const disabled = this.catalogCustomizations.disabledServiceIds;
-    const added = this.catalogCustomizations.addedServices;
+    const disabled = this.catalogCustomizations.disabledServiceIds || new Set();
+    const added = this.catalogCustomizations.addedServices || [];
+    const overrides = this.data.serviceOverrides || {};
 
     const activeMap = new Map();
     // 1. Base services not disabled (core categories like Custom Comment & LikeX Special are protected)
     for (const s of base) {
       const sId = String(s.id);
-      const rId = String(s.rawId || '');
-      const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
+      const rId = String(s.rawId || s.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
       const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
-        const liveInfo = this.getLiveRateInfo(sId, rId, prov);
-        const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
+        // Authoritative cost is baseline canonical s.cost, unless cloud override is configured
+        let effectiveCost = Number(s.cost || 0.1);
+        const ov = overrides[sId] || overrides[rId] || overrides[`wos-${rId}`] || overrides[`sf-${rId}`];
+        if (ov && ov.cost !== undefined && !isNaN(Number(ov.cost))) {
+          effectiveCost = Number(ov.cost);
+        }
+
         activeMap.set(sId, {
           ...s,
           cost: effectiveCost,
-          min: (liveInfo && liveInfo.min !== undefined) ? liveInfo.min : s.min,
-          max: (liveInfo && liveInfo.max !== undefined) ? liveInfo.max : s.max,
-          refill: (liveInfo && liveInfo.refill !== undefined) ? liveInfo.refill : s.refill,
-          cancel: (liveInfo && liveInfo.cancel !== undefined) ? liveInfo.cancel : s.cancel,
-          isLiveSynced: Boolean(liveInfo)
+          min: (ov && ov.min !== undefined) ? ov.min : s.min,
+          max: (ov && ov.max !== undefined) ? ov.max : s.max,
+          refill: (ov && ov.refill !== undefined) ? ov.refill : s.refill,
+          cancel: (ov && ov.cancel !== undefined) ? ov.cancel : s.cancel,
+          isLiveSynced: Boolean(ov)
         });
       }
     }
-    // 2. Added/imported custom services take priority
+
+    // 2. Added/imported custom services take priority (except core flagship services like wos-6288)
     for (const s of added) {
       const sId = String(s.id);
-      const rId = String(s.rawId || '');
-      const prov = s.provider || (sId.startsWith('sf-') ? 'socialfans' : (sId.startsWith('wos-') ? 'worldofsmm' : null));
+      const rId = String(s.rawId || s.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
+      const isProtected = sId === 'wos-6288' || rId === '6288' || (s.category || '') === 'LikeX Special';
+      if (isProtected && activeMap.has(sId)) {
+        continue; // Never let stale local custom services overwrite core LikeX Special flagship services
+      }
+
       const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
-        const liveInfo = this.getLiveRateInfo(sId, rId, prov);
-        const effectiveCost = (liveInfo && liveInfo.rate > 0) ? liveInfo.rate : s.cost;
+        let effectiveCost = Number(s.cost || 0.1);
+        const ov = overrides[sId] || overrides[rId] || overrides[`wos-${rId}`] || overrides[`sf-${rId}`];
+        if (ov && ov.cost !== undefined && !isNaN(Number(ov.cost))) {
+          effectiveCost = Number(ov.cost);
+        }
+
         activeMap.set(sId, {
           ...s,
           cost: effectiveCost,
-          min: (liveInfo && liveInfo.min !== undefined) ? liveInfo.min : s.min,
-          max: (liveInfo && liveInfo.max !== undefined) ? liveInfo.max : s.max,
-          refill: (liveInfo && liveInfo.refill !== undefined) ? liveInfo.refill : s.refill,
-          cancel: (liveInfo && liveInfo.cancel !== undefined) ? liveInfo.cancel : s.cancel,
-          isLiveSynced: Boolean(liveInfo)
+          min: (ov && ov.min !== undefined) ? ov.min : s.min,
+          max: (ov && ov.max !== undefined) ? ov.max : s.max,
+          refill: (ov && ov.refill !== undefined) ? ov.refill : s.refill,
+          cancel: (ov && ov.cancel !== undefined) ? ov.cancel : s.cancel,
+          isLiveSynced: Boolean(ov)
         });
       }
     }
@@ -926,8 +943,43 @@ class SmmStateStore {
     this.showToast('Profile avatar updated successfully! 🌟', 'success');
   }
 
-  // Dynamic profit calculation (never sells at a loss; minimum 25% margin safeguard)
-  getSellingPrice(wholesaleCostUsd) {
+  // Dynamic profit calculation (supports per-service cloud overrides & global margin with minimum 25% safeguard)
+  getSellingPrice(wholesaleCostUsd, serviceId = null, rawId = null) {
+    const sId = serviceId ? String(serviceId).trim() : null;
+    const rId = rawId ? String(rawId).trim() : (sId ? sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '') : null);
+    const overrides = this.data.serviceOverrides || {};
+
+    // Check if there is an authoritative cloud override configured by Admin
+    const override = (sId && overrides[sId]) || 
+                     (rId && overrides[rId]) || 
+                     (sId && overrides[`wos-${sId}`]) || 
+                     (sId && overrides[`sf-${sId}`]) ||
+                     (rId && overrides[`wos-${rId}`]) ||
+                     (rId && overrides[`sf-${rId}`]);
+    const inrRate = this.data.exchangeRate || 95.385;
+
+    if (override) {
+      // 1. Explicit selling price in INR (e.g. ₹0.25/1K)
+      const explicitInr = override.customSellingPriceInr !== undefined && override.customSellingPriceInr !== null
+        ? override.customSellingPriceInr
+        : override.sellingPriceInr;
+      if (explicitInr !== undefined && explicitInr !== null && !isNaN(Number(explicitInr))) {
+        return Number(explicitInr) / inrRate; // USD equivalent so formatMoney outputs exact INR
+      }
+      // 2. Custom profit markup for this service
+      const customMarkup = override.customMarkupPercent !== undefined && override.customMarkupPercent !== null
+        ? override.customMarkupPercent
+        : override.markup;
+      if (customMarkup !== undefined && customMarkup !== null && !isNaN(Number(customMarkup))) {
+        const customCost = (override.cost !== undefined && !isNaN(Number(override.cost))) ? Number(override.cost) : Number(wholesaleCostUsd || 0.10);
+        return customCost * (1 + Number(customMarkup) / 100);
+      }
+      // 3. Custom wholesale cost override
+      if (override.cost !== undefined && override.cost !== null && !isNaN(Number(override.cost))) {
+        wholesaleCostUsd = Number(override.cost);
+      }
+    }
+
     const markup = Math.max(25, Number(this.data.adminStats.globalMarkupPercent) || 50);
     return (Number(wholesaleCostUsd) || 0.10) * (1 + markup / 100);
   }
@@ -1026,16 +1078,47 @@ class SmmStateStore {
       this.data.customerServices.forEach(s => {
         s.markupPercent = percent;
         if (s.wholesaleCost) {
-          s.pricePer1k = this.getSellingPrice(s.wholesaleCost);
+          s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id);
         }
       });
     }
 
-    // Save to Cloud database (Supabase) so all devices (mobile, other PCs, visitors) see this margin!
+    // Save to Cloud database (Supabase row 999) so all devices (mobile, other PCs, visitors) see this margin!
     this.saveCloudConfig({ global_markup: percent });
 
     this.showToast(`Applied +${percent}% profit markup across all devices & services!`, 'success');
     this.notify();
+  }
+
+  // Admin per-service pricing override setter (saves to Supabase row 999 so all devices sync instantly)
+  async setServicePricingOverride(serviceId, overrideData = {}) {
+    if (!serviceId) return;
+    const sId = String(serviceId).trim().replace(/^wos-/, '').replace(/^sf-/, '');
+    if (!this.data.serviceOverrides) this.data.serviceOverrides = {};
+
+    this.data.serviceOverrides[sId] = {
+      ...(this.data.serviceOverrides[sId] || {}),
+      ...overrideData,
+      updatedAt: Date.now()
+    };
+
+    // Save to Cloud config in Supabase row 999
+    await this.saveCloudConfig({ service_overrides: this.data.serviceOverrides });
+    this.notify();
+    this.showToast(`Service #${sId} custom pricing saved & synced across all devices!`, 'success');
+  }
+
+  // Reset a service back to the standard global markup
+  async removeServicePricingOverride(serviceId) {
+    if (!serviceId || !this.data.serviceOverrides) return;
+    const sId = String(serviceId).trim().replace(/^wos-/, '').replace(/^sf-/, '');
+    delete this.data.serviceOverrides[sId];
+    delete this.data.serviceOverrides[`wos-${sId}`];
+    delete this.data.serviceOverrides[`sf-${sId}`];
+
+    await this.saveCloudConfig({ service_overrides: this.data.serviceOverrides });
+    this.notify();
+    this.showToast(`Service #${sId} restored to standard global markup!`, 'info');
   }
 
   async initServerSync() {
@@ -1187,7 +1270,7 @@ class SmmStateStore {
               if (Array.isArray(this.data.customerServices)) {
                 this.data.customerServices.forEach(s => {
                   s.markupPercent = markupVal;
-                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost);
+                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id);
                 });
               }
               changed = true;
@@ -1216,10 +1299,31 @@ class SmmStateStore {
               if (Array.isArray(this.data.customerServices)) {
                 this.data.customerServices.forEach(s => {
                   s.markupPercent = markupVal;
-                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost);
+                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id);
                 });
               }
               changed = true;
+            }
+          }
+          if (parsed.service_overrides && typeof parsed.service_overrides === 'object') {
+            const prevOverrides = JSON.stringify(this.data.serviceOverrides || {});
+            const nextOverrides = JSON.stringify(parsed.service_overrides);
+            if (prevOverrides !== nextOverrides) {
+              this.data.serviceOverrides = parsed.service_overrides;
+              changed = true;
+            }
+          }
+          if (parsed.catalog_customizations && typeof parsed.catalog_customizations === 'object') {
+            if (Array.isArray(parsed.catalog_customizations.addedServices)) {
+              this.catalogCustomizations.addedServices = parsed.catalog_customizations.addedServices.filter(s => {
+                const id = String(s.id || s.rawId || '');
+                return !id.includes('6288') && (s.category || '') !== 'LikeX Special';
+              });
+            }
+            if (Array.isArray(parsed.catalog_customizations.disabledServiceIds)) {
+              this.catalogCustomizations.disabledServiceIds = new Set(parsed.catalog_customizations.disabledServiceIds);
+              this.catalogCustomizations.disabledServiceIds.delete('6288');
+              this.catalogCustomizations.disabledServiceIds.delete('wos-6288');
             }
           }
           if (parsed.maintenance_mode) {
@@ -1258,6 +1362,12 @@ class SmmStateStore {
             updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...parsed.support_video });
           }
         } catch (e) {}
+      }
+
+      const isInitialSync = !this._hasSyncedInitialCloudSettings;
+      if (isInitialSync) {
+        this._hasSyncedInitialCloudSettings = true;
+        changed = true;
       }
 
       if (changed) {
@@ -2503,15 +2613,12 @@ class SmmStateStore {
 
       const providerDisplayName = targetProvider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM';
 
-      // Dynamic Live Wholesale Rate Lookup to protect profit margin
+      // Deterministic Wholesale Rate & Selling Price Lookup from authoritative store/cloud overrides
       let targetWholesaleCost = wholesaleCost;
-      const liveInfo = this.getLiveRateInfo(serviceId, cleanRawServiceId, targetProvider);
-      if (liveInfo && liveInfo.rate > 0) {
-        targetWholesaleCost = liveInfo.rate;
-      } else if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
-        targetWholesaleCost = foundSvc ? (foundSvc.cost || foundSvc.rate || 0.20) : 0.20;
+      if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
+        targetWholesaleCost = foundSvc ? (foundSvc.cost || foundSvc.rate || 0.10) : 0.10;
       }
-      const unitSellingPrice = this.getSellingPrice(targetWholesaleCost);
+      const unitSellingPrice = this.getSellingPrice(targetWholesaleCost, serviceId, cleanRawServiceId);
       const totalCost = (unitSellingPrice / 1000) * Number(quantity);
 
       if (this.data.customer.balance < totalCost) {

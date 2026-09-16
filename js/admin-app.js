@@ -2825,14 +2825,27 @@ const AdminApp = {
             <tr>
               <th>Sub-Category & Package Name</th>
               <th>Platform</th>
-              <th>WorldOfSMM Cost</th>
+              <th>Provider Cost</th>
               <th>Customer Selling Price</th>
               <th>Profit Margin</th>
               <th>Refill Guarantee</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
-            ${services.map(s => `
+            ${services.map(s => {
+              const sKey = String(s.rawId || s.id).replace(/^wos-/, '').replace(/^sf-/, '');
+              const override = (store.data.serviceOverrides || {})[sKey] || (store.data.serviceOverrides || {})[String(s.id)];
+              let marginBadge = `<span class="badge badge-success">+${currentMarkup}% Profit</span>`;
+              if (override) {
+                if (override.customSellingPriceInr !== undefined && override.customSellingPriceInr !== null) {
+                  marginBadge = `<span class="badge badge-warning" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.4); font-weight: 700;">Fixed: ₹${override.customSellingPriceInr}/1K</span>`;
+                } else if (override.customMarkupPercent !== undefined && override.customMarkupPercent !== null) {
+                  marginBadge = `<span class="badge badge-info" style="background: rgba(59, 130, 246, 0.15); color: #2563EB; border: 1px solid rgba(59, 130, 246, 0.4); font-weight: 700;">Custom: +${override.customMarkupPercent}%</span>`;
+                }
+              }
+              const sellingPrice = store.getSellingPrice(s.wholesaleCost || 0.12, s.id, s.rawId);
+              return `
               <tr>
                 <td>
                   <strong style="font-size: 14px;">${s.customerName}</strong>
@@ -2850,19 +2863,25 @@ const AdminApp = {
                 </td>
                 <td>
                   <strong style="font-size: 15px; color: var(--primary);">
-                    ${store.formatMoney(store.getSellingPrice(s.wholesaleCost || 0.12))} / 1K
+                    ${store.formatMoney(sellingPrice)} / 1K
                   </strong>
                 </td>
                 <td>
-                  <span class="badge badge-success">+${currentMarkup}% Profit</span>
+                  ${marginBadge}
                 </td>
                 <td>
                   <span class="badge ${s.refillSupported ? 'badge-primary' : 'badge-neutral'}">
                     ${s.refillSupported ? `🛡️ ${s.refillPeriod}` : 'No Refill'}
                   </span>
                 </td>
+                <td>
+                  <button class="btn btn-sm btn-secondary" style="font-size: 12px; padding: 5px 12px; border-radius: 8px; font-weight: 700;" onclick="AdminApp.openEditServicePriceModal('${s.id}', '${s.rawId || s.id}')">
+                    ✏️ Set Price
+                  </button>
+                </td>
               </tr>
-            `).join('')}
+            `;
+            }).join('')}
           </tbody>
         </table>
       </div>
@@ -2897,6 +2916,231 @@ const AdminApp = {
     } else {
       window.store.showToast('⚠️ Could not sync live provider rates. Check network/API connection.', 'error');
     }
+  },
+
+  // Per-Service Pricing Override Modal
+  openEditServicePriceModal(serviceId, rawId) {
+    const store = window.store;
+    const cleanRaw = String(rawId || serviceId).replace(/^wos-/, '').replace(/^sf-/, '');
+    const allServices = [...(store.data.customerServices || []), ...(window.JAP_SERVICES || [])];
+    const svc = allServices.find(s => String(s.rawId || s.id) === cleanRaw || String(s.id) === String(serviceId));
+    if (!svc) {
+      store.showToast('Service not found', 'error');
+      return;
+    }
+
+    const wholesaleUsd = parseFloat(svc.wholesaleCost || svc.cost || 0.10);
+    const fx = store.data.exchangeRate || 95.385;
+    const wholesaleInr = wholesaleUsd * fx;
+    const globalMarkup = store.data.adminStats.globalMarkupPercent || 50;
+    const currentSellingPrice = store.getSellingPrice(wholesaleUsd, svc.id, svc.rawId);
+
+    const override = (store.data.serviceOverrides || {})[cleanRaw] || (store.data.serviceOverrides || {})[String(serviceId)] || {};
+    const hasOverride = Boolean(override.customSellingPriceInr !== undefined || override.customMarkupPercent !== undefined);
+
+    let mode = 'global';
+    let customVal = '';
+    if (override.customSellingPriceInr !== undefined && override.customSellingPriceInr !== null) {
+      mode = 'fixed_inr';
+      customVal = override.customSellingPriceInr;
+    } else if (override.customMarkupPercent !== undefined && override.customMarkupPercent !== null) {
+      mode = 'custom_margin';
+      customVal = override.customMarkupPercent;
+    }
+
+    const sheet = document.getElementById('generic-modal-sheet');
+    const modal = document.getElementById('generic-modal-backdrop');
+    if (!sheet || !modal) return;
+
+    sheet.innerHTML = `
+      <div class="modal-header">
+        <div>
+          <h3 class="modal-title">⚙️ Set Custom Price / Margin</h3>
+          <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+            Service ID #${cleanRaw} • ${svc.provider === 'socialfans' ? 'SocialFans' : 'WorldOfSMM'}
+          </div>
+        </div>
+        <button class="modal-close" onclick="AdminApp.closeServicePriceModal()">&times;</button>
+      </div>
+
+      <div style="padding: 12px 0; display: flex; flex-direction: column; gap: 16px;">
+        <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; padding: 12px 14px;">
+          <strong style="font-size: 14px; color: var(--text-main); display: block; margin-bottom: 4px;">${svc.customerName || svc.name}</strong>
+          <div style="display: flex; gap: 16px; font-size: 12.5px; color: var(--text-secondary); flex-wrap: wrap; margin-top: 6px;">
+            <span>Wholesale Cost: <strong>$${wholesaleUsd.toFixed(4)}</strong> (≈ ₹${wholesaleInr.toFixed(4)}/1K)</span>
+            <span>Global Markup: <strong>+${globalMarkup}%</strong></span>
+            <span>Current Price: <strong style="color: var(--primary);">₹${currentSellingPrice.toFixed(4)}/1K</strong></span>
+          </div>
+        </div>
+
+        <form onsubmit="AdminApp.saveServicePriceOverride(event, '${svc.id}', '${cleanRaw}')" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Pricing Mode:</label>
+            <div style="display: grid; grid-template-columns: 1fr; gap: 8px;">
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg);">
+                <input type="radio" name="pricing_mode" value="global" ${mode === 'global' ? 'checked' : ''} onchange="AdminApp.handlePriceOverrideTypeChange()" />
+                <div>
+                  <strong>Standard Global Markup (+${globalMarkup}%)</strong>
+                  <div style="font-size: 11.5px; color: var(--text-secondary);">Calculates dynamic price from provider cost (Selling Price = ₹${(wholesaleUsd * (1 + globalMarkup/100) * fx).toFixed(4)}/1K)</div>
+                </div>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg);">
+                <input type="radio" name="pricing_mode" value="fixed_inr" ${mode === 'fixed_inr' ? 'checked' : ''} onchange="AdminApp.handlePriceOverrideTypeChange()" />
+                <div>
+                  <strong>Custom Fixed Selling Price (₹ INR / 1,000)</strong>
+                  <div style="font-size: 11.5px; color: var(--text-secondary);">Guarantees fixed exact price across all devices (e.g. ₹0.2089 or ₹0.25)</div>
+                </div>
+              </label>
+
+              <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--card-bg);">
+                <input type="radio" name="pricing_mode" value="custom_margin" ${mode === 'custom_margin' ? 'checked' : ''} onchange="AdminApp.handlePriceOverrideTypeChange()" />
+                <div>
+                  <strong>Custom Profit Margin (%) for this service</strong>
+                  <div style="font-size: 11.5px; color: var(--text-secondary);">Overrides global markup just for this service (e.g. +100% or +150%)</div>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <div id="price-override-val-container" style="display: ${mode === 'global' ? 'none' : 'block'};">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label id="price-override-val-label" class="form-label" style="font-weight: 700; font-size: 12.5px;">
+                ${mode === 'fixed_inr' ? 'Fixed Selling Price (₹ INR per 1,000):' : 'Custom Profit Margin (%):'}
+              </label>
+              <input 
+                type="number" 
+                step="any"
+                id="price-override-input" 
+                class="form-input" 
+                value="${customVal}" 
+                placeholder="${mode === 'fixed_inr' ? 'e.g. 0.2089' : 'e.g. 100'}"
+                oninput="AdminApp.handlePriceOverridePreview(${wholesaleUsd}, ${fx}, ${globalMarkup})"
+                style="min-height: 42px; border-radius: 10px; font-size: 14px; font-weight: 700;"
+              />
+            </div>
+          </div>
+
+          <!-- Dynamic Live Preview Box -->
+          <div id="price-override-preview" style="background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.3); border-radius: 10px; padding: 10px 14px; font-size: 13px;">
+            Customer Selling Price will be: <strong id="price-override-preview-val" style="color: #059669; font-size: 14px;">₹${currentSellingPrice.toFixed(4)} / 1K</strong>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            ${hasOverride ? `
+              <button type="button" class="btn btn-secondary" style="flex: 1; height: 44px; border-radius: 10px;" onclick="AdminApp.resetServicePriceOverride('${svc.id}', '${cleanRaw}')">
+                🔄 Reset to Global
+              </button>
+            ` : `
+              <button type="button" class="btn btn-secondary" style="flex: 1; height: 44px; border-radius: 10px;" onclick="AdminApp.closeServicePriceModal()">
+                Cancel
+              </button>
+            `}
+            <button type="submit" class="btn btn-primary" style="flex: 2; height: 44px; border-radius: 10px; font-weight: 800; background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+              💾 Save & Sync Cloud
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.classList.add('active');
+    if (window.CustomerApp && CustomerApp.openModal) CustomerApp.openModal();
+  },
+
+  closeServicePriceModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    if (modal) modal.classList.remove('active');
+    if (window.CustomerApp && CustomerApp.closeModal) CustomerApp.closeModal();
+  },
+
+  handlePriceOverrideTypeChange() {
+    const selectedMode = document.querySelector('input[name="pricing_mode"]:checked')?.value || 'global';
+    const container = document.getElementById('price-override-val-container');
+    const label = document.getElementById('price-override-val-label');
+    const input = document.getElementById('price-override-input');
+    if (!container || !label || !input) return;
+
+    if (selectedMode === 'global') {
+      container.style.display = 'none';
+    } else if (selectedMode === 'fixed_inr') {
+      container.style.display = 'block';
+      label.textContent = 'Fixed Selling Price (₹ INR per 1,000):';
+      input.placeholder = 'e.g. 0.2089';
+    } else if (selectedMode === 'custom_margin') {
+      container.style.display = 'block';
+      label.textContent = 'Custom Profit Margin (%):';
+      input.placeholder = 'e.g. 100';
+    }
+  },
+
+  handlePriceOverridePreview(wholesaleUsd, fx, globalMarkup) {
+    const selectedMode = document.querySelector('input[name="pricing_mode"]:checked')?.value || 'global';
+    const input = document.getElementById('price-override-input');
+    const previewVal = document.getElementById('price-override-preview-val');
+    if (!previewVal) return;
+
+    const val = parseFloat(input?.value);
+    if (selectedMode === 'fixed_inr') {
+      if (val && val > 0) {
+        previewVal.textContent = `₹${val.toFixed(4)} / 1K`;
+      } else {
+        previewVal.textContent = `Please enter price`;
+      }
+    } else if (selectedMode === 'custom_margin') {
+      if (val && val > 0) {
+        const p = wholesaleUsd * (1 + val / 100) * fx;
+        previewVal.textContent = `₹${p.toFixed(4)} / 1K`;
+      } else {
+        previewVal.textContent = `Please enter margin %`;
+      }
+    } else {
+      const p = wholesaleUsd * (1 + globalMarkup / 100) * fx;
+      previewVal.textContent = `₹${p.toFixed(4)} / 1K`;
+    }
+  },
+
+  async saveServicePriceOverride(e, serviceId, rawId) {
+    e.preventDefault();
+    const selectedMode = document.querySelector('input[name="pricing_mode"]:checked')?.value || 'global';
+    const input = document.getElementById('price-override-input');
+    const store = window.store;
+    const cleanRaw = String(rawId || serviceId).replace(/^wos-/, '').replace(/^sf-/, '');
+
+    if (selectedMode === 'global') {
+      await store.removeServicePricingOverride(cleanRaw);
+    } else if (selectedMode === 'fixed_inr') {
+      const price = parseFloat(input.value);
+      if (!price || price <= 0) {
+        store.showToast('Please enter a valid price in INR', 'error');
+        return;
+      }
+      await store.setServicePricingOverride(cleanRaw, {
+        customSellingPriceInr: price,
+        customMarkupPercent: null
+      });
+    } else if (selectedMode === 'custom_margin') {
+      const margin = parseFloat(input.value);
+      if (!margin || margin <= 0) {
+        store.showToast('Please enter a valid margin percentage', 'error');
+        return;
+      }
+      await store.setServicePricingOverride(cleanRaw, {
+        customMarkupPercent: margin,
+        customSellingPriceInr: null
+      });
+    }
+
+    this.closeServicePriceModal();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  async resetServicePriceOverride(serviceId, rawId) {
+    const store = window.store;
+    const cleanRaw = String(rawId || serviceId).replace(/^wos-/, '').replace(/^sf-/, '');
+    await store.removeServicePricingOverride(cleanRaw);
+    this.closeServicePriceModal();
+    this.render(document.getElementById('screen-container'));
   },
 
   // --- PROVIDER SERVICES MANAGER & BATCH ACTIONS ---
@@ -3198,7 +3442,7 @@ const AdminApp = {
                 const isSelected = this.selectedServiceIds.has(sKey);
                 const isActive = store.isServiceActiveInCatalog(s.id, s.rawId);
                 const wholesaleInr = store.formatMoney(s.cost);
-                const sellingPriceUsd = store.getSellingPrice(s.cost);
+                const sellingPriceUsd = store.getSellingPrice(s.cost, s.id, s.rawId);
                 const sellingPriceInr = store.formatMoney(sellingPriceUsd);
 
                 return `

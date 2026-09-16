@@ -1229,7 +1229,7 @@ const CustomerApp = {
     }
 
     const activeService = activePackages.length > 0 ? activePackages[0] : null;
-    const sellingPrice = activeService ? store.getSellingPrice(activeService.cost || 0.20) : 0;
+    const sellingPrice = activeService ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId) : 0;
     const isCommentService = activeService ? ((activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'))) : false;
     const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom'));
     const effectiveMin = activeService ? (isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10)) : 10;
@@ -1337,7 +1337,7 @@ const CustomerApp = {
                   // In Instagram banner, strip redundant "Instagram" prefix so meaningful service info shows cleanly (e.g. "HQ Followers R365" instead of getting clipped to "In...")
                   shortName = shortName.replace(/^instagram\s+/i, '');
                   if (shortName.length > 20) shortName = shortName.substring(0, 20).trim() + '...';
-                  const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1) : null;
+                  const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1, sMatch.id, sMatch.rawId) : null;
                   const rateStr = rateNum ? `${store.formatMoney(rateNum)}/1K` : '';
                   return `
                     <button type="button" class="rec-service-chip" onclick="CustomerApp.selectRecommendedService('${id}')" title="Click to auto-select #${id}">
@@ -1464,7 +1464,7 @@ const CustomerApp = {
           <!-- Hidden Native Select for 100% calculation & form compatibility -->
           <select id="new-order-service-select" style="display: none;" onchange="CustomerApp.handleServiceChange(this.value)">
             ${activePackages.length > 0 ? activePackages.map(s => {
-              const p = store.getSellingPrice(s.cost || 0.1);
+              const p = store.getSellingPrice(s.cost || 0.1, s.id, s.rawId);
               const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
               const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
               const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
@@ -1507,7 +1507,7 @@ const CustomerApp = {
             <div class="custom-dropdown-menu" id="custom-service-dropdown-menu" style="display: none;">
               ${activePackages.length > 0 ? activePackages.map(s => {
                 const isSelected = activeService && String(s.id) === String(activeService.id);
-                const p = store.getSellingPrice(s.cost || 0.1);
+                const p = store.getSellingPrice(s.cost || 0.1, s.id, s.rawId);
                 const tags = this.getServiceTags(s);
                 const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
                 return `
@@ -1803,14 +1803,14 @@ const CustomerApp = {
       const text = document.getElementById('trigger-service-name-text');
       if (text) text.textContent = s.name;
       const rate = document.getElementById('trigger-service-rate-text');
-      if (rate && store.getSellingPrice && store.formatMoney) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1)) + '/1K';
+      if (rate && store.getSellingPrice && store.formatMoney) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1, s.id, s.rawId)) + '/1K';
 
       if (window.PixelTracker) {
         window.PixelTracker.trackViewContent({
           contentName: s.name,
           contentCategory: this.currentCategory || 'SMM Service',
           serviceId: cleanId,
-          price: store.getSellingPrice(s.cost || 0.1)
+          price: store.getSellingPrice(s.cost || 0.1, s.id, s.rawId)
         });
       }
 
@@ -1895,6 +1895,7 @@ const CustomerApp = {
         const refill = selectedOpt.getAttribute('data-refill') === '1';
         const name = selectedOpt.getAttribute('data-name') || '';
         const id = selectedOpt.value;
+        const rawId = selectedOpt.getAttribute('data-raw-id') || id;
 
         const isCatSpecial = (CustomerApp.currentCategory || '').toLowerCase().includes('likex special') || (CustomerApp.currentCategory || '').toLowerCase().includes('special very good');
         const isComment = name.toLowerCase().includes('comment') || (!isCatSpecial && (CustomerApp.currentCategory || '').toLowerCase().includes('comment'));
@@ -1913,14 +1914,17 @@ const CustomerApp = {
             const count = lines.length;
             if (commentsCountHint) {
               if (count < 50) {
-                commentsCountHint.innerHTML = `<span style="color: #ef4444; font-weight: 800;">⚠️ ${count}/50 comments (Min 50 required)</span>`;
+                commentsCountHint.textContent = `${count} comment(s) added (need at least 50)`;
+                commentsCountHint.style.color = 'var(--error)';
               } else {
-                commentsCountHint.innerHTML = `<span style="color: #10b981; font-weight: 800;">✓ ${count} comments</span>`;
+                commentsCountHint.textContent = `${count} comments ready ✓`;
+                commentsCountHint.style.color = 'var(--success)';
               }
             }
-            qtyInput.value = count > 0 ? count : 50;
+            qtyInput.value = count;
+            qtyInput.min = 50;
             const hint = document.getElementById('qty-limits-hint');
-            if (hint) hint.textContent = '1 comment per line (Min: 50 comments)';
+            if (hint) hint.textContent = `Min: 50 comments | Max: ${max.toLocaleString()}`;
           } else {
             commentsGroup.style.display = 'none';
             if (steppersBar) steppersBar.style.display = 'flex';
@@ -1936,7 +1940,7 @@ const CustomerApp = {
           }
         }
 
-        const sellingPrice = store.getSellingPrice(cost);
+        const sellingPrice = store.getSellingPrice(cost, id, rawId);
 
         const nameEl = document.getElementById('service-detail-name');
         if (nameEl) nameEl.textContent = name;
@@ -2093,7 +2097,7 @@ const CustomerApp = {
       return;
     }
 
-    const unitSellingPrice = store.getSellingPrice(wholesaleCost);
+    const unitSellingPrice = store.getSellingPrice(wholesaleCost, serviceId, rawServiceId);
     const totalCost = (unitSellingPrice / 1000) * quantity;
     if (store.data.customer.balance < totalCost) {
       store.showToast('Insufficient wallet balance. Please add funds first!', 'error');

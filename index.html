@@ -19,11 +19,16 @@
   <meta property="og:image" content="assets/likex-logo-tight.png" />
   <meta property="og:url" content="https://likex.in" />
 
+  <!-- Cache Prevention Meta Tags -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
   <!-- CSS Stylesheets -->
-  <link rel="stylesheet" href="css/design-system.css?v=7.6" />
-  <link rel="stylesheet" href="css/device-frame.css?v=7.6" />
-  <link rel="stylesheet" href="css/mobile-customer.css?v=7.6" />
-  <link rel="stylesheet" href="css/admin-console.css?v=7.6" />
+  <link rel="stylesheet" href="css/design-system.css?v=8.0" />
+  <link rel="stylesheet" href="css/device-frame.css?v=8.0" />
+  <link rel="stylesheet" href="css/mobile-customer.css?v=8.0" />
+  <link rel="stylesheet" href="css/admin-console.css?v=8.0" />
 
   <!-- Meta Pixel Code (LikeX Official Pixel) -->
   <script>
@@ -150,16 +155,34 @@
     </button>
   </div>
 
+  <!-- Prevent Stale Cache & Service Worker on Mobile/Desktop -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then(function(registrations) {
+        for (let registration of registrations) {
+          registration.unregister();
+        }
+      }).catch(function(){});
+    }
+    if ('caches' in window) {
+      caches.keys().then(function(names) {
+        for (let name of names) {
+          caches.delete(name);
+        }
+      }).catch(function(){});
+    }
+  </script>
+
   <!-- JavaScript Modules with Cache-Busting Versioning -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-client.js?v=7.6"></script>
-  <script src="js/analytics.js?v=7.6"></script>
-  <script src="js/jap-catalog.js?v=7.6"></script>
-  <script src="js/mock-data.js?v=7.6"></script>
-  <script src="js/state-store.js?v=7.6"></script>
-  <script src="js/customer-app.js?v=7.6"></script>
-  <script src="js/admin-app.js?v=7.6"></script>
-  <script src="js/main.js?v=7.6"></script>
+  <script src="js/supabase-client.js?v=8.0"></script>
+  <script src="js/analytics.js?v=8.0"></script>
+  <script src="js/jap-catalog.js?v=8.0"></script>
+  <script src="js/mock-data.js?v=8.0"></script>
+  <script src="js/state-store.js?v=8.0"></script>
+  <script src="js/customer-app.js?v=8.0"></script>
+  <script src="js/admin-app.js?v=8.0"></script>
+  <script src="js/main.js?v=8.0"></script>
 
 </body>
 </html>
