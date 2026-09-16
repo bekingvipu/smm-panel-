@@ -86,7 +86,7 @@ export default async function handler(req, res) {
         const rawAmount = Number(zapData.data?.amount || zapData.data?.pay_amount || 0);
         const utr = String(zapData.data?.utr || zapData.data?.txn_id || '').trim();
         const exchangeRate = 95.385;
-        const usdCredit = Number((rawAmount / exchangeRate).toFixed(4));
+        const usdCredit = rawAmount / exchangeRate;
 
         let targetUserId = (rows && rows[0] && rows[0].user_id) ? rows[0].user_id : null;
         let userEmail = 'customer@likex.in';
@@ -143,6 +143,22 @@ export default async function handler(req, res) {
 
         // Fallback atomic conditional update if RPC is offline
         if (!creditApplied) {
+          const doubleCheck = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?or=(id.eq.${encodeURIComponent(pendingTxnId)},description.ilike.*${encodeURIComponent(orderId)}*)&select=id,status,balance_after`, {
+            headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+          });
+          const dcRows = await doubleCheck.json().catch(() => []);
+          if (Array.isArray(dcRows) && dcRows.length > 0 && dcRows[0].status === 'Success') {
+            return res.status(200).json({
+              paid: true,
+              status: 'Success',
+              order_id: orderId,
+              amount: usdCredit,
+              balance: dcRows[0].balance_after,
+              utr: utr || orderId,
+              source: 'zapupi_live_query'
+            });
+          }
+
           const claimRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?id=eq.${encodeURIComponent(pendingTxnId)}&status=eq.Pending`, {
             method: 'PATCH',
             headers: {
@@ -153,6 +169,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({ status: 'Processing' })
           });
+
 
           const claimedRows = await claimRes.json().catch(() => []);
           if (Array.isArray(claimedRows) && claimedRows.length === 0) {

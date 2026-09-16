@@ -2548,8 +2548,8 @@ class SmmStateStore {
 
       let formatted = '';
       if (inrVal >= 1) {
-        // Strictly 2 digits after the decimal point (e.g. 9.9963 becomes 9.99)
-        const truncated2 = Math.floor((inrVal + 0.000001) * 100) / 100;
+        // Standard 2 decimal precision rounding (e.g. 9.9963 becomes 10.00)
+        const truncated2 = Math.round((inrVal + Number.EPSILON) * 100) / 100;
         formatted = truncated2.toLocaleString('en-IN', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2

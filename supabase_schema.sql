@@ -581,3 +581,9 @@ BEGIN
     );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Grant PostgREST execute permissions to API roles
+GRANT EXECUTE ON FUNCTION public.process_wallet_deposit(TEXT, BIGINT, NUMERIC, TEXT, TEXT, TEXT) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.process_wallet_order(TEXT, NUMERIC, TEXT, TEXT) TO anon, authenticated, service_role;
+GRANT EXECUTE ON FUNCTION public.refund_wallet_order(TEXT, NUMERIC, TEXT, TEXT) TO anon, authenticated, service_role;
+

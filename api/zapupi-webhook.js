@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
   try {
     const exchangeRate = 95.385; // 1 USD = 95.385 INR (Matched to LikeX Storefront)
-    const usdCredit = Number((amount / exchangeRate).toFixed(4));
+    const usdCredit = amount / exchangeRate;
     const pendingTxnId = `ORD-${orderId}`;
 
     // 1. First check if already successfully credited
@@ -130,6 +130,16 @@ export default async function handler(req, res) {
 
     // 3. Fallback conditional atomic update if RPC unavailable
     if (!creditApplied) {
+      // Re-verify if another thread or worker already marked this order as Success
+      const doubleCheck = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?or=(id.eq.${encodeURIComponent(pendingTxnId)},description.ilike.*${encodeURIComponent(orderId)}*)&select=id,status,balance_after`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const dcRows = await doubleCheck.json().catch(() => []);
+      if (Array.isArray(dcRows) && dcRows.length > 0 && dcRows[0].status === 'Success') {
+        console.log(`[ZapUPI Webhook] Order ${orderId} already marked Success in fallback double-check.`);
+        return res.status(200).json({ status: 'ok', message: 'Already processed by concurrent worker', order_id: orderId, balance: dcRows[0].balance_after });
+      }
+
       // Attempt conditional claim from Pending -> Processing
       const claimRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?id=eq.${encodeURIComponent(pendingTxnId)}&status=eq.Pending`, {
         method: 'PATCH',
@@ -141,6 +151,7 @@ export default async function handler(req, res) {
         },
         body: JSON.stringify({ status: 'Processing' })
       });
+
 
       const claimedRows = await claimRes.json().catch(() => []);
       if (Array.isArray(claimedRows) && claimedRows.length === 0) {
