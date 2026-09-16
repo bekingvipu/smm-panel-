@@ -306,7 +306,13 @@ const CustomerApp = {
                   <span>${isLoggedIn ? store.data.customer.name : 'Guest Visitor'}</span>
                 </div>
                 <div style="font-size: 12px; color: var(--text-secondary);">${isLoggedIn ? store.data.customer.email : 'Public Catalog Browsing'}</div>
-                <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--primary); margin-top: 2px; background: var(--primary-light); padding: 2px 8px; border-radius: 999px;">
+                ${isLoggedIn ? `
+                  <div style="margin-top: 5px; display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; background: rgba(99, 102, 241, 0.12); color: var(--primary); padding: 2px 8px; border-radius: 6px; border: 1px dashed var(--primary); cursor: pointer;" onclick="event.stopPropagation(); navigator.clipboard.writeText('${store.getCustomerId(store.data.customer)}'); window.store.showToast('Copied Customer ID: ${store.getCustomerId(store.data.customer)}', 'success');" title="Click to copy Customer ID">
+                    <span>ID: <strong>${store.getCustomerId(store.data.customer)}</strong></span>
+                    <span style="font-size: 10px; opacity: 0.8;">📋</span>
+                  </div>
+                ` : ''}
+                <div style="display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--primary); margin-top: 3px; background: var(--primary-light); padding: 2px 8px; border-radius: 999px;">
                   <span>🎨 Change Avatar</span>
                 </div>
               </div>
@@ -3333,7 +3339,13 @@ const CustomerApp = {
         <div class="balance-hero-card">
           <div class="balance-hero-header">
             <div>
-              <div class="balance-label">WALLET BALANCE</div>
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <div class="balance-label">WALLET BALANCE</div>
+                <div style="background: rgba(255, 255, 255, 0.2); padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;" onclick="navigator.clipboard.writeText('${store.getCustomerId(store.data.customer)}'); window.store.showToast('Copied Customer ID: ${store.getCustomerId(store.data.customer)}', 'success');" title="Click to copy Customer ID">
+                  <span>ID: ${store.getCustomerId(store.data.customer)}</span>
+                  <span style="font-size: 10px; opacity: 0.9;">📋</span>
+                </div>
+              </div>
               <div class="balance-amount">${store.formatMoney(store.data.customer.balance)}</div>
             </div>
             <div class="balance-icon-pill"><span>💰</span></div>

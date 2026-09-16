@@ -9,12 +9,13 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. USERS TABLE
 CREATE TABLE IF NOT EXISTS public.users (
     id BIGSERIAL PRIMARY KEY,
+    customer_code VARCHAR(50) UNIQUE,
     username VARCHAR(100) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     role VARCHAR(20) DEFAULT 'customer', -- 'customer' or 'admin'
-    balance NUMERIC(12, 4) DEFAULT 240.50,
-    spent NUMERIC(12, 4) DEFAULT 3840.00,
+    balance NUMERIC(12, 4) DEFAULT 0.00,
+    spent NUMERIC(12, 4) DEFAULT 0.00,
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -125,10 +126,12 @@ CREATE TABLE IF NOT EXISTS public.refill_requests (
 CREATE TABLE IF NOT EXISTS public.wallet_transactions (
     id VARCHAR(50) PRIMARY KEY,
     user_id BIGINT REFERENCES public.users(id),
-    type VARCHAR(50) NOT NULL, -- 'Deposit', 'Order Deduction', 'Refund'
+    type VARCHAR(50) NOT NULL, -- 'Deposit', 'Order Deduction', 'Refund', 'Adjustment'
     description TEXT NOT NULL,
     amount NUMERIC(10, 4) NOT NULL,
+    balance_before NUMERIC(12, 4),
     balance_after NUMERIC(12, 4) NOT NULL,
+    order_id VARCHAR(100),
     status VARCHAR(50) DEFAULT 'Success',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -313,9 +316,11 @@ WHERE au.email IS NOT NULL
 -- 3. Automatic trigger function to sync future signups to public.users
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
 RETURNS TRIGGER AS $$
+DECLARE
+    v_new_id BIGINT;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM public.users WHERE email = NEW.email) THEN
-        INSERT INTO public.users (email, username, password_hash, role)
+        INSERT INTO public.users (email, username, password_hash, role, balance, spent)
         VALUES (
             NEW.email,
             COALESCE(
@@ -324,8 +329,16 @@ BEGIN
                 split_part(NEW.email, '@', 1)
             ) || '_' || SUBSTRING(NEW.id::text, 1, 5),
             'auth_synced',
-            'customer'
-        );
+            'customer',
+            0.00,
+            0.00
+        )
+        RETURNING id INTO v_new_id;
+
+        -- Assign unique permanent Customer ID
+        UPDATE public.users
+        SET customer_code = 'LX-' || (10000 + v_new_id)
+        WHERE id = v_new_id AND (customer_code IS NULL OR customer_code = '');
     END IF;
     RETURN NEW;
 END;
@@ -336,4 +349,144 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
+
+-- =========================================================
+-- 12. ATOMIC WALLET SECURITY & ORDER DEBIT RPC FUNCTIONS
+-- =========================================================
+
+-- Process Wallet Order with Row-Level Lock (Prevents Race Condition Bypass)
+CREATE OR REPLACE FUNCTION public.process_wallet_order(
+    p_user_email TEXT,
+    p_amount NUMERIC,
+    p_order_id TEXT,
+    p_description TEXT
+) RETURNS JSONB AS $$
+DECLARE
+    v_user RECORD;
+    v_new_balance NUMERIC;
+    v_new_spent NUMERIC;
+    v_txn_id TEXT;
+BEGIN
+    -- Atomic row-level lock on customer account
+    SELECT id, balance, spent, email, customer_code INTO v_user
+    FROM public.users
+    WHERE lower(trim(email)) = lower(trim(p_user_email))
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Customer account not found.');
+    END IF;
+
+    IF COALESCE(v_user.balance, 0) < p_amount THEN
+        RETURN jsonb_build_object(
+            'success', false,
+            'error', 'Insufficient wallet balance.',
+            'current_balance', COALESCE(v_user.balance, 0),
+            'required_amount', p_amount
+        );
+    END IF;
+
+    v_new_balance := ROUND(v_user.balance - p_amount, 4);
+    v_new_spent := ROUND(COALESCE(v_user.spent, 0) + p_amount, 4);
+
+    -- Atomically update customer balance and spent
+    UPDATE public.users
+    SET balance = v_new_balance,
+        spent = v_new_spent
+    WHERE id = v_user.id;
+
+    -- Insert ledger record
+    v_txn_id := 'TXN-ORD-' || p_order_id;
+    INSERT INTO public.wallet_transactions (id, user_id, type, description, amount, balance_before, balance_after, order_id, status, created_at)
+    VALUES (v_txn_id, v_user.id, 'Order Deduction', p_description, -p_amount, v_user.balance, v_new_balance, p_order_id, 'Success', NOW())
+    ON CONFLICT (id) DO UPDATE
+    SET balance_after = EXCLUDED.balance_after,
+        balance_before = EXCLUDED.balance_before;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'user_id', v_user.id,
+        'customer_code', COALESCE(v_user.customer_code, 'LX-' || (10000 + v_user.id)),
+        'previous_balance', v_user.balance,
+        'new_balance', v_new_balance,
+        'deducted_amount', p_amount,
+        'transaction_id', v_txn_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Refund Wallet Order (In case of fatal upstream rejection)
+CREATE OR REPLACE FUNCTION public.refund_wallet_order(
+    p_user_email TEXT,
+    p_amount NUMERIC,
+    p_order_id TEXT,
+    p_reason TEXT
+) RETURNS JSONB AS $$
+DECLARE
+    v_user RECORD;
+    v_new_balance NUMERIC;
+    v_new_spent NUMERIC;
+    v_txn_id TEXT;
+BEGIN
+    SELECT id, balance, spent, email, customer_code INTO v_user
+    FROM public.users
+    WHERE lower(trim(email)) = lower(trim(p_user_email))
+    FOR UPDATE;
+
+    IF NOT FOUND THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Customer account not found.');
+    END IF;
+
+    v_new_balance := ROUND(COALESCE(v_user.balance, 0) + p_amount, 4);
+    v_new_spent := ROUND(GREATEST(0, COALESCE(v_user.spent, 0) - p_amount), 4);
+
+    UPDATE public.users
+    SET balance = v_new_balance,
+        spent = v_new_spent
+    WHERE id = v_user.id;
+
+    v_txn_id := 'TXN-REF-' || p_order_id || '-' || FLOOR(EXTRACT(EPOCH FROM NOW()));
+    INSERT INTO public.wallet_transactions (id, user_id, type, description, amount, balance_before, balance_after, order_id, status, created_at)
+    VALUES (v_txn_id, v_user.id, 'Refund', 'Refund for Order #' || p_order_id || ' (' || p_reason || ')', p_amount, v_user.balance, v_new_balance, p_order_id, 'Success', NOW())
+    ON CONFLICT (id) DO NOTHING;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'user_id', v_user.id,
+        'previous_balance', v_user.balance,
+        'new_balance', v_new_balance,
+        'refunded_amount', p_amount,
+        'transaction_id', v_txn_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- =========================================================
+-- 13. ONE-TIME MIGRATION & RECONCILIATION SCRIPT
+-- Paste and run in Supabase SQL editor to upgrade existing live data
+-- =========================================================
+
+-- 1. Ensure columns exist and defaults are strictly 0.00
+ALTER TABLE public.users ALTER COLUMN balance SET DEFAULT 0.00;
+ALTER TABLE public.users ALTER COLUMN spent SET DEFAULT 0.00;
+ALTER TABLE public.users ADD COLUMN IF NOT EXISTS customer_code VARCHAR(50) UNIQUE;
+ALTER TABLE public.wallet_transactions ADD COLUMN IF NOT EXISTS balance_before NUMERIC(12, 4);
+ALTER TABLE public.wallet_transactions ADD COLUMN IF NOT EXISTS order_id VARCHAR(100);
+
+-- 2. Populate customer_code for existing users without one
+UPDATE public.users
+SET customer_code = 'LX-' || (10000 + id)
+WHERE customer_code IS NULL OR customer_code = '';
+
+-- 3. Reconcile balances for existing customers:
+-- Remove fake 240.50 default. If user has genuine deposits in wallet_transactions, set balance = deposits - orders.
+-- If user never deposited, set balance = 0.00.
+UPDATE public.users u
+SET balance = COALESCE((
+    SELECT ROUND(SUM(wt.amount), 4)
+    FROM public.wallet_transactions wt
+    WHERE wt.user_id = u.id AND wt.status = 'Success'
+), 0.00)
+WHERE u.role = 'customer';
+
 

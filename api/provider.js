@@ -121,82 +121,244 @@ export default async function handler(req, res) {
     const providerKey = requestedProvider in PROVIDERS ? requestedProvider : 'worldofsmm';
     const providerConfig = PROVIDERS[providerKey];
 
-    const data = await callProvider(providerConfig);
-
-    // If order was placed, log to Supabase PostgreSQL orders table (keeps LikeX ID & Provider Order ID separate)
+    // =========================================================
+    // ACTION: ADD ORDER (SECURE WALLET ENFORCEMENT & DEDUCTION)
+    // =========================================================
     if (action === 'add') {
-      const liveOrderId = extractProviderOrderId(data);
-      const liveError = extractProviderError(data);
-      const isSuccess = Boolean(liveOrderId);
+      const customerEmail = String(paramsObj.customerEmail || '').trim().toLowerCase();
+      if (!customerEmail) {
+        return res.status(400).json({ error: 'Customer login required to place an order.', success: false });
+      }
+
       const rawLikeXStr = paramsObj.likeXOrderId ? String(paramsObj.likeXOrderId).replace(/\D/g, '') : '';
       const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
+      const displayLikeXId = paramsObj.likeXOrderId || `LX${orderIdNum}`;
+      const serviceName = String(paramsObj.serviceName || 'Social Growth Service');
+      const orderCharge = Number(paramsObj.charge || 0);
 
-      const orderStatus = isSuccess ? (data.status || 'Processing') : 'Queued';
+      // 1. Fetch user from Supabase to verify existence & balance
+      let user = null;
+      try {
+        const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(customerEmail)}&select=id,username,email,balance,spent,customer_code`, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        if (uRes.ok) {
+          const uData = await uRes.json();
+          if (Array.isArray(uData) && uData.length > 0) {
+            user = uData[0];
+          }
+        }
+      } catch (uErr) {
+        console.warn('[LikeX Backend] Error fetching customer:', uErr);
+      }
+
+      if (!user) {
+        return res.status(400).json({ error: 'Customer account not found in system. Please sign in.', success: false });
+      }
+
+      const customerCode = user.customer_code || `LX-${10000 + user.id}`;
+      const userBalanceBefore = Number(user.balance || 0);
+
+      // 2. Strict Balance Verification BEFORE contacting provider
+      if (userBalanceBefore < orderCharge) {
+        return res.status(400).json({
+          error: `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $${userBalanceBefore.toFixed(2)}. Please recharge your wallet.`,
+          balance: userBalanceBefore,
+          required: orderCharge,
+          success: false
+        });
+      }
+
+      // 3. Atomic Debit via RPC or direct REST
+      let debitSuccess = false;
+      let balanceAfter = userBalanceBefore;
+      let rpcError = null;
+
+      try {
+        const rpcRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/process_wallet_order`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            p_user_email: customerEmail,
+            p_amount: orderCharge,
+            p_order_id: String(orderIdNum),
+            p_description: `Payment for Order #${displayLikeXId} — ${serviceName} [${customerEmail}]`
+          })
+        });
+
+        if (rpcRes.ok) {
+          const rpcData = await rpcRes.json();
+          if (rpcData && rpcData.success) {
+            debitSuccess = true;
+            balanceAfter = Number(rpcData.new_balance);
+          } else {
+            rpcError = rpcData?.error || 'Insufficient balance';
+          }
+        }
+      } catch (err) {
+        console.warn('[LikeX Backend] RPC debit attempt notice:', err.message);
+      }
+
+      // Fallback direct atomic debit if RPC not yet created in Supabase
+      if (!debitSuccess) {
+        if (rpcError && rpcError.includes('Insufficient')) {
+          return res.status(400).json({
+            error: 'Insufficient wallet balance. Please add funds to your wallet.',
+            balance: userBalanceBefore,
+            required: orderCharge,
+            success: false
+          });
+        }
+
+        // Re-verify current balance
+        if (userBalanceBefore < orderCharge) {
+          return res.status(400).json({
+            error: 'Insufficient wallet balance. Please add funds to your wallet.',
+            balance: userBalanceBefore,
+            required: orderCharge,
+            success: false
+          });
+        }
+
+        balanceAfter = Number((userBalanceBefore - orderCharge).toFixed(4));
+        const newSpent = Number(((user.spent || 0) + orderCharge).toFixed(4));
+
+        try {
+          // Update user balance
+          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${user.id}`, {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ balance: balanceAfter, spent: newSpent })
+          });
+
+          // Insert ledger entry
+          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({
+              id: `TXN-ORD-${orderIdNum}`,
+              user_id: user.id,
+              type: 'Order Deduction',
+              description: `Payment for Order #${displayLikeXId} — ${serviceName} [${customerEmail}]`,
+              amount: -orderCharge,
+              balance_before: userBalanceBefore,
+              balance_after: balanceAfter,
+              order_id: String(displayLikeXId),
+              status: 'Success',
+              created_at: new Date().toISOString()
+            })
+          });
+          debitSuccess = true;
+        } catch (debitErr) {
+          console.error('[LikeX Backend] Fallback debit error:', debitErr);
+          return res.status(500).json({ error: 'Failed to process wallet transaction. Please try again.', success: false });
+        }
+      }
+
+      // 4. Submit order to Upstream Wholesale Provider
+      let providerData = null;
+      try {
+        providerData = await callProvider(providerConfig);
+      } catch (provErr) {
+        console.warn('[LikeX Backend] Provider dispatch timeout/error:', provErr.message);
+        providerData = { error: provErr.name === 'AbortError' ? 'Provider timeout (15s)' : provErr.message };
+      }
+
+      const liveOrderId = extractProviderOrderId(providerData);
+      const liveError = extractProviderError(providerData);
+      const isSuccess = Boolean(liveOrderId);
+
+      // If provider fatally rejected (e.g. invalid service/link), auto-refund customer immediately
+      const isFatalRejection = !isSuccess && liveError && (
+        liveError.toLowerCase().includes('incorrect') ||
+        liveError.toLowerCase().includes('not found') ||
+        liveError.toLowerCase().includes('disabled') ||
+        liveError.toLowerCase().includes('minimal') ||
+        liveError.toLowerCase().includes('maximum') ||
+        liveError.toLowerCase().includes('private')
+      );
+
+      if (isFatalRejection) {
+        // Rollback / Refund customer balance
+        const refundedBalance = Number((balanceAfter + orderCharge).toFixed(4));
+        try {
+          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${user.id}`, {
+            method: 'PATCH',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ balance: refundedBalance, spent: user.spent || 0 })
+          });
+
+          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              id: `TXN-REF-${orderIdNum}-${Date.now()}`,
+              user_id: user.id,
+              type: 'Refund',
+              description: `Refund for Order #${displayLikeXId} (Provider Rejected: ${liveError.slice(0, 40)})`,
+              amount: orderCharge,
+              balance_before: balanceAfter,
+              balance_after: refundedBalance,
+              order_id: String(displayLikeXId),
+              status: 'Success',
+              created_at: new Date().toISOString()
+            })
+          });
+          balanceAfter = refundedBalance;
+        } catch (rfErr) {
+          console.warn('[LikeX Backend] Auto-refund error:', rfErr);
+        }
+      }
+
+      const orderStatus = isSuccess ? (providerData.status || 'Processing') : (isFatalRejection ? 'Canceled' : 'Queued');
       const orderErrorNote = liveError ? `Error: ${String(liveError).slice(0, 40)}` : null;
 
       const snapshotPayload = {
         rawServiceId: String(paramsObj.service || ''),
         serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
-        serviceName: String(paramsObj.serviceName || ''),
+        serviceName: serviceName,
         category: String(paramsObj.category || ''),
         platform: String(paramsObj.platform || ''),
         provider: providerKey,
         wholesaleCost: Number(paramsObj.wholesaleCost || 0),
-        charge: Number(paramsObj.charge || 0),
-        email: paramsObj.customerEmail || '',
-        name: paramsObj.customerName || '',
+        charge: orderCharge,
+        email: customerEmail,
+        name: user.username || paramsObj.customerName || '',
+        customerCode: customerCode,
+        walletBalanceBeforeOrder: userBalanceBefore,
+        walletBalanceAtOrder: userBalanceBefore,
+        walletBalanceAfter: balanceAfter,
         note: orderErrorNote || null
       };
 
-      // 1. Resolve or create user_id in public.users
-      let resolvedUserId = null;
-      if (paramsObj.customerEmail) {
-        try {
-          const cleanEmail = String(paramsObj.customerEmail).trim().toLowerCase();
-          const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(cleanEmail)}&select=id`, {
-            headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-          });
-          if (uRes.ok) {
-            const uData = await uRes.json();
-            if (Array.isArray(uData) && uData.length > 0) {
-              resolvedUserId = uData[0].id;
-            } else {
-              const cleanName = paramsObj.customerName || cleanEmail.split('@')[0];
-              const createRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users`, {
-                method: 'POST',
-                headers: {
-                  apikey: SUPABASE_ANON_KEY,
-                  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-                  'Content-Type': 'application/json',
-                  Prefer: 'return=representation'
-                },
-                body: JSON.stringify({
-                  email: cleanEmail,
-                  username: cleanName,
-                  password_hash: 'auth_order_autogen',
-                  role: 'customer'
-                })
-              });
-              if (createRes.ok) {
-                const newU = await createRes.json();
-                if (Array.isArray(newU) && newU.length > 0) {
-                  resolvedUserId = newU[0].id;
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.warn('[LikeX Backend] User ID resolution error:', e);
-        }
-      }
-
-      // 2. target_url is TEXT with no length limit; store clean URL + snapshot delimiter
+      // 5. Log Order into Supabase orders table
       const rawTargetLink = String(paramsObj.link || '').trim();
       const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
       const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 45);
 
       try {
-        const dbRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
           method: 'POST',
           headers: {
             apikey: SUPABASE_ANON_KEY,
@@ -206,11 +368,11 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify({
             id: orderIdNum,
-            user_id: resolvedUserId,
-            service_id: null, // Null to prevent Foreign Key constraint errors with customer_services table
+            user_id: user.id,
+            service_id: null,
             target_url: encodedTargetUrl,
             quantity: Number(paramsObj.quantity) || 1000,
-            charge: Number(paramsObj.charge) || 0,
+            charge: orderCharge,
             provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
             provider_order_id: liveOrderId || null,
             assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
@@ -220,26 +382,25 @@ export default async function handler(req, res) {
             created_at: new Date().toISOString()
           })
         });
-        if (!dbRes.ok) {
-          const errTxt = await dbRes.text();
-          console.warn('[LikeX Backend] Supabase order logging notice:', dbRes.status, errTxt);
-        } else {
-          console.log(`[LikeX Backend] Order #${orderIdNum} successfully logged to Supabase.`);
-        }
       } catch (dbErr) {
         console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message);
       }
 
       return res.status(200).json({
-        ...data,
-        order: liveOrderId || data?.order || null,
+        ...providerData,
+        order: liveOrderId || providerData?.order || null,
         providerOrderId: liveOrderId || null,
         success: isSuccess,
-        error: liveError || data?.error || null,
+        error: liveError || null,
         provider: providerKey,
-        providerName: providerConfig.name
+        providerName: providerConfig.name,
+        newBalance: balanceAfter,
+        customerId: customerCode
       });
     }
+
+    // Default: for non-'add' actions (services, balance, status, refill)
+    const data = await callProvider(providerConfig);
 
     // If upstream returns an array (e.g. action: 'services'), return array directly
     if (Array.isArray(data)) {

@@ -1645,10 +1645,18 @@ class SmmStateStore {
       // 1. Fetch users from Supabase with balance & spent
       const { data: supaUsers } = await window.supabaseClient
         .from('users')
-        .select('id, email, username, role, balance, spent');
+        .select('id, email, username, role, balance, spent, created_at, customer_code');
 
       const userMap = new Map();
       if (supaUsers && supaUsers.length > 0) {
+        // Ensure every user has a consistent customer_code
+        supaUsers.forEach(u => {
+          if (!u.customer_code) {
+            u.customer_code = `LX-${10000 + Number(u.id || 1)}`;
+          }
+          userMap.set(String(u.id), u);
+          if (u.email) userMap.set(u.email.toLowerCase(), u);
+        });
         this.data.users = supaUsers;
         const prevUsers = localStorage.getItem('likex_supabase_users');
         const newUsersStr = JSON.stringify(supaUsers);
@@ -1656,7 +1664,6 @@ class SmmStateStore {
           localStorage.setItem('likex_supabase_users', newUsersStr);
           dataChanged = true;
         }
-        supaUsers.forEach(u => userMap.set(String(u.id), u));
       }
 
       // 2. Fetch orders from Supabase
@@ -1665,10 +1672,23 @@ class SmmStateStore {
         .select('*')
         .order('created_at', { ascending: false });
 
+      // 3. Fetch all wallet transactions from Supabase for admin ledger
+      try {
+        const { data: supaTxns } = await window.supabaseClient
+          .from('wallet_transactions')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (supaTxns && Array.isArray(supaTxns)) {
+          this.data.allTransactions = supaTxns;
+        }
+      } catch (txErr) {
+        console.warn('[LikeX Admin] Transactions fetch notice:', txErr);
+      }
+
       if (supaOrders && supaOrders.length > 0) {
         const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
         const mapped = supaOrders.map(so => {
-          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : null;
+          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : (snapshot?.email ? userMap.get(String(snapshot.email).toLowerCase()) : null);
 
           // 1. Check if target_url contains embedded metadata snapshot
           let cleanTargetUrl = String(so.target_url || '').trim();
@@ -1744,6 +1764,8 @@ class SmmStateStore {
             customerName = customerName.replace(/_[a-f0-9]{5}$/, '');
           }
 
+          const resolvedCustCode = matchedUser?.customer_code || snapshot?.customerCode || (matchedUser?.id ? `LX-${10000 + Number(matchedUser.id)}` : (userEmail ? this.getCustomerId(userEmail) : 'LX-Guest'));
+
           return {
             id: String(so.id),
             likeXOrderId: String(so.id),
@@ -1766,6 +1788,13 @@ class SmmStateStore {
             upstreamError: finalErrorMsg,
             userEmail: userEmail,
             customerName: customerName,
+            customerUserId: matchedUser?.id || so.user_id || null,
+            customerId: resolvedCustCode,
+            customerCode: resolvedCustCode,
+            walletBalanceAtOrder: snapshot?.walletBalanceAtOrder ?? snapshot?.walletBalanceBeforeOrder ?? null,
+            walletBalanceBeforeOrder: snapshot?.walletBalanceBeforeOrder ?? null,
+            walletBalanceAfter: snapshot?.walletBalanceAfter ?? null,
+            serviceSnapshot: snapshot,
             createdAt: orderCreatedAt,
             date: this.formatRealDate(orderCreatedAt)
           };
@@ -1819,19 +1848,90 @@ class SmmStateStore {
     return `smm_user_${safeKey}_${key}`;
   }
 
+  // Unique Customer ID Helper (e.g. LX-10245)
+  getCustomerId(userOrEmail) {
+    if (!userOrEmail) return 'LX-10001';
+    if (typeof userOrEmail === 'object') {
+      if (userOrEmail.customer_code) return userOrEmail.customer_code;
+      if (userOrEmail.customerId) return userOrEmail.customerId;
+      if (userOrEmail.customerCode) return userOrEmail.customerCode;
+      if (userOrEmail.id && !isNaN(Number(userOrEmail.id))) {
+        return `LX-${10000 + Number(userOrEmail.id)}`;
+      }
+      userOrEmail = userOrEmail.email || '';
+    }
+    const str = String(userOrEmail).trim().toLowerCase();
+    // 1. Check current customer
+    if (this.data.customer && this.data.customer.customerId) {
+      if ((this.data.customer.email && this.data.customer.email.toLowerCase() === str) ||
+          (this.data.customer.id && String(this.data.customer.id) === str)) {
+        return this.data.customer.customerId;
+      }
+    }
+    // 2. Check this.data.users
+    const found = (this.data.users || []).find(u => 
+      (u.email && u.email.toLowerCase() === str) || 
+      (u.customer_code && u.customer_code.toLowerCase() === str) ||
+      (String(u.id) === str)
+    );
+    if (found) {
+      if (found.customer_code) return found.customer_code;
+      if (found.id && !isNaN(Number(found.id))) return `LX-${10000 + Number(found.id)}`;
+    }
+    // 3. Fallback deterministic hash for email
+    if (str.includes('@')) {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = (hash << 5) - hash + str.charCodeAt(i);
+        hash |= 0;
+      }
+      const num = 10000 + (Math.abs(hash) % 89999);
+      return `LX-${num}`;
+    }
+    return `LX-${str.replace(/\D/g, '') || '10245'}`;
+  }
+
   getCustomerWalletBalance(emailOrUserId) {
     if (!emailOrUserId) return null;
     const str = String(emailOrUserId).trim();
 
-    // 1. If currently logged in customer matches
+    // 1. Check this.data.users (Supabase live users cache)
+    if (Array.isArray(this.data.users)) {
+      const u = this.data.users.find(usr => 
+        (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
+        (usr.id && String(usr.id) === str) ||
+        (usr.customer_code && usr.customer_code.toLowerCase() === str.toLowerCase())
+      );
+      if (u && u.balance !== undefined && u.balance !== null) {
+        return Number(u.balance);
+      }
+    }
+
+    // 2. If currently logged in customer matches
     if (this.data.customer) {
       if ((this.data.customer.email && this.data.customer.email.toLowerCase() === str.toLowerCase()) ||
-          (this.data.customer.id && String(this.data.customer.id) === str)) {
+          (this.data.customer.id && String(this.data.customer.id) === str) ||
+          (this.data.customer.customerId && this.data.customer.customerId.toLowerCase() === str.toLowerCase())) {
         return Number(this.data.customer.balance || 0);
       }
     }
 
-    // 2. Check localStorage user balance key
+    // 3. Check likex_supabase_users cached in localStorage
+    try {
+      const supaUsers = JSON.parse(localStorage.getItem('likex_supabase_users') || '[]');
+      if (Array.isArray(supaUsers)) {
+        const u = supaUsers.find(usr => 
+          (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
+          (usr.id && String(usr.id) === str) ||
+          (usr.customer_code && usr.customer_code.toLowerCase() === str.toLowerCase())
+        );
+        if (u && u.balance !== undefined && u.balance !== null) {
+          return Number(u.balance);
+        }
+      }
+    } catch (e) {}
+
+    // 4. Check localStorage user balance key
     if (str.includes('@')) {
       const balKey = this._getUserStorageKey(str, 'balance');
       if (balKey) {
@@ -1842,74 +1942,30 @@ class SmmStateStore {
       }
     }
 
-    // 3. Scan all smm_user_*_balance in localStorage
-    try {
-      const safeKey = str.toLowerCase().replace(/[^a-z0-9]/g, '_');
-      const directKey = `smm_user_${safeKey}_balance`;
-      const directSaved = localStorage.getItem(directKey);
-      if (directSaved !== null && !isNaN(parseFloat(directSaved))) {
-        return parseFloat(directSaved);
-      }
-
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('smm_user_') && key.endsWith('_balance')) {
-          const emailPart = key.replace('smm_user_', '').replace('_balance', '');
-          if (emailPart === safeKey) {
-            const val = parseFloat(localStorage.getItem(key));
-            if (!isNaN(val)) return val;
-          }
-        }
-      }
-    } catch (e) {}
-
-    // 4. Check this.data.users if present
-    if (Array.isArray(this.data.users)) {
-      const u = this.data.users.find(usr => 
-        (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
-        (usr.id && String(usr.id) === str)
-      );
-      if (u && u.balance !== undefined && u.balance !== null) {
-        return Number(u.balance);
-      }
-    }
-
-    // 5. Check likex_supabase_users cached in localStorage
-    try {
-      const supaUsers = JSON.parse(localStorage.getItem('likex_supabase_users') || '[]');
-      if (Array.isArray(supaUsers)) {
-        const u = supaUsers.find(usr => 
-          (usr.email && usr.email.toLowerCase() === str.toLowerCase()) ||
-          (usr.id && String(usr.id) === str)
-        );
-        if (u && u.balance !== undefined && u.balance !== null) {
-          return Number(u.balance);
-        }
-      }
-    } catch (e) {}
-
     return null;
   }
 
   loadUserData(email) {
     if (!email) return;
-    const balKey = this._getUserStorageKey(email, 'balance');
-    const ordersKey = this._getUserStorageKey(email, 'orders');
-    const txnsKey = this._getUserStorageKey(email, 'txns');
+    const cleanEmail = email.trim().toLowerCase();
+    const balKey = this._getUserStorageKey(cleanEmail, 'balance');
+    const ordersKey = this._getUserStorageKey(cleanEmail, 'orders');
+    const txnsKey = this._getUserStorageKey(cleanEmail, 'txns');
 
     const savedBal = localStorage.getItem(balKey);
     this.data.customer.balance = savedBal !== null ? parseFloat(savedBal) : 0.00;
 
+    const savedCustomerId = localStorage.getItem('smm_user_customer_id');
+    this.data.customer.customerId = savedCustomerId || this.getCustomerId(cleanEmail);
+
     const savedOrders = localStorage.getItem(ordersKey);
     const parsedOrders = savedOrders ? JSON.parse(savedOrders) : [];
     this.data.orders = parsedOrders.map(o => {
-      // Use Provider Order ID as primary ID when available
       if (o.providerOrderId) {
         o.id = String(o.providerOrderId);
       } else if (String(o.id).length > 5) {
         o.providerOrderId = String(o.id);
       }
-      // White-label provider display name for customer privacy
       if (o.providerName && (o.providerName.includes('WorldOfSMM') || o.providerName.includes('SocialFans') || o.providerName.includes('JustAnotherPanel') || o.providerName.includes('JAP'))) {
         o.providerName = 'LikeX Automated Server';
       }
@@ -1918,87 +1974,77 @@ class SmmStateStore {
 
     const savedTxns = localStorage.getItem(txnsKey);
     this.data.transactions = savedTxns ? JSON.parse(savedTxns) : [];
-
     this.data.customer.ordersCount = this.data.orders.length;
     this.data.customer.spent = this.data.orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
 
-    // Asynchronous Cloud Reconcile from Supabase wallet_transactions
+    // Authoritative Live Sync from Supabase
     if (window.supabaseClient) {
+      // 1. Fetch user authoritative balance & customer_code from public.users
+      window.supabaseClient
+        .from('users')
+        .select('id, balance, spent, customer_code, created_at')
+        .eq('email', cleanEmail)
+        .limit(1)
+        .then(({ data: supaUserData, error: userErr }) => {
+          if (!userErr && Array.isArray(supaUserData) && supaUserData.length > 0) {
+            const u = supaUserData[0];
+            if (u.balance !== null && u.balance !== undefined) {
+              this.data.customer.balance = Number(u.balance);
+            }
+            if (u.spent !== null && u.spent !== undefined) {
+              this.data.customer.spent = Number(u.spent);
+            }
+            const code = u.customer_code || `LX-${10000 + Number(u.id)}`;
+            this.data.customer.customerId = code;
+            localStorage.setItem('smm_user_customer_id', code);
+            this.saveUserData();
+            this.notify();
+            this.updateCustomerHeader();
+          }
+        })
+        .catch(() => {});
+
+      // 2. Fetch authoritative transactions from Supabase wallet_transactions
       window.supabaseClient
         .from('wallet_transactions')
         .select('*')
-        .eq('status', 'Success')
-        .ilike('description', `%${email}%`)
+        .or(`description.ilike.%${cleanEmail}%,description.ilike.%${cleanEmail.split('@')[0]}%`)
         .order('created_at', { ascending: false })
-        .then(({ data: cloudTxns }) => {
-          if (Array.isArray(cloudTxns) && cloudTxns.length > 0) {
-            let updated = false;
+        .then(({ data: cloudTxns, error: txnErr }) => {
+          if (!txnErr && Array.isArray(cloudTxns) && cloudTxns.length > 0) {
+            const seenIds = new Set();
+            const merged = [];
 
-            // 1. Deduplicate local transactions array first by 12-digit UTR
-            const seenKeys = new Set();
-            const cleanTxns = [];
-            let duplicateDepositDeduction = 0;
-
-            this.data.transactions.forEach(t => {
-              const uMatch = (t.description || '').match(/\b\d{12}\b/);
-              const oMatch = (t.description || '').match(/\bLKX\d+\b/);
-              const key = uMatch ? uMatch[0] : (oMatch ? oMatch[0] : (t.id || JSON.stringify(t)));
-              if (!seenKeys.has(key)) {
-                seenKeys.add(key);
-                cleanTxns.push(t);
-              } else {
-                if (t.type === 'Wallet Deposit' || t.type === 'Deposit') {
-                  duplicateDepositDeduction += Number(t.amount || 0);
-                }
-                updated = true;
-              }
-            });
-            this.data.transactions = cleanTxns;
-
-            // 2. Reconcile missing cloud deposits
             cloudTxns.forEach(ctxn => {
-              const uMatch = (ctxn.description || '').match(/\b\d{12}\b/);
-              const oMatch = (ctxn.description || '').match(/\bLKX\d+\b/);
-              const key = uMatch ? uMatch[0] : (oMatch ? oMatch[0] : ctxn.id);
-
-              const alreadyExists = seenKeys.has(key) || this.data.transactions.some(t => {
-                if (t.id === ctxn.id || t.id === `TXN-${ctxn.id}`) return true;
-                if (uMatch && (t.description || '').includes(uMatch[0])) return true;
-                if (oMatch && (t.description || '').includes(oMatch[0])) return true;
-                return false;
+              seenIds.add(String(ctxn.id));
+              merged.push({
+                id: ctxn.id,
+                type: ctxn.type,
+                description: ctxn.description,
+                amount: Number(ctxn.amount),
+                balanceBefore: ctxn.balance_before !== undefined ? Number(ctxn.balance_before) : undefined,
+                balanceAfter: Number(ctxn.balance_after),
+                status: ctxn.status || 'Success',
+                orderId: ctxn.order_id || null,
+                createdAt: ctxn.created_at ? new Date(ctxn.created_at).getTime() : Date.now(),
+                date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
               });
+            });
 
-              if (!alreadyExists && ctxn.type === 'Deposit') {
-                const inrRate = this.data.exchangeRate || 95.385;
-                // If ctxn amount was recorded in raw USD, normalize
-                const depAmt = Number(ctxn.amount || 0);
-                this.data.customer.balance = Number((this.data.customer.balance + depAmt).toFixed(4));
-                seenKeys.add(key);
-                this.data.transactions.unshift({
-                  id: ctxn.id,
-                  type: 'Wallet Deposit',
-                  description: ctxn.description,
-                  amount: depAmt,
-                  balanceAfter: this.data.customer.balance,
-                  status: 'Success',
-                  date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
-                });
-                updated = true;
+            this.data.transactions.forEach(ltxn => {
+              if (ltxn && ltxn.id && !seenIds.has(String(ltxn.id))) {
+                merged.push(ltxn);
+                seenIds.add(String(ltxn.id));
               }
             });
 
-            if (duplicateDepositDeduction > 0) {
-              this.data.customer.balance = Math.max(0, Number((this.data.customer.balance - duplicateDepositDeduction).toFixed(4)));
-              updated = true;
-            }
-
-            if (updated) {
-              this.saveUserData();
-              this.notify();
-              this.updateCustomerHeader();
-            }
+            merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+            this.data.transactions = merged;
+            this.saveUserData();
+            this.notify();
           }
-        }).catch(() => {});
+        })
+        .catch(() => {});
     }
   }
 
@@ -2009,6 +2055,9 @@ class SmmStateStore {
     localStorage.setItem(this._getUserStorageKey(email, 'balance'), this.data.customer.balance.toFixed(4));
     localStorage.setItem(this._getUserStorageKey(email, 'orders'), JSON.stringify(this.data.orders));
     localStorage.setItem(this._getUserStorageKey(email, 'txns'), JSON.stringify(this.data.transactions));
+    if (this.data.customer.customerId) {
+      localStorage.setItem('smm_user_customer_id', this.data.customer.customerId);
+    }
   }
 
   login(name, email, avatar = null, showToast = true) {
@@ -2335,24 +2384,11 @@ class SmmStateStore {
       const currentWalletBal = Number(this.data.customer.balance || 0);
       const walletBalAfter = Number((currentWalletBal - totalCost).toFixed(4));
 
-      // Deduct user wallet immediately
-      this.data.customer.balance = walletBalAfter;
-
-      // Deduct in transactions
-      this.data.transactions.unshift({
-        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
-        type: 'Order Placed',
-        description: `Order #${finalOrderId} — ${serviceName}`,
-        amount: -totalCost,
-        balanceAfter: walletBalAfter,
-        status: 'Success',
-        createdAt: now,
-        date: fullDateStr
-      });
-
       const resolvedCategory = category || foundSvc?.category || 'Social Growth';
       const resolvedPlatform = platform || foundSvc?.platform || (String(cleanedTarget).includes('instagram') ? 'instagram' : 'smm');
       const resolvedServiceId = serviceId || (targetProvider === 'socialfans' ? `sf-${cleanRawServiceId}` : `wos-${cleanRawServiceId}`);
+
+      const customerCode = this.data.customer?.customerId || this.getCustomerId(this.data.customer);
 
       const serviceSnapshot = {
         serviceId: resolvedServiceId,
@@ -2365,7 +2401,11 @@ class SmmStateStore {
         providerDisplayName: providerDisplayName,
         wholesaleCost: targetWholesaleCost,
         charge: totalCost,
-        unitSellingPrice: unitSellingPrice
+        unitSellingPrice: unitSellingPrice,
+        customerCode: customerCode,
+        walletBalanceBeforeOrder: currentWalletBal,
+        walletBalanceAtOrder: currentWalletBal,
+        walletBalanceAfter: walletBalAfter
       };
 
       const newOrder = {
@@ -2408,14 +2448,50 @@ class SmmStateStore {
         userEmail: this.data.customer?.email || '',
         customerName: this.data.customer?.name || 'Customer',
         customerUserId: this.data.customer?.id || null,
+        customerId: customerCode,
+        customerCode: customerCode,
         walletBalanceBeforeOrder: currentWalletBal,
-        walletBalanceAtOrder: walletBalAfter,
+        walletBalanceAtOrder: currentWalletBal,
+        walletBalanceAfter: walletBalAfter,
         paymentMethod: 'LikeX Wallet (Full Advance)',
         isQueued: false,
         needsTopup: false,
         upstreamError: null,
         providerResponse: null
       };
+
+      // Await direct fast provider submission (Backend verifies wallet balance in DB first!)
+      const dispatchResult = await this._dispatchOrderToProvider(newOrder, targetProvider, cleanRawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot);
+
+      // Handle backend insufficient balance rejection
+      if (dispatchResult.insufficientBalance) {
+        if (dispatchResult.newBalance !== undefined) {
+          this.data.customer.balance = Number(dispatchResult.newBalance);
+        }
+        this.saveUserData();
+        this.notify();
+        this.showToast('⚠️ Insufficient wallet balance. Please recharge your wallet to place this order.', 'error');
+        CustomerApp.openDepositModal();
+        return { success: false, message: 'Insufficient balance' };
+      }
+
+      // Apply authoritative balance returned by server or calculated
+      const finalBalAfter = dispatchResult.newBalance !== undefined ? Number(dispatchResult.newBalance) : walletBalAfter;
+      this.data.customer.balance = finalBalAfter;
+
+      // Add to transactions ledger
+      this.data.transactions.unshift({
+        id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
+        type: 'Order Placed',
+        description: `Order #${finalOrderId} — ${serviceName}`,
+        amount: -totalCost,
+        balanceBefore: currentWalletBal,
+        balanceAfter: finalBalAfter,
+        orderId: finalOrderId,
+        status: 'Success',
+        createdAt: now,
+        date: fullDateStr
+      });
 
       this.data.orders.unshift(newOrder);
 
@@ -2431,7 +2507,7 @@ class SmmStateStore {
         if (this.data.customer?.email) {
           const reg = JSON.parse(localStorage.getItem('likex_registered_customers') || '[]');
           if (!reg.some(c => (typeof c === 'string' ? c : c.email) === this.data.customer.email)) {
-            reg.push({ email: this.data.customer.email, name: this.data.customer.name, registeredAt: Date.now() });
+            reg.push({ email: this.data.customer.email, name: this.data.customer.name, customerId: customerCode, registeredAt: Date.now() });
             localStorage.setItem('likex_registered_customers', JSON.stringify(reg));
           }
         }
@@ -2448,9 +2524,6 @@ class SmmStateStore {
         time: formattedDate,
         icon: '🛒'
       });
-
-      // Await direct fast provider submission
-      const dispatchResult = await this._dispatchOrderToProvider(newOrder, targetProvider, cleanRawServiceId, cleanedTarget, quantity, comments, finalOrderId, serviceName, totalCost, targetWholesaleCost, serviceSnapshot);
 
       this.recalculateAdminStats();
 
@@ -2505,75 +2578,83 @@ class SmmStateStore {
         })
       });
 
-      if (liveRes.ok) {
-        const liveData = await liveRes.json();
-        const candidateId = liveData?.providerOrderId || liveData?.order || liveData?.order_id || liveData?.id;
-        const liveProvId = (candidateId && String(candidateId).trim() !== '' && String(candidateId).toLowerCase() !== 'null') ? String(candidateId).trim() : null;
-        const liveError = liveData?.error || liveData?.message || null;
+      if (!liveRes.ok) {
+        const errData = await liveRes.json().catch(() => ({}));
+        const errMsg = errData.error || `HTTP ${liveRes.status} Provider Error`;
+        const isInsufficient = liveRes.status === 400 && (errMsg.toLowerCase().includes('insufficient') || errMsg.toLowerCase().includes('balance'));
+        return {
+          success: false,
+          insufficientBalance: isInsufficient,
+          error: errMsg,
+          newBalance: errData.balance !== undefined ? errData.balance : undefined
+        };
+      }
 
-        if (liveProvId && !liveError) {
-          order.providerOrderId = liveProvId;
-          order.providerResponse = liveData;
-          order.providerStatus = liveData.status || 'Processing';
-          order.status = liveData.status || 'Processing';
-          order.isQueued = false;
-          order.needsTopup = false;
-          order.upstreamError = null;
-          order.errorReason = null;
-          order.lastUpdatedAt = Date.now();
-          order.refillReason = `Dispatched to ${providerDisplayName} (Provider Order #${liveProvId})`;
+      const liveData = await liveRes.json();
+      const candidateId = liveData?.providerOrderId || liveData?.order || liveData?.order_id || liveData?.id;
+      const liveProvId = (candidateId && String(candidateId).trim() !== '' && String(candidateId).toLowerCase() !== 'null') ? String(candidateId).trim() : null;
+      const liveError = liveData?.error || liveData?.message || null;
+      const returnedBalance = liveData?.newBalance !== undefined ? liveData.newBalance : undefined;
 
-          this.updateOrderInAllStorages(order);
-          this.triggerAlert({
-            type: 'live_order',
-            orderId: String(liveProvId),
-            likeXOrderId: finalOrderId,
-            providerName: providerDisplayName,
-            providerKey: targetProvider,
-            serviceName: serviceName,
-            target: cleanedTarget,
-            quantity: quantity,
-            customerPaid: totalCost.toFixed(2),
-            customerEmail: order.userEmail || ''
-          });
-        } else {
-          const errMsg = liveError || 'Provider rejected order';
-          order.providerOrderId = null;
-          order.isQueued = true;
-          order.needsTopup = true;
-          order.upstreamError = errMsg;
-          order.errorReason = errMsg;
-          order.providerResponse = liveData || null;
-          order.providerStatus = `Queued: ${errMsg}`;
-          order.status = 'Queued';
-          order.lastUpdatedAt = Date.now();
-          order.refillReason = `Queued: ${errMsg}`;
+      if (liveProvId && !liveError) {
+        order.providerOrderId = liveProvId;
+        order.providerResponse = liveData;
+        order.providerStatus = liveData.status || 'Processing';
+        order.status = liveData.status || 'Processing';
+        order.isQueued = false;
+        order.needsTopup = false;
+        order.upstreamError = null;
+        order.errorReason = null;
+        order.lastUpdatedAt = Date.now();
+        order.refillReason = `Dispatched to ${providerDisplayName} (Provider Order #${liveProvId})`;
 
-          this.updateOrderInAllStorages(order);
-          this.triggerAlert({
-            type: 'queued_order',
-            orderId: finalOrderId,
-            providerName: providerDisplayName,
-            providerKey: targetProvider,
-            serviceName: serviceName,
-            target: cleanedTarget,
-            quantity: quantity,
-            customerPaid: totalCost.toFixed(2),
-            customerEmail: order.userEmail || ''
-          });
-        }
+        this.updateOrderInAllStorages(order);
+        this.triggerAlert({
+          type: 'live_order',
+          orderId: String(liveProvId),
+          likeXOrderId: finalOrderId,
+          providerName: providerDisplayName,
+          providerKey: targetProvider,
+          serviceName: serviceName,
+          target: cleanedTarget,
+          quantity: quantity,
+          customerPaid: totalCost.toFixed(2),
+          customerEmail: order.userEmail || ''
+        });
       } else {
-        const errMsg = `HTTP ${liveRes.status} Provider Error`;
+        const errMsg = liveError || 'Provider rejected order';
         order.providerOrderId = null;
         order.isQueued = true;
         order.needsTopup = true;
         order.upstreamError = errMsg;
         order.errorReason = errMsg;
+        order.providerResponse = liveData || null;
         order.providerStatus = `Queued: ${errMsg}`;
         order.status = 'Queued';
         order.lastUpdatedAt = Date.now();
+        order.refillReason = `Queued: ${errMsg}`;
+
         this.updateOrderInAllStorages(order);
+        this.triggerAlert({
+          type: 'queued_order',
+          orderId: finalOrderId,
+          providerName: providerDisplayName,
+          providerKey: targetProvider,
+          serviceName: serviceName,
+          target: cleanedTarget,
+          quantity: quantity,
+          customerPaid: totalCost.toFixed(2),
+          customerEmail: order.userEmail || ''
+        });
       }
+
+      this.notify();
+      return {
+        success: !order.isQueued && Boolean(order.providerOrderId),
+        providerOrderId: order.providerOrderId || null,
+        error: order.upstreamError || null,
+        newBalance: returnedBalance
+      };
     } catch (err) {
       const errMsg = err.name === 'AbortError' ? 'Provider timeout (15s)' : err.message;
       order.providerOrderId = null;
@@ -2585,44 +2666,14 @@ class SmmStateStore {
       order.status = 'Queued';
       order.lastUpdatedAt = Date.now();
       this.updateOrderInAllStorages(order);
-    }
 
-    // Upsert to Supabase while preserving full snapshot
-    if (window.supabaseClient) {
-      try {
-        const rawNum = String(finalOrderId).replace(/\D/g, '');
-        const orderNum = parseInt(rawNum, 10) || Math.floor(10000 + Math.random() * 90000);
-        const snapshotWithNote = {
-          ...serviceSnapshot,
-          email: order.userEmail || '',
-          note: order.upstreamError ? `Error: ${String(order.upstreamError).slice(0, 80)}` : null
-        };
-        await window.supabaseClient.from('orders').upsert([{
-          id: orderNum,
-          user_id: null,
-          service_id: null,
-          assigned_provider_id: targetProvider === 'socialfans' ? 3 : 2,
-          target_url: cleanedTarget,
-          quantity: Number(quantity),
-          charge: totalCost,
-          provider_cost: (targetWholesaleCost / 1000) * Number(quantity),
-          provider_order_id: order.providerOrderId || null,
-          status: order.status || (order.isQueued ? 'Queued' : 'Processing'),
-          remains: Number(quantity),
-          refill_status: 'SNAPSHOT:' + JSON.stringify(snapshotWithNote),
-          created_at: new Date(order.createdAt).toISOString()
-        }], { onConflict: 'id' });
-      } catch (dbErr) {
-        console.warn('[LikeX Supabase] Async order upsert notice:', dbErr);
-      }
+      this.notify();
+      return {
+        success: false,
+        providerOrderId: null,
+        error: errMsg
+      };
     }
-
-    this.notify();
-    return {
-      success: !order.isQueued && Boolean(order.providerOrderId),
-      providerOrderId: order.providerOrderId || null,
-      error: order.upstreamError || null
-    };
   }
 
   // Live single-order status checking from upstream provider API

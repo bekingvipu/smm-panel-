@@ -223,6 +223,7 @@ const AdminApp = {
     else if (tab === 'services') contentHtml = this.renderCustomerServices(store);
     else if (tab === 'refills') contentHtml = this.renderRefillsQueue(store);
     else if (tab === 'orders') contentHtml = this.renderAdminOrders(store);
+    else if (tab === 'customers') contentHtml = this.renderCustomers(store);
     else if (tab === 'support') contentHtml = this.renderAdminSupport(store);
 
     container.innerHTML = `
@@ -257,6 +258,10 @@ const AdminApp = {
             <li class="admin-nav-item ${tab === 'orders' ? 'active' : ''}" onclick="store.setAdminTab('orders')">
               <span class="nav-icon">🛒</span>
               <span>Orders</span>
+            </li>
+            <li class="admin-nav-item ${tab === 'customers' ? 'active' : ''}" onclick="store.setAdminTab('customers')">
+              <span class="nav-icon">👥</span>
+              <span>Customers</span>
             </li>
             <li class="admin-nav-item ${tab === 'provider_services' ? 'active' : ''}" onclick="store.setAdminTab('provider_services')">
               <span class="nav-icon">⚡</span>
@@ -342,6 +347,7 @@ const AdminApp = {
     if (tab === 'services') return 'Customer Services & Profit Markup';
     if (tab === 'refills') return 'Refill Requests Management';
     if (tab === 'orders') return 'All Orders Master Table';
+    if (tab === 'customers') return 'Customer Management & Ledger Directory';
     if (tab === 'support') return 'Support Ticket Queue';
     return 'Admin Console';
   },
@@ -1819,6 +1825,819 @@ const AdminApp = {
     }
   },
 
+  // CUSTOMER TRACKING & WALLET MANAGEMENT
+  getAllCustomersList(store) {
+    if (!store) store = window.store;
+    const allUsers = (store.data && store.data.users) || [];
+    const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
+    const allTransactions = (store.data && (store.data.allTransactions || store.data.transactions)) || [];
+
+    const customerMap = new Map();
+
+    // 1. Process users from Supabase
+    allUsers.forEach(u => {
+      const emailKey = (u.email || '').trim().toLowerCase();
+      const code = u.customer_code || store.getCustomerId(u);
+      const key = emailKey || code || String(u.id);
+      if (!key) return;
+
+      customerMap.set(key, {
+        id: code,
+        userId: u.id,
+        name: u.username || u.name || (emailKey ? emailKey.split('@')[0] : 'Customer'),
+        email: u.email || '',
+        balance: store.getCustomerWalletBalance ? store.getCustomerWalletBalance(u.email || u.id || code) : Number(u.balance || 0),
+        spent: Number(u.spent || 0),
+        role: u.role || 'user',
+        createdAt: u.created_at || u.createdAt || null,
+        orders: [],
+        transactions: []
+      });
+    });
+
+    // 2. Process currently logged in customer if exists
+    if (store.data && store.data.customer && store.data.customer.email) {
+      const c = store.data.customer;
+      const emailKey = c.email.trim().toLowerCase();
+      const code = store.getCustomerId(c);
+      if (!customerMap.has(emailKey)) {
+        customerMap.set(emailKey, {
+          id: code,
+          userId: c.id,
+          name: c.name || c.username || emailKey.split('@')[0],
+          email: c.email,
+          balance: Number(c.balance || 0),
+          spent: Number(c.spent || 0),
+          role: 'user',
+          createdAt: c.createdAt || null,
+          orders: [],
+          transactions: []
+        });
+      }
+    }
+
+    // 3. Map orders to customers
+    allOrders.forEach(o => {
+      if (!o) return;
+      const orderEmail = (o.userEmail || o.customerEmail || '').trim().toLowerCase();
+      const orderCustCode = o.customerId || o.customerCode || (orderEmail ? store.getCustomerId(orderEmail) : null);
+      let matchedCust = null;
+      if (orderEmail && customerMap.has(orderEmail)) {
+        matchedCust = customerMap.get(orderEmail);
+      } else if (orderCustCode && customerMap.has(orderCustCode)) {
+        matchedCust = customerMap.get(orderCustCode);
+      } else if (orderEmail && orderEmail !== 'guest customer' && !orderEmail.includes('guest@')) {
+        const newCode = orderCustCode || store.getCustomerId(orderEmail);
+        matchedCust = {
+          id: newCode,
+          userId: o.user_id || o.customerUserId || null,
+          name: o.customerName || orderEmail.split('@')[0],
+          email: orderEmail,
+          balance: store.getCustomerWalletBalance ? store.getCustomerWalletBalance(orderEmail) : 0,
+          spent: 0,
+          role: 'user',
+          createdAt: o.createdAt || o.date || null,
+          orders: [],
+          transactions: []
+        };
+        customerMap.set(orderEmail, matchedCust);
+      }
+
+      if (matchedCust) {
+        matchedCust.orders.push(o);
+      }
+    });
+
+    // 4. Map transactions to customers
+    allTransactions.forEach(tx => {
+      if (!tx) return;
+      const txEmail = (tx.user_email || tx.userEmail || '').trim().toLowerCase();
+      const txCode = tx.customer_code || (txEmail ? store.getCustomerId(txEmail) : null);
+      let matchedCust = null;
+      if (txEmail && customerMap.has(txEmail)) {
+        matchedCust = customerMap.get(txEmail);
+      } else if (txCode && customerMap.has(txCode)) {
+        matchedCust = customerMap.get(txCode);
+      }
+
+      if (matchedCust) {
+        matchedCust.transactions.push(tx);
+      }
+    });
+
+    // Finalize stats
+    const customers = Array.from(customerMap.values()).map(c => {
+      c.orders.sort((a, b) => {
+        const timeA = new Date(a.createdAt || a.date || 0).getTime();
+        const timeB = new Date(b.createdAt || b.date || 0).getTime();
+        return timeB - timeA;
+      });
+
+      c.transactions.sort((a, b) => {
+        const timeA = new Date(a.created_at || a.createdAt || a.date || 0).getTime();
+        const timeB = new Date(b.created_at || b.createdAt || b.date || 0).getTime();
+        return timeB - timeA;
+      });
+
+      const totalDeposited = c.transactions
+        .filter(t => {
+          const type = (t.type || '').toLowerCase();
+          const status = (t.status || '').toLowerCase();
+          return (type.includes('deposit') || type.includes('credit') || type.includes('topup')) && 
+                 (status === 'success' || status === 'completed' || status === 'paid');
+        })
+        .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+      const totalSpentFromOrders = c.orders.reduce((sum, o) => sum + Number(o.amount || o.charge || 0), 0);
+      const totalSpent = totalSpentFromOrders > 0 ? totalSpentFromOrders : c.spent;
+
+      return {
+        ...c,
+        ordersCount: c.orders.length,
+        totalDeposited: totalDeposited,
+        totalSpent: totalSpent
+      };
+    });
+
+    customers.sort((a, b) => {
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    });
+
+    return customers;
+  },
+
+  renderCustomers(store) {
+    const customers = this.getAllCustomersList(store);
+    const totalCustomers = customers.length;
+    const totalBalance = customers.reduce((sum, c) => sum + Number(c.balance || 0), 0);
+    const totalOrdersCount = customers.reduce((sum, c) => sum + c.ordersCount, 0);
+    const totalDepositedAll = customers.reduce((sum, c) => sum + c.totalDeposited, 0);
+
+    return `
+      <!-- CUSTOMERS HEADER & ACTIONS -->
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; margin-bottom: 24px;">
+        <div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <h2 style="font-size: 22px; font-weight: 800; color: var(--text-main); margin: 0;">👥 Customer Tracking & Wallet Directory</h2>
+            <span class="badge badge-primary" style="font-size: 13px; padding: 4px 10px;">${totalCustomers} Total Customers</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+            Unique permanent Customer IDs, live wallet balances, financial summaries, and complete order histories.
+          </p>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <button class="btn btn-sm btn-outline" style="border-radius: 999px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;" onclick="AdminApp.refreshCustomersData(this)">
+            <span>🔄 Sync Live Data</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 STATS OVERVIEW CARDS -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+        <div class="card" style="padding: 18px; border-left: 4px solid var(--primary); display: flex; align-items: center; gap: 14px;">
+          <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(99, 102, 241, 0.12); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            👥
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Total Customers</div>
+            <div style="font-size: 22px; font-weight: 900; color: var(--text-main); margin-top: 2px;">${totalCustomers}</div>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 18px; border-left: 4px solid #10B981; display: flex; align-items: center; gap: 14px;">
+          <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(16, 185, 129, 0.12); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            💰
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Outstanding Balances</div>
+            <div style="font-size: 20px; font-weight: 900; color: #10B981; margin-top: 2px;">${store.formatMoney(totalBalance)}</div>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 18px; border-left: 4px solid #F59E0B; display: flex; align-items: center; gap: 14px;">
+          <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(245, 158, 11, 0.12); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            📦
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Total Customer Orders</div>
+            <div style="font-size: 22px; font-weight: 900; color: var(--text-main); margin-top: 2px;">${totalOrdersCount}</div>
+          </div>
+        </div>
+
+        <div class="card" style="padding: 18px; border-left: 4px solid #8B5CF6; display: flex; align-items: center; gap: 14px;">
+          <div style="width: 46px; height: 46px; border-radius: 12px; background: rgba(139, 92, 246, 0.12); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;">
+            📥
+          </div>
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: var(--text-secondary); text-transform: uppercase;">Total Ever Topped Up</div>
+            <div style="font-size: 20px; font-weight: 900; color: #8B5CF6; margin-top: 2px;">${store.formatMoney(totalDepositedAll)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SEARCH & FILTER TOOLBAR -->
+      <div class="card" style="padding: 16px 20px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+        <div style="position: relative; flex: 1; min-width: 280px; max-width: 480px;">
+          <span style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 14px; color: var(--text-muted);">🔍</span>
+          <input 
+            type="text" 
+            id="admin-customers-search-input" 
+            class="form-input" 
+            style="padding-left: 38px; height: 42px; border-radius: 999px; font-size: 13.5px;" 
+            placeholder="Search Customer ID (e.g. LX-10245), name, or email..." 
+            oninput="AdminApp.handleAdminCustomersSearch(this.value)"
+          />
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-primary customer-filter-btn active" data-filter="all" onclick="AdminApp.filterCustomersTable('all', this)" style="border-radius: 999px;">
+            All (${totalCustomers})
+          </button>
+          <button class="btn btn-sm btn-outline customer-filter-btn" data-filter="has_balance" onclick="AdminApp.filterCustomersTable('has_balance', this)" style="border-radius: 999px;">
+            With Balance
+          </button>
+          <button class="btn btn-sm btn-outline customer-filter-btn" data-filter="has_orders" onclick="AdminApp.filterCustomersTable('has_orders', this)" style="border-radius: 999px;">
+            Active Buyers
+          </button>
+        </div>
+      </div>
+
+      <!-- CUSTOMERS TABLE CONTAINER -->
+      <div id="admin-customers-table-container">
+        ${this.renderCustomersTableContent(store)}
+      </div>
+    `;
+  },
+
+  renderCustomersTableContent(store, searchTerm = '', filterType = 'all') {
+    if (!store) store = window.store;
+    let customers = this.getAllCustomersList(store);
+
+    const cleanSearch = String(searchTerm || '').trim().toLowerCase();
+    if (cleanSearch) {
+      customers = customers.filter(c => {
+        const idMatch = String(c.id || '').toLowerCase().includes(cleanSearch);
+        const nameMatch = String(c.name || '').toLowerCase().includes(cleanSearch);
+        const emailMatch = String(c.email || '').toLowerCase().includes(cleanSearch);
+        return idMatch || nameMatch || emailMatch;
+      });
+    }
+
+    if (filterType === 'has_balance') {
+      customers = customers.filter(c => Number(c.balance || 0) > 0.001);
+    } else if (filterType === 'has_orders') {
+      customers = customers.filter(c => c.ordersCount > 0);
+    }
+
+    if (customers.length === 0) {
+      return `
+        <div class="card" style="padding: 48px 20px; text-align: center; color: var(--text-muted);">
+          <div style="font-size: 36px; margin-bottom: 8px;">👥</div>
+          <div style="font-weight: 800; font-size: 16px; color: var(--text-main);">No Customers Found</div>
+          <div style="font-size: 13px; margin-top: 4px;">No customer records matched your query or filter criteria.</div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="table-responsive" style="background: var(--bg-card); border-radius: 16px; border: 1px solid var(--border-color); overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.03);">
+        <table class="admin-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+          <thead>
+            <tr style="background: var(--bg-surface); border-bottom: 1.5px solid var(--border-color);">
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Customer ID</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Customer Profile</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Wallet Balance</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); text-align: center;">Orders</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Total Spent</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Total Deposited</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary);">Joined</th>
+              <th style="padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; color: var(--text-secondary); text-align: right;">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${customers.map(c => {
+              const avatarLetter = (c.name || 'C').charAt(0).toUpperCase();
+              const dateStr = c.createdAt ? new Date(c.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Registered';
+              const balanceUsd = Number(c.balance || 0);
+
+              return `
+                <tr style="border-bottom: 1px solid var(--border-color); transition: background 0.15s ease;" onmouseover="this.style.background='rgba(99, 102, 241, 0.04)'" onmouseout="this.style.background='transparent'">
+                  <!-- 1. CUSTOMER ID -->
+                  <td style="padding: 14px 16px;">
+                    <div style="display: inline-flex; align-items: center; gap: 6px;">
+                      <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: var(--primary); font-family: var(--font-mono); font-weight: 800; font-size: 12.5px; padding: 4px 8px; border-radius: 6px; border: 1px solid rgba(99, 102, 241, 0.25); cursor: pointer;" onclick="navigator.clipboard.writeText('${c.id}'); window.store.showToast('Copied Customer ID: ${c.id}', 'success');" title="Click to copy Customer ID">
+                        ${c.id}
+                      </span>
+                      <button type="button" onclick="navigator.clipboard.writeText('${c.id}'); window.store.showToast('Copied Customer ID: ${c.id}', 'success');" title="Copy Customer ID" style="background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 11px; opacity: 0.7;">📋</button>
+                    </div>
+                  </td>
+
+                  <!-- 2. CUSTOMER PROFILE -->
+                  <td style="padding: 14px 16px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #9333EA); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); cursor: pointer;" onclick="AdminApp.openCustomerDetailsModal('${c.email || c.id}')">
+                        ${avatarLetter}
+                      </div>
+                      <div style="min-width: 0;">
+                        <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main); cursor: pointer;" onclick="AdminApp.openCustomerDetailsModal('${c.email || c.id}')" title="Click to view Customer Details">
+                          ${c.name}
+                        </div>
+                        <div style="font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 1px;">
+                          <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 160px;" title="${c.email}">
+                            ${c.email || 'No email'}
+                          </span>
+                          ${c.email ? `
+                            <button type="button" title="Copy Email" onclick="navigator.clipboard.writeText('${c.email}'); window.store.showToast('Customer email copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 10px; opacity: 0.7;">📋</button>
+                          ` : ''}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- 3. WALLET BALANCE -->
+                  <td style="padding: 14px 16px;">
+                    <div>
+                      <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 800; font-size: 13.5px; padding: 4px 10px; border-radius: 8px;">
+                        ${store.formatMoney(balanceUsd)}
+                      </span>
+                      <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 3px; font-family: var(--font-mono); font-weight: 600;">
+                        $${balanceUsd.toFixed(2)} USD
+                      </div>
+                    </div>
+                  </td>
+
+                  <!-- 4. ORDERS COUNT -->
+                  <td style="padding: 14px 16px; text-align: center;">
+                    <span class="badge" style="background: rgba(99, 102, 241, 0.08); color: var(--primary); font-weight: 800; font-size: 12px; padding: 3px 9px; border-radius: 999px;">
+                      ${c.ordersCount} orders
+                    </span>
+                  </td>
+
+                  <!-- 5. TOTAL SPENT -->
+                  <td style="padding: 14px 16px;">
+                    <div style="font-weight: 700; font-size: 13px; color: var(--text-main);">
+                      ${store.formatMoney(c.totalSpent)}
+                    </div>
+                  </td>
+
+                  <!-- 6. TOTAL DEPOSITED -->
+                  <td style="padding: 14px 16px;">
+                    <div style="font-weight: 700; font-size: 13px; color: #8B5CF6;">
+                      ${store.formatMoney(c.totalDeposited)}
+                    </div>
+                  </td>
+
+                  <!-- 7. JOINED DATE -->
+                  <td style="padding: 14px 16px;">
+                    <div style="font-size: 12px; color: var(--text-secondary);">
+                      📅 ${dateStr}
+                    </div>
+                  </td>
+
+                  <!-- 8. ACTION -->
+                  <td style="padding: 14px 16px; text-align: right;">
+                    <button class="btn btn-sm btn-primary" style="border-radius: 999px; font-weight: 700; font-size: 12px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 5px;" onclick="AdminApp.openCustomerDetailsModal('${c.email || c.id}')">
+                      <span>🔍 Details & Ledger</span>
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  },
+
+  currentCustomerSearchTerm: '',
+  currentCustomerFilter: 'all',
+
+  handleAdminCustomersSearch(val) {
+    this.currentCustomerSearchTerm = val;
+    const container = document.getElementById('admin-customers-table-container');
+    if (container) {
+      container.innerHTML = this.renderCustomersTableContent(window.store, this.currentCustomerSearchTerm, this.currentCustomerFilter);
+    }
+  },
+
+  filterCustomersTable(filterType, btnEl) {
+    this.currentCustomerFilter = filterType;
+    document.querySelectorAll('.customer-filter-btn').forEach(b => {
+      b.classList.remove('active', 'btn-primary');
+      b.classList.add('btn-outline');
+    });
+    if (btnEl) {
+      btnEl.classList.remove('btn-outline');
+      btnEl.classList.add('active', 'btn-primary');
+    }
+    const container = document.getElementById('admin-customers-table-container');
+    if (container) {
+      container.innerHTML = this.renderCustomersTableContent(window.store, this.currentCustomerSearchTerm, this.currentCustomerFilter);
+    }
+  },
+
+  async refreshCustomersData(btnEl) {
+    const store = window.store;
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.innerHTML = '<span>⏳ Syncing...</span>';
+    }
+    if (store.syncSupabaseDataForAdmin) {
+      await store.syncSupabaseDataForAdmin();
+    }
+    store.showToast('Synced customer directory and wallet transactions with live database!', 'success');
+    if (btnEl) {
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<span>🔄 Sync Live Data</span>';
+    }
+    const container = document.getElementById('admin-customers-table-container');
+    if (container) {
+      container.innerHTML = this.renderCustomersTableContent(store, this.currentCustomerSearchTerm, this.currentCustomerFilter);
+    }
+  },
+
+  openCustomerDetailsModal(customerIdentifier, activeTab = 'ledger') {
+    const store = window.store;
+    if (!store) return;
+
+    const customers = this.getAllCustomersList(store);
+    const cleanId = String(customerIdentifier || '').trim().toLowerCase();
+
+    let customer = customers.find(c => 
+      (c.email && c.email.toLowerCase() === cleanId) ||
+      (c.id && c.id.toLowerCase() === cleanId) ||
+      (String(c.userId) === cleanId)
+    );
+
+    if (!customer) {
+      // Fallback: construct minimum customer profile
+      const custCode = store.getCustomerId(cleanId);
+      customer = {
+        id: custCode,
+        userId: null,
+        name: cleanId.includes('@') ? cleanId.split('@')[0] : 'Customer',
+        email: cleanId.includes('@') ? cleanId : '',
+        balance: store.getCustomerWalletBalance(cleanId) || 0,
+        spent: 0,
+        totalDeposited: 0,
+        createdAt: null,
+        orders: (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders).filter(o => 
+          (o.userEmail && o.userEmail.toLowerCase() === cleanId) || (o.customerCode === custCode)
+        ),
+        transactions: (store.data.allTransactions || store.data.transactions || []).filter(tx => 
+          (tx.user_email && tx.user_email.toLowerCase() === cleanId) || (tx.customer_code === custCode)
+        )
+      };
+      customer.ordersCount = customer.orders.length;
+    }
+
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!sheet) return;
+
+    sheet.className = 'modal-sheet order-details-sheet';
+
+    const avatarLetter = (customer.name || 'C').charAt(0).toUpperCase();
+    const joinedStr = customer.createdAt 
+      ? new Date(customer.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+      : 'Registered';
+
+    const liveBalanceUsd = Number(customer.balance || 0);
+    const totalDepositedUsd = Number(customer.totalDeposited || 0);
+    const totalSpentUsd = Number(customer.totalSpent || 0);
+    const ordersCount = customer.ordersCount || customer.orders.length;
+
+    sheet.innerHTML = `
+      <!-- MODAL HEADER -->
+      <div class="modal-header" style="padding-bottom: 16px; border-bottom: 1.5px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-start;">
+        <div style="display: flex; align-items: center; gap: 14px;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #9333EA); color: white; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 20px; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">
+            ${avatarLetter}
+          </div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+              <h3 class="modal-title" style="margin: 0; font-size: 19px; font-weight: 800; color: var(--text-main);">
+                ${customer.name}
+              </h3>
+              <span class="badge" style="background: rgba(99, 102, 241, 0.12); color: var(--primary); font-family: var(--font-mono); font-weight: 800; font-size: 12px; padding: 3px 8px; border-radius: 6px; cursor: pointer;" onclick="navigator.clipboard.writeText('${customer.id}'); window.store.showToast('Copied Customer ID: ${customer.id}', 'success');" title="Click to copy Customer ID">
+                ID: ${customer.id} 📋
+              </span>
+            </div>
+            <div style="font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; display: flex; align-items: center; gap: 8px;">
+              <span>✉️ ${customer.email || 'No email provided'}</span>
+              <span>•</span>
+              <span>📅 Joined: ${joinedStr}</span>
+            </div>
+          </div>
+        </div>
+
+        <button class="modal-close" onclick="CustomerApp.closeModal()" style="font-size: 24px; line-height: 1; border: none; background: none; cursor: pointer; color: var(--text-muted);">&times;</button>
+      </div>
+
+      <!-- 4 FINANCIAL SUMMARY CARDS -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0 22px;">
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1.5px solid rgba(16, 185, 129, 0.3); border-radius: 14px; padding: 14px 16px;">
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #059669;">Current Live Balance</div>
+          <div style="font-size: 20px; font-weight: 900; color: #059669; margin-top: 4px;">
+            ${store.formatMoney(liveBalanceUsd)}
+          </div>
+          <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 2px;">
+            $${liveBalanceUsd.toFixed(2)} USD
+          </div>
+        </div>
+
+        <div style="background: rgba(139, 92, 246, 0.08); border: 1.5px solid rgba(139, 92, 246, 0.3); border-radius: 14px; padding: 14px 16px;">
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #7C3AED;">Total Ever Deposited</div>
+          <div style="font-size: 20px; font-weight: 900; color: #7C3AED; margin-top: 4px;">
+            ${store.formatMoney(totalDepositedUsd)}
+          </div>
+          <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 2px;">
+            All-Time Top-ups
+          </div>
+        </div>
+
+        <div style="background: rgba(239, 68, 68, 0.08); border: 1.5px solid rgba(239, 68, 68, 0.3); border-radius: 14px; padding: 14px 16px;">
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: #DC2626;">Total Amount Spent</div>
+          <div style="font-size: 20px; font-weight: 900; color: #DC2626; margin-top: 4px;">
+            ${store.formatMoney(totalSpentUsd)}
+          </div>
+          <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 2px;">
+            On Growth Orders
+          </div>
+        </div>
+
+        <div style="background: rgba(99, 102, 241, 0.08); border: 1.5px solid rgba(99, 102, 241, 0.3); border-radius: 14px; padding: 14px 16px;">
+          <div style="font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--primary);">Total Orders Placed</div>
+          <div style="font-size: 20px; font-weight: 900; color: var(--primary); margin-top: 4px;">
+            ${ordersCount}
+          </div>
+          <div style="font-size: 11px; font-family: var(--font-mono); color: var(--text-muted); margin-top: 2px;">
+            Orders History
+          </div>
+        </div>
+      </div>
+
+      <!-- TABS NAVIGATION -->
+      <div style="display: flex; gap: 8px; border-bottom: 2px solid var(--border-color); margin-bottom: 18px;">
+        <button 
+          id="cust-tab-btn-ledger" 
+          class="btn btn-sm ${activeTab === 'ledger' ? 'btn-primary' : 'btn-outline'}" 
+          style="border-radius: 10px 10px 0 0; font-weight: 800; border-bottom: none; padding: 8px 18px;" 
+          onclick="AdminApp.switchCustomerDetailsTab('ledger')"
+        >
+          💳 Wallet & Top-up History (${customer.transactions.length})
+        </button>
+        <button 
+          id="cust-tab-btn-orders" 
+          class="btn btn-sm ${activeTab === 'orders' ? 'btn-primary' : 'btn-outline'}" 
+          style="border-radius: 10px 10px 0 0; font-weight: 800; border-bottom: none; padding: 8px 18px;" 
+          onclick="AdminApp.switchCustomerDetailsTab('orders')"
+        >
+          📦 Order History (${customer.orders.length})
+        </button>
+      </div>
+
+      <!-- TAB PANE 1: WALLET / TOP-UP HISTORY & LEDGER -->
+      <div id="cust-pane-ledger" style="display: ${activeTab === 'ledger' ? 'block' : 'none'};">
+        ${customer.transactions.length === 0 ? `
+          <div style="padding: 40px 20px; text-align: center; color: var(--text-muted); background: var(--bg-surface); border-radius: 14px; border: 1px dashed var(--border-color);">
+            <div style="font-size: 32px; margin-bottom: 6px;">💳</div>
+            <div style="font-weight: 700; color: var(--text-main);">No Wallet Transactions Recorded</div>
+            <div style="font-size: 12px; margin-top: 2px;">This customer has not performed any top-ups or wallet deductions yet.</div>
+          </div>
+        ` : `
+          <div class="table-responsive" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px;">
+            <table class="admin-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+              <thead>
+                <tr style="background: var(--bg-surface); position: sticky; top: 0; z-index: 1; border-bottom: 1.5px solid var(--border-color);">
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Txn / Payment ID</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Date & Time</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Type</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Amount</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Balance Transition</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Related Order</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${customer.transactions.map(t => {
+                  const type = (t.type || 'deposit').toLowerCase();
+                  const isCredit = type.includes('deposit') || type.includes('credit') || type.includes('topup') || type.includes('refund');
+                  const amtNum = Number(t.amount || 0);
+                  const dtStr = t.created_at || t.createdAt || t.date || '';
+                  const formattedDt = dtStr ? new Date(dtStr).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                  const txnId = t.payment_id || t.paymentId || t.id || 'TXN-';
+                  const orderIdLinked = t.order_id || t.orderId || null;
+
+                  let typeLabel = 'Top-up Deposit';
+                  let typeBadgeBg = 'rgba(16, 185, 129, 0.12)';
+                  let typeColor = '#059669';
+
+                  if (type.includes('order') || type.includes('debit')) {
+                    typeLabel = 'Order Deduction';
+                    typeBadgeBg = 'rgba(239, 68, 68, 0.12)';
+                    typeColor = '#DC2626';
+                  } else if (type.includes('refund')) {
+                    typeLabel = 'Order Refund';
+                    typeBadgeBg = 'rgba(245, 158, 11, 0.12)';
+                    typeColor = '#D97706';
+                  } else if (type.includes('adjustment')) {
+                    typeLabel = 'Admin Adjustment';
+                    typeBadgeBg = 'rgba(99, 102, 241, 0.12)';
+                    typeColor = '#4F46E5';
+                  }
+
+                  const beforeVal = (t.balance_before !== undefined && t.balance_before !== null) ? Number(t.balance_before) : (t.balanceBefore !== undefined ? Number(t.balanceBefore) : null);
+                  const afterVal = (t.balance_after !== undefined && t.balance_after !== null) ? Number(t.balance_after) : (t.balanceAfter !== undefined ? Number(t.balanceAfter) : null);
+
+                  return `
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                      <td style="padding: 10px 12px;">
+                        <span style="font-family: var(--font-mono); font-weight: 700; font-size: 11.5px; color: var(--text-main);" title="${txnId}">
+                          ${String(txnId).slice(0, 18)}
+                        </span>
+                      </td>
+                      <td style="padding: 10px 12px; color: var(--text-secondary); white-space: nowrap;">
+                        ${formattedDt}
+                      </td>
+                      <td style="padding: 10px 12px;">
+                        <span class="badge" style="background: ${typeBadgeBg}; color: ${typeColor}; font-weight: 800; font-size: 11px; padding: 2px 7px; border-radius: 6px;">
+                          ${typeLabel}
+                        </span>
+                      </td>
+                      <td style="padding: 10px 12px; font-weight: 800; color: ${isCredit ? '#059669' : '#DC2626'};">
+                        ${isCredit ? '+' : '-'}${store.formatMoney(amtNum)}
+                      </td>
+                      <td style="padding: 10px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
+                        ${beforeVal !== null && afterVal !== null ? `
+                          <span>${store.formatMoney(beforeVal)} &rarr; <strong style="color: var(--text-main);">${store.formatMoney(afterVal)}</strong></span>
+                        ` : (afterVal !== null ? `End: ${store.formatMoney(afterVal)}` : 'Logged')}
+                      </td>
+                      <td style="padding: 10px 12px;">
+                        ${orderIdLinked ? `
+                          <span style="font-family: var(--font-mono); font-weight: 800; color: var(--primary); cursor: pointer; text-decoration: underline;" onclick="AdminApp.openOrderDetailsModal('${orderIdLinked}')" title="Click to view linked order">
+                            #${orderIdLinked}
+                          </span>
+                        ` : '<span style="color: var(--text-muted);">&mdash;</span>'}
+                      </td>
+                      <td style="padding: 10px 12px;">
+                        <span class="badge badge-success" style="font-size: 10.5px; padding: 2px 6px;">
+                          ${t.status || 'Success'}
+                        </span>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+
+      <!-- TAB PANE 2: ORDER HISTORY -->
+      <div id="cust-pane-orders" style="display: ${activeTab === 'orders' ? 'block' : 'none'};">
+        ${customer.orders.length === 0 ? `
+          <div style="padding: 40px 20px; text-align: center; color: var(--text-muted); background: var(--bg-surface); border-radius: 14px; border: 1px dashed var(--border-color);">
+            <div style="font-size: 32px; margin-bottom: 6px;">📦</div>
+            <div style="font-weight: 700; color: var(--text-main);">No Orders Placed Yet</div>
+            <div style="font-size: 12px; margin-top: 2px;">This customer has not placed any orders yet.</div>
+          </div>
+        ` : `
+          <div class="table-responsive" style="max-height: 380px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 12px;">
+            <table class="admin-table" style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+              <thead>
+                <tr style="background: var(--bg-surface); position: sticky; top: 0; z-index: 1; border-bottom: 1.5px solid var(--border-color);">
+                  <th style="padding: 10px 12px; text-transform: uppercase;">LikeX Order ID</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Date & Time</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Service</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase; text-align: right;">Qty</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase; text-align: right;">User Price</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Status</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Provider</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase;">Real Provider Order ID</th>
+                  <th style="padding: 10px 12px; text-transform: uppercase; text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${customer.orders.map(o => {
+                  const rawIdVal = o.likeXOrderId || o.id;
+                  const displayLxId = store.formatLikeXOrderId ? store.formatLikeXOrderId(rawIdVal) : (String(rawIdVal).startsWith('LX') ? rawIdVal : 'LX' + rawIdVal);
+                  const dtStr = o.createdAt || o.date || '';
+                  const formattedDt = dtStr ? new Date(dtStr).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
+                  const svcId = this.getOrderServiceId ? this.getOrderServiceId(o) : (o.serviceId || 'N/A');
+                  const svcName = o.serviceSnapshot?.serviceName || o.serviceName || 'Social Growth Service';
+                  const chargeAmt = Number(o.amount || o.charge || 0);
+
+                  const provKey = String(o.serviceSnapshot?.provider || o.provider || '').toLowerCase();
+                  const sIdStr = String(o.serviceSnapshot?.rawServiceId || o.serviceSnapshot?.serviceId || o.serviceId || o.rawServiceId || '');
+                  const isSf = provKey === 'socialfans' || sIdStr.startsWith('sf-');
+                  const providerName = isSf ? 'SocialFans' : 'World of SMM';
+                  const realProvOrderId = o.providerOrderId || 'Pending';
+
+                  let statusBadgeClass = 'badge-primary';
+                  const statLow = (o.status || '').toLowerCase();
+                  if (statLow.includes('completed')) statusBadgeClass = 'badge-success';
+                  else if (statLow.includes('progress') || statLow.includes('processing')) statusBadgeClass = 'badge-warning';
+                  else if (statLow.includes('cancel') || statLow.includes('fail')) statusBadgeClass = 'badge-danger';
+
+                  return `
+                    <tr style="border-bottom: 1px solid var(--border-color); cursor: pointer;" onclick="AdminApp.openOrderDetailsModal('${o.id}')">
+                      <td style="padding: 10px 12px;">
+                        <span style="font-family: var(--font-mono); font-weight: 800; color: var(--primary);">
+                          #${displayLxId}
+                        </span>
+                      </td>
+                      <td style="padding: 10px 12px; color: var(--text-secondary); white-space: nowrap;">
+                        ${formattedDt}
+                      </td>
+                      <td style="padding: 10px 12px; max-width: 200px;">
+                        <div style="font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${svcName}">
+                          ${svcName}
+                        </div>
+                        <div style="font-size: 10.5px; color: var(--text-muted); font-family: var(--font-mono);">
+                          ID #${svcId}
+                        </div>
+                      </td>
+                      <td style="padding: 10px 12px; font-weight: 700; text-align: right; font-family: var(--font-mono);">
+                        ${Number(o.quantity || 1000).toLocaleString('en-IN')}
+                      </td>
+                      <td style="padding: 10px 12px; font-weight: 800; color: var(--text-main); text-align: right;">
+                        ${store.formatMoney(chargeAmt)}
+                      </td>
+                      <td style="padding: 10px 12px;">
+                        <span class="badge ${statusBadgeClass}" style="font-size: 11px; padding: 2px 7px; border-radius: 6px;">
+                          ${o.status || 'Processing'}
+                        </span>
+                      </td>
+                      <td style="padding: 10px 12px;">
+                        <span class="badge" style="background: rgba(99, 102, 241, 0.08); color: var(--primary); font-size: 11px; font-weight: 700;">
+                          ${providerName}
+                        </span>
+                      </td>
+                      <td style="padding: 10px 12px;" onclick="event.stopPropagation()">
+                        ${realProvOrderId && realProvOrderId !== 'Pending' ? `
+                          <div style="display: inline-flex; align-items: center; gap: 4px;">
+                            <span class="badge" style="background: rgba(16, 185, 129, 0.12); color: #059669; font-family: var(--font-mono); font-weight: 800; font-size: 11px; padding: 2px 6px; border-radius: 4px; cursor: pointer;" onclick="navigator.clipboard.writeText('${realProvOrderId}'); window.store.showToast('Copied Provider Order ID: ${realProvOrderId}', 'success');" title="Click to copy Provider Order ID">
+                              ${realProvOrderId}
+                            </span>
+                            <button type="button" onclick="navigator.clipboard.writeText('${realProvOrderId}'); window.store.showToast('Copied Provider Order ID: ${realProvOrderId}', 'success');" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 10px; opacity: 0.7;" title="Copy Provider Order ID">📋</button>
+                          </div>
+                        ` : `
+                          <span style="color: var(--text-muted); font-size: 11px; font-style: italic;">Pending Dispatch</span>
+                        `}
+                      </td>
+                      <td style="padding: 10px 12px; text-align: right;" onclick="event.stopPropagation()">
+                        <button class="btn btn-sm btn-outline" style="border-radius: 999px; font-size: 11px; padding: 4px 10px; font-weight: 700;" onclick="AdminApp.openOrderDetailsModal('${o.id}')">
+                          View Order
+                        </button>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      </div>
+
+      <!-- MODAL FOOTER -->
+      <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; padding-top: 14px; border-top: 1.5px solid var(--border-color);">
+        <button type="button" class="btn btn-secondary" style="border-radius: 10px; font-weight: 700; padding: 8px 20px;" onclick="CustomerApp.closeModal()">
+          Close
+        </button>
+      </div>
+    `;
+
+    CustomerApp.openModal();
+  },
+
+  switchCustomerDetailsTab(tabId) {
+    const paneLedger = document.getElementById('cust-pane-ledger');
+    const paneOrders = document.getElementById('cust-pane-orders');
+    const btnLedger = document.getElementById('cust-tab-btn-ledger');
+    const btnOrders = document.getElementById('cust-tab-btn-orders');
+
+    if (paneLedger) paneLedger.style.display = tabId === 'ledger' ? 'block' : 'none';
+    if (paneOrders) paneOrders.style.display = tabId === 'orders' ? 'block' : 'none';
+
+    if (btnLedger) {
+      if (tabId === 'ledger') {
+        btnLedger.className = 'btn btn-sm btn-primary';
+      } else {
+        btnLedger.className = 'btn btn-sm btn-outline';
+      }
+    }
+    if (btnOrders) {
+      if (tabId === 'orders') {
+        btnOrders.className = 'btn btn-sm btn-primary';
+      } else {
+        btnOrders.className = 'btn btn-sm btn-outline';
+      }
+    }
+  },
+
   // CUSTOMER SERVICES & PROFIT % TOOL
   renderCustomerServices(store) {
     const services = store.data.customerServices;
@@ -2811,6 +3630,7 @@ const AdminApp = {
       const custEmail = o.userEmail || o.customerEmail || '';
       const custName = o.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
       const avatarLetter = (custName || 'C').charAt(0).toUpperCase();
+      const custCode = o.customerId || o.customerCode || (custEmail ? store.getCustomerId(custEmail) : null);
 
       // Formatted IDs
       const rawIdVal = o.likeXOrderId || o.id;
@@ -2887,12 +3707,19 @@ const AdminApp = {
           <!-- 2. CUSTOMER -->
           <td>
             <div style="display: flex; align-items: center; gap: 9px;" onclick="event.stopPropagation()">
-              <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #9333EA); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25);">
+              <div style="width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366F1, #9333EA); color: white; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px; flex-shrink: 0; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.25); cursor: pointer;" title="View Customer Details" onclick="AdminApp.openCustomerDetailsModal('${custEmail || custCode}')">
                 ${avatarLetter}
               </div>
               <div style="min-width: 0;">
-                <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px;">
-                  ${custName}
+                <div style="display: flex; align-items: center; gap: 5px;">
+                  <div style="font-weight: 800; font-size: 13px; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; cursor: pointer;" title="View Customer Details" onclick="AdminApp.openCustomerDetailsModal('${custEmail || custCode}')">
+                    ${custName}
+                  </div>
+                  ${custCode ? `
+                    <span style="font-size: 10px; font-weight: 800; font-family: var(--font-mono); color: var(--primary); background: rgba(99, 102, 241, 0.12); padding: 1px 5px; border-radius: 4px; cursor: pointer;" title="Click to view Customer Details for ${custCode}" onclick="AdminApp.openCustomerDetailsModal('${custEmail || custCode}')">
+                      ${custCode}
+                    </span>
+                  ` : ''}
                 </div>
                 <div style="font-size: 11px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
                   <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 115px;" title="${custEmail || 'Guest Customer'}">
@@ -3321,22 +4148,25 @@ const AdminApp = {
     const custName = order.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
     const isGuest = !custEmail || custEmail.toLowerCase() === 'guest customer' || custEmail.toLowerCase() === 'guest@likex.com';
 
-    // User ID
+    // User ID & Customer Code
     const customerUserId = order.customerUserId || order.user_id || null;
+    const displayCustCode = order.customerId || order.customerCode || store.getCustomerId(custEmail || customerUserId);
 
-    // Live Wallet Balance
+    // Live Current Wallet Balance
     let balanceVal = null;
     if (!isGuest && store.getCustomerWalletBalance) {
-      balanceVal = store.getCustomerWalletBalance(custEmail || customerUserId);
+      balanceVal = store.getCustomerWalletBalance(custEmail || customerUserId || displayCustCode);
     }
     const currentWalletBalStr = (balanceVal !== null && balanceVal !== undefined)
       ? store.formatMoney(balanceVal)
       : (isGuest ? 'N/A (Guest Order)' : '₹0.00');
 
-    // Balance at Order Time
-    const balAtOrderNum = order.walletBalanceAtOrder !== undefined 
+    // Balance at Order Time (Captured at the moment the order was placed)
+    const balAtOrderNum = order.walletBalanceAtOrder !== undefined && order.walletBalanceAtOrder !== null
       ? order.walletBalanceAtOrder 
-      : (order.balanceAfter !== undefined ? order.balanceAfter : null);
+      : (order.walletBalanceBeforeOrder !== undefined && order.walletBalanceBeforeOrder !== null
+          ? order.walletBalanceBeforeOrder
+          : (order.balanceAfter !== undefined ? order.balanceAfter : null));
     const balAtOrderStr = (balAtOrderNum !== null && balAtOrderNum !== undefined) 
       ? store.formatMoney(balAtOrderNum) 
       : null;
@@ -3398,6 +4228,13 @@ const AdminApp = {
             <span>Customer Information</span>
           </div>
           <div class="order-data-row">
+            <span class="order-data-label">Customer ID:</span>
+            <span class="order-data-val" style="display: inline-flex; align-items: center; gap: 6px;">
+              <span class="badge" style="font-family: var(--font-mono); font-weight: 800; font-size: 12.5px; background: rgba(99, 102, 241, 0.12); color: #4338CA; border: 1px solid rgba(99, 102, 241, 0.25);">${displayCustCode}</span>
+              ${(!isGuest && custEmail) ? `<button type="button" class="btn-copy-id" title="Copy Customer ID" onclick="navigator.clipboard.writeText('${displayCustCode}'); window.store.showToast('Customer ID copied!', 'success');" style="background: none; border: none; cursor: pointer; font-size: 12px;">📋</button>` : ''}
+            </span>
+          </div>
+          <div class="order-data-row">
             <span class="order-data-label">Customer Name:</span>
             <span class="order-data-val">${custName}</span>
           </div>
@@ -3409,21 +4246,13 @@ const AdminApp = {
             </span>
           </div>
           <div class="order-data-row">
-            <span class="order-data-label">Customer / User ID:</span>
-            <span class="order-data-val" style="font-family: var(--font-mono); font-weight: 700; color: var(--text-secondary);">
-              ${customerUserId ? `#${customerUserId}` : (isGuest ? 'Guest Order' : 'Web Customer')}
-            </span>
+            <span class="order-data-label">Current Wallet Balance (Now):</span>
+            <span class="order-data-val" id="order-detail-user-wallet-balance" style="color: #10B981; font-weight: 800;">${currentWalletBalStr}</span>
           </div>
           <div class="order-data-row">
-            <span class="order-data-label">User Wallet Balance:</span>
-            <span class="order-data-val" id="order-detail-user-wallet-balance" style="color: var(--primary); font-weight: 800;">${currentWalletBalStr}</span>
+            <span class="order-data-label">Wallet Balance at Order Time:</span>
+            <span class="order-data-val" style="color: var(--primary); font-weight: 800;">${balAtOrderStr || (balAtOrderNum !== null ? store.formatMoney(balAtOrderNum) : '₹0.00')}</span>
           </div>
-          ${balAtOrderStr ? `
-            <div class="order-data-row">
-              <span class="order-data-label">Balance at Order Time:</span>
-              <span class="order-data-val" style="color: var(--text-secondary); font-weight: 700;">${balAtOrderStr}</span>
-            </div>
-          ` : ''}
         </div>
 
         <!-- 2. SERVICE DETAILS -->
