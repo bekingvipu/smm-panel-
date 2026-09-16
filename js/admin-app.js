@@ -3941,7 +3941,7 @@ const AdminApp = {
           <!-- 7. STATUS & LIVE PROGRESS -->
           <td>
             <div style="display: flex; flex-direction: column; gap: 4px;">
-              ${(!o.providerOrderId && (isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || String(o.status).toLowerCase().includes('topup'))) ? `
+              ${(isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
                 <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;">
                   ⚠️ Queued Top-Up
                 </span>
@@ -4083,7 +4083,7 @@ const AdminApp = {
     const queuedOrders = allOrders.filter(o => {
       if (!o) return false;
       const st = (o.status || '').toLowerCase();
-      return !o.providerOrderId && (o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance'));
+      return o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
     });
 
     const hasSelected = this.selectedOrderIds && this.selectedOrderIds.size > 0;
@@ -4150,9 +4150,9 @@ const AdminApp = {
               <span>➕</span>
               <span>Create Manual Order</span>
             </button>
-            <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700;" onclick="store.syncSupabaseDataForAdmin ? store.syncSupabaseDataForAdmin().then(() => store.syncOrdersStatus()) : store.syncOrdersStatus()">
+            <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700;" onclick="store.syncOrdersStatus()">
               <span>🔄</span>
-              <span>Sync Orders & Status</span>
+              <span>Sync Live Status</span>
             </button>
           </div>
         </div>
