@@ -155,24 +155,6 @@ window.SMM_MOCK = {
     // INSTAGRAM - LIKEX SPECIAL
     // -------------------------------------------------------------
     {
-      id: 'wos-6288',
-      rawId: '6288',
-      platform: 'instagram',
-      subcategory: 'LikeX Special',
-      customerName: 'Instagram Reel Views [All Reel Links] [0-1 Min Start] [1M/Day] 🔥',
-      pricePer1k: 0.00165,
-      min: 100,
-      max: 2147483647,
-      deliverySpeed: '⚡ 1M/Day [Instant]',
-      startTime: '0 - 1 Min',
-      refillSupported: false,
-      refillPeriod: 'None',
-      description: 'Ultra fast Instagram Reel views from WorldOfSMM (6288). Works on all reel links.',
-      provider: 'worldofsmm',
-      wholesaleCost: 0.0011,
-      markupPercent: 50
-    },
-    {
       id: 'wos-3100',
       rawId: '3100',
       platform: 'instagram',

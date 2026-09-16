@@ -1128,12 +1128,11 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special');
 
     if (isLikeXSpecial && activePackages.length > 0) {
-      // Flagship Order: 1. Views (6288), 2. Likes (3100)
+      // Flagship Order: Likes (3100)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
-        if (id.includes('6288') || (s.name || '').toLowerCase().includes('view')) return 1;
-        if (id.includes('3100') || (s.name || '').toLowerCase().includes('like')) return 2;
-        return 3;
+        if (id.includes('3100') || (s.name || '').toLowerCase().includes('like')) return 1;
+        return 2;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
     } else if ((this.currentCategory || '').includes('Non-Drop Followers — Refill Guaranteed') && activePackages.length > 0) {

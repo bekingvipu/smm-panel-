@@ -71,10 +71,10 @@ class SmmStateStore {
       const savedCustom = localStorage.getItem('likex_catalog_customizations_v4');
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
-        // Ensure core flagship services (like 6288 in LikeX Special) are never polluted with stale local costs
+        // Ensure service 6288 in LikeX Special is never loaded from cached added services
         const cleanAdded = (parsed.addedServices || []).filter(s => {
           const id = String(s.id || s.rawId || '');
-          return !id.includes('6288') && (s.category || '') !== 'LikeX Special';
+          return !(id.includes('6288') && (s.category || '') === 'LikeX Special');
         });
         this.catalogCustomizations = {
           addedServices: cleanAdded,
@@ -87,10 +87,8 @@ class SmmStateStore {
       this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
     }
 
-    // Ensure official core services (e.g. World of SMM 6288 & 6433) are never suppressed by stale localStorage
+    // Ensure official core services (e.g. World of SMM 6433) are never suppressed by stale localStorage
     if (this.catalogCustomizations && this.catalogCustomizations.disabledServiceIds) {
-      this.catalogCustomizations.disabledServiceIds.delete('6288');
-      this.catalogCustomizations.disabledServiceIds.delete('wos-6288');
       this.catalogCustomizations.disabledServiceIds.delete('6433');
       this.catalogCustomizations.disabledServiceIds.delete('wos-6433');
     }
@@ -806,6 +804,9 @@ class SmmStateStore {
     for (const s of base) {
       const sId = String(s.id);
       const rId = String(s.rawId || s.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
+      if ((sId === 'wos-6288' || rId === '6288') && (s.category || '') === 'LikeX Special') {
+        continue; // 6288 is strictly excluded from LikeX Special
+      }
       const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
         // Authoritative cost is baseline canonical s.cost, unless cloud override is configured
@@ -827,13 +828,15 @@ class SmmStateStore {
       }
     }
 
-    // 2. Added/imported custom services take priority (except core flagship services like wos-6288)
+    // 2. Added/imported custom services take priority
     for (const s of added) {
       const sId = String(s.id);
       const rId = String(s.rawId || s.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
-      const isProtected = sId === 'wos-6288' || rId === '6288' || (s.category || '') === 'LikeX Special';
-      if (isProtected && activeMap.has(sId)) {
-        continue; // Never let stale local custom services overwrite core LikeX Special flagship services
+      if ((sId === 'wos-6288' || rId === '6288') && (s.category || '') === 'LikeX Special') {
+        continue; // 6288 is strictly excluded from LikeX Special
+      }
+      if (activeMap.has(sId)) {
+        continue;
       }
 
       const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
@@ -1320,13 +1323,11 @@ class SmmStateStore {
             if (Array.isArray(parsed.catalog_customizations.addedServices)) {
               this.catalogCustomizations.addedServices = parsed.catalog_customizations.addedServices.filter(s => {
                 const id = String(s.id || s.rawId || '');
-                return !id.includes('6288') && (s.category || '') !== 'LikeX Special';
+                return !(id.includes('6288') && (s.category || '') === 'LikeX Special');
               });
             }
             if (Array.isArray(parsed.catalog_customizations.disabledServiceIds)) {
               this.catalogCustomizations.disabledServiceIds = new Set(parsed.catalog_customizations.disabledServiceIds);
-              this.catalogCustomizations.disabledServiceIds.delete('6288');
-              this.catalogCustomizations.disabledServiceIds.delete('wos-6288');
             }
           }
           if (parsed.maintenance_mode) {
