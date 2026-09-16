@@ -1630,10 +1630,20 @@ class SmmStateStore {
       }
     };
 
-    // 1. Current store orders
-    (this.data.orders || []).forEach(addOrMerge);
+    // 1. Live un-scoped platform orders from Supabase REST API
+    if (Array.isArray(this.data.allAdminSupabaseOrders)) {
+      this.data.allAdminSupabaseOrders.forEach(addOrMerge);
+    }
 
-    // 2. Global master orders from localStorage
+    // 2. Cached Supabase platform orders from localStorage
+    try {
+      const supaOrders = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
+      if (Array.isArray(supaOrders)) {
+        supaOrders.forEach(addOrMerge);
+      }
+    } catch (e) {}
+
+    // 3. Global master orders from localStorage
     try {
       const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
       if (Array.isArray(master)) {
@@ -1641,7 +1651,7 @@ class SmmStateStore {
       }
     } catch (e) {}
 
-    // 3. Scan all smm_user_*_orders in localStorage
+    // 4. Scan all smm_user_*_orders in localStorage across all accounts
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
@@ -1654,13 +1664,8 @@ class SmmStateStore {
       }
     } catch (e) {}
 
-    // 4. Any Supabase orders cached
-    try {
-      const supaOrders = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
-      if (Array.isArray(supaOrders)) {
-        supaOrders.forEach(addOrMerge);
-      }
-    } catch (e) {}
+    // 5. Transient current customer orders
+    (this.data.orders || []).forEach(addOrMerge);
 
     let finalOrders = ordersList;
     // Filter out deleted/hidden orders for admin console view without touching customer orders
@@ -1794,21 +1799,32 @@ class SmmStateStore {
     return this.data.adminStats;
   }
 
-  // Background sync Supabase users & orders for admin with rich name & email resolution
+  // Background sync Supabase users & orders for admin with rich name & email resolution (UN-SCOPED GLOBAL FETCH)
   async syncSupabaseDataForAdmin() {
-    if (!window.supabaseClient || this._isSyncingSupabaseAdmin) return;
+    if (this._isSyncingSupabaseAdmin) return;
     this._isSyncingSupabaseAdmin = true;
     try {
       let dataChanged = false;
 
-      // 1. Fetch users from Supabase with balance & spent
-      const { data: supaUsers } = await window.supabaseClient
-        .from('users')
-        .select('id, email, username, role, balance, spent, created_at, customer_code');
+      // 1. Fetch ALL users from Supabase via un-scoped REST API
+      let supaUsers = null;
+      try {
+        const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?select=id,email,username,role,balance,spent,created_at,customer_code&order=id.asc`, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (uRes.ok) supaUsers = await uRes.json();
+      } catch (e) {}
+
+      if (!supaUsers && window.supabaseClient) {
+        const { data } = await window.supabaseClient.from('users').select('id, email, username, role, balance, spent, created_at, customer_code');
+        supaUsers = data;
+      }
 
       const userMap = new Map();
       if (supaUsers && supaUsers.length > 0) {
-        // Ensure every user has a consistent customer_code
         supaUsers.forEach(u => {
           if (!u.customer_code) {
             u.customer_code = `LX-${10000 + Number(u.id || 1)}`;
@@ -1825,20 +1841,36 @@ class SmmStateStore {
         }
       }
 
-      // 2. Fetch orders from Supabase
-      const { data: supaOrders } = await window.supabaseClient
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // 3. Fetch all wallet transactions from Supabase for admin ledger
+      // 2. Fetch ALL platform orders from Supabase via un-scoped REST API (No customer JWT attached!)
+      let supaOrders = null;
       try {
-        const { data: supaTxns } = await window.supabaseClient
-          .from('wallet_transactions')
-          .select('*')
-          .order('created_at', { ascending: false });
-        if (supaTxns && Array.isArray(supaTxns)) {
-          this.data.allTransactions = supaTxns;
+        const oRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?select=*&order=created_at.desc`, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (oRes.ok) supaOrders = await oRes.json();
+      } catch (e) {}
+
+      if (!supaOrders && window.supabaseClient) {
+        const { data } = await window.supabaseClient.from('orders').select('*').order('created_at', { ascending: false });
+        supaOrders = data;
+      }
+
+      // 3. Fetch ALL wallet transactions from Supabase for admin ledger
+      try {
+        const tRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?select=*&order=created_at.desc`, {
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+          }
+        });
+        if (tRes.ok) {
+          const supaTxns = await tRes.json();
+          if (Array.isArray(supaTxns)) {
+            this.data.allTransactions = supaTxns;
+          }
         }
       } catch (txErr) {
         console.warn('[LikeX Admin] Transactions fetch notice:', txErr);
@@ -1847,9 +1879,6 @@ class SmmStateStore {
       if (supaOrders && supaOrders.length > 0) {
         const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
         const mapped = supaOrders.map(so => {
-          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : (snapshot?.email ? userMap.get(String(snapshot.email).toLowerCase()) : null);
-
-          // 1. Check if target_url contains embedded metadata snapshot
           let cleanTargetUrl = String(so.target_url || '').trim();
           let snapshot = null;
 
@@ -1867,12 +1896,13 @@ class SmmStateStore {
             } catch (e) {}
           }
 
-          // Legacy fallback: check if refill_status contains encoded snapshot
           if (!snapshot && so.refill_status && String(so.refill_status).startsWith('SNAPSHOT:')) {
             try {
               snapshot = JSON.parse(String(so.refill_status).replace('SNAPSHOT:', ''));
             } catch (e) {}
           }
+
+          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : (snapshot?.email ? userMap.get(String(snapshot.email).toLowerCase()) : null);
 
           let rawServiceId = snapshot?.rawServiceId || (so.service_id ? String(so.service_id) : null);
           let svcTitle = snapshot?.serviceName || null;
@@ -1959,6 +1989,7 @@ class SmmStateStore {
           };
         });
 
+        this.data.allAdminSupabaseOrders = mapped;
         const prevOrders = localStorage.getItem('likex_supabase_orders');
         const newOrdersStr = JSON.stringify(mapped);
         if (prevOrders !== newOrdersStr) {
@@ -1968,7 +1999,7 @@ class SmmStateStore {
       }
 
       this.recalculateAdminStats();
-      if (dataChanged && this.persona === 'admin') {
+      if (dataChanged || this.persona === 'admin') {
         this.notify();
       }
     } catch (err) {
