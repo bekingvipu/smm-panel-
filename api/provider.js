@@ -125,9 +125,9 @@ export default async function handler(req, res) {
     const refill = customParams.refill || paramsObj.refill;
     if (refill) formData.append('refill', String(refill));
 
-    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
+    // 10-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     let response;
     let resText = '';
@@ -147,7 +147,7 @@ export default async function handler(req, res) {
       // Automatic 1-time rapid retry on transient connection drops / aborts for order placement
       if (attempt === 1 && (customParams.action === 'add' || action === 'add')) {
         console.warn(`[LikeX Backend] Transient upstream dispatch error (${fetchErr.message}), retrying once...`);
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 150));
         return callProvider(providerConfig, customParams, 2);
       }
       throw fetchErr;
@@ -461,12 +461,7 @@ export default async function handler(req, res) {
         })
       }).catch(dbErr => console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message));
 
-      // Wait max 50ms so client receives immediate snappy response
-      await Promise.race([
-        logPromise,
-        new Promise(resolve => setTimeout(resolve, 50))
-      ]);
-
+      // Non-blocking response delivery to customer as soon as provider responds
       return res.status(200).json({
         ...providerData,
         order: liveOrderId || providerData?.order || null,

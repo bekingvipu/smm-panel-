@@ -90,7 +90,18 @@ window.INSTAGRAM_CATEGORIES = [
   'Instagram 👑 Views — Non-Drop',
   'Instagram 👑 Likes — Non-Drop',
   'Instagram 👑 Comment / Custom Comment — No Drop',
-  'Instagram 👑 All Service'
+  '👑Instagram❤️Likes (The Best)✅',
+  '👑Instagram Reel Views [Best👁️]',
+  '✅Instagram Best Services👑',
+  'Instagram Services❤️ (No Refill)',
+  '👑Instagram Likes❤️[ Non-Drop ]',
+  'Instagram Services ( UAE, USA, Brazil )',
+  '👑Instagram Reel Views👁️',
+  '👑Instagram Reel Likes',
+  '👑Instagram 🇮🇳Indian Likes Services',
+  '👑INSTAGRAM BLUETICK VERIFICATION🎉💯',
+  '👑Instagram Saves, Story Views & Poll Votes',
+  '👑Instagram Comments, Comment likes & Shares'
 ];
 
 window.SMM_MOCK = {
