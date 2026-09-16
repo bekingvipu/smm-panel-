@@ -1161,22 +1161,25 @@ class SmmStateStore {
           const now = Date.now();
           const lastAlertTime = Number(localStorage.getItem('likex_last_low_bal_alert') || 0);
           if (now - lastAlertTime > 3 * 60 * 60 * 1000) { // 3-hour anti-spam cooldown
-            if (balData.worldofsmm && balData.worldofsmm.balance !== undefined && parseFloat(balData.worldofsmm.balance) < thresholdUSD) {
+            const wosBalRaw = balData.worldofsmm && balData.worldofsmm.balance !== undefined ? parseFloat(balData.worldofsmm.balance) : NaN;
+            const sfBalRaw = balData.socialfans && balData.socialfans.balance !== undefined ? parseFloat(balData.socialfans.balance) : NaN;
+
+            if (!isNaN(wosBalRaw) && isFinite(wosBalRaw) && wosBalRaw >= 0 && wosBalRaw < thresholdUSD) {
               localStorage.setItem('likex_last_low_bal_alert', String(now));
               this.triggerAlert({
                 type: 'low_balance',
                 providerName: 'WorldOfSMM',
                 providerKey: 'worldofsmm',
-                balance: (parseFloat(balData.worldofsmm.balance) * 85).toFixed(2),
+                balance: (wosBalRaw * 85).toFixed(2),
                 threshold: thresholdINR.toFixed(2)
               });
-            } else if (balData.socialfans && balData.socialfans.balance !== undefined && parseFloat(balData.socialfans.balance) < thresholdINR) {
+            } else if (!isNaN(sfBalRaw) && isFinite(sfBalRaw) && sfBalRaw >= 0 && sfBalRaw < thresholdINR) {
               localStorage.setItem('likex_last_low_bal_alert', String(now));
               this.triggerAlert({
                 type: 'low_balance',
                 providerName: 'SocialFans',
                 providerKey: 'socialfans',
-                balance: parseFloat(balData.socialfans.balance).toFixed(2),
+                balance: sfBalRaw.toFixed(2),
                 threshold: thresholdINR.toFixed(2)
               });
             }
@@ -2740,6 +2743,24 @@ class SmmStateStore {
       const finalBalAfter = dispatchResult.newBalance !== undefined ? Number(dispatchResult.newBalance) : walletBalAfter;
       this.data.customer.balance = finalBalAfter;
 
+      // Update in cached users list
+      if (Array.isArray(this.data.users)) {
+        const uIdx = this.data.users.findIndex(u => (u.email && u.email.toLowerCase() === this.data.customer?.email?.toLowerCase()) || (u.id && String(u.id) === String(this.data.customer?.id)));
+        if (uIdx >= 0) {
+          this.data.users[uIdx].balance = finalBalAfter;
+        }
+      }
+
+      // Firmly stamp dual wallet balances on order
+      newOrder.walletBalanceAtOrder = currentWalletBal;
+      newOrder.walletBalanceBeforeOrder = currentWalletBal;
+      newOrder.walletBalanceAfter = finalBalAfter;
+      if (newOrder.serviceSnapshot) {
+        newOrder.serviceSnapshot.walletBalanceAtOrder = currentWalletBal;
+        newOrder.serviceSnapshot.walletBalanceBeforeOrder = currentWalletBal;
+        newOrder.serviceSnapshot.walletBalanceAfter = finalBalAfter;
+      }
+
       // Add to transactions ledger
       this.data.transactions.unshift({
         id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -2879,9 +2900,11 @@ class SmmStateStore {
         });
       } else {
         const errMsg = liveError || 'Provider rejected order';
+        const isLowBalance = Boolean(liveData?.isLowBalanceError || String(errMsg).toLowerCase().includes('balance') || String(errMsg).toLowerCase().includes('fund'));
         order.providerOrderId = null;
         order.isQueued = true;
-        order.needsTopup = true;
+        order.needsTopup = isLowBalance;
+        order.isLowBalance = isLowBalance;
         order.upstreamError = errMsg;
         order.errorReason = errMsg;
         order.providerResponse = liveData || null;
@@ -2900,7 +2923,9 @@ class SmmStateStore {
           target: cleanedTarget,
           quantity: quantity,
           customerPaid: totalCost.toFixed(2),
-          customerEmail: order.userEmail || ''
+          customerEmail: order.userEmail || '',
+          reason: errMsg,
+          isLowBalance: isLowBalance
         });
       }
 
@@ -2914,13 +2939,29 @@ class SmmStateStore {
       const errMsg = err.name === 'AbortError' ? 'Provider timeout (15s)' : err.message;
       order.providerOrderId = null;
       order.isQueued = true;
-      order.needsTopup = true;
+      order.needsTopup = false;
+      order.isLowBalance = false;
       order.upstreamError = errMsg;
       order.errorReason = errMsg;
       order.providerStatus = `Queued: ${errMsg}`;
       order.status = 'Queued';
       order.lastUpdatedAt = Date.now();
+      order.refillReason = `Queued: ${errMsg}`;
       this.updateOrderInAllStorages(order);
+
+      this.triggerAlert({
+        type: 'queued_order',
+        orderId: finalOrderId,
+        providerName: providerDisplayName,
+        providerKey: targetProvider,
+        serviceName: serviceName,
+        target: cleanedTarget,
+        quantity: quantity,
+        customerPaid: totalCost.toFixed(2),
+        customerEmail: order.userEmail || '',
+        reason: errMsg,
+        isLowBalance: false
+      });
 
       this.notify();
       return {
@@ -4080,6 +4121,20 @@ class SmmStateStore {
         }
       } catch (e) {}
     }
+
+    // 4. Update in cached Supabase orders so Admin Orders sees it instantly
+    try {
+      const supa = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
+      if (Array.isArray(supa)) {
+        const sIdx = supa.findIndex(matchesOrder);
+        if (sIdx >= 0) {
+          supa[sIdx] = { ...supa[sIdx], ...updatedOrder };
+        } else {
+          supa.unshift(updatedOrder);
+        }
+        localStorage.setItem('likex_supabase_orders', JSON.stringify(supa));
+      }
+    } catch (e) {}
   }
 
   dispatchQueuedOrder(orderId) {

@@ -58,14 +58,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Main Render Loop with Frame-Batching
   let _renderRaf = null;
+  let _lastPersona = null;
+  let _lastAdminTab = null;
+
   const renderApp = (immediate = false) => {
     const doRender = () => {
       _renderRaf = null;
       syncRoute();
       if (store.persona === 'admin') {
         document.title = 'Admin Console — LikeX System Management';
+        const adminShell = document.querySelector('.admin-shell');
+        // If background poller or state notification occurs while already on admin orders view, update in-place
+        if (!immediate && adminShell && _lastPersona === 'admin' && store.adminTab === 'orders' && _lastAdminTab === 'orders') {
+          if (window.AdminApp && typeof window.AdminApp.updateAdminOrdersTableView === 'function') {
+            window.AdminApp.updateAdminOrdersTableView();
+            return;
+          }
+        }
+        _lastPersona = 'admin';
+        _lastAdminTab = store.adminTab;
         AdminApp.render(screenContainer);
       } else {
+        _lastPersona = 'customer';
+        _lastAdminTab = null;
         document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
         CustomerApp.render(screenContainer);
       }

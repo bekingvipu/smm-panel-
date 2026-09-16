@@ -3656,7 +3656,38 @@ const AdminApp = {
   },
 
   adminOrdersSearch: '',
-  adminOrdersFilter: 'all',
+  adminOrdersFilter: (function() {
+    try {
+      const urlF = new URLSearchParams(window.location.search).get('filter');
+      if (urlF) return urlF;
+      return localStorage.getItem('likex_admin_orders_filter') || 'all';
+    } catch (_) {
+      return 'all';
+    }
+  })(),
+  activeOrderDetailsId: null,
+
+  setAdminOrdersFilter(filter) {
+    this.adminOrdersFilter = filter || 'all';
+    try {
+      localStorage.setItem('likex_admin_orders_filter', this.adminOrdersFilter);
+      const url = new URL(window.location);
+      url.searchParams.set('filter', this.adminOrdersFilter);
+      window.history.replaceState(null, '', url);
+    } catch (_) {}
+
+    // Update active UI classes on filter pills
+    document.querySelectorAll('.orders-filter-pill').forEach(btn => {
+      const filterAttr = btn.getAttribute('data-filter');
+      if (filterAttr === this.adminOrdersFilter) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+
+    this.updateAdminOrdersTableView();
+  },
 
   getOrderServiceId(order) {
     if (!order) return 'N/A';
@@ -3987,6 +4018,16 @@ const AdminApp = {
       const avatarLetter = (custName || 'C').charAt(0).toUpperCase();
       const custCode = o.customerId || o.customerCode || (custEmail ? store.getCustomerId(custEmail) : null);
 
+      // Customer Wallet Balances (Live & Snapshot at Order Time)
+      const liveBalVal = store.getCustomerWalletBalance ? store.getCustomerWalletBalance(custEmail || o.customerUserId || custCode) : null;
+      const currentBalStr = (liveBalVal !== null && liveBalVal !== undefined) ? store.formatMoney(liveBalVal) : '₹0.00';
+      const balAtOrderNum = o.walletBalanceAtOrder !== undefined && o.walletBalanceAtOrder !== null 
+        ? o.walletBalanceAtOrder 
+        : (o.walletBalanceBeforeOrder !== undefined && o.walletBalanceBeforeOrder !== null 
+            ? o.walletBalanceBeforeOrder 
+            : (o.serviceSnapshot?.walletBalanceAtOrder ?? o.serviceSnapshot?.walletBalanceBeforeOrder ?? null));
+      const balAtOrderStr = (balAtOrderNum !== null && balAtOrderNum !== undefined) ? store.formatMoney(balAtOrderNum) : (liveBalVal !== null ? store.formatMoney(liveBalVal) : '₹0.00');
+
       // Formatted IDs
       const rawIdVal = o.likeXOrderId || o.id;
       const displayLikeXId = store.formatLikeXOrderId ? store.formatLikeXOrderId(rawIdVal) : (String(rawIdVal).startsWith('LX') ? rawIdVal : 'LX' + rawIdVal);
@@ -4083,6 +4124,14 @@ const AdminApp = {
                   ${custEmail ? `
                     <button type="button" title="Copy Email" onclick="navigator.clipboard.writeText('${custEmail}'); window.store.showToast('Customer email copied!', 'success');" style="background: none; border: none; cursor: pointer; padding: 0; font-size: 10px; opacity: 0.7;">📋</button>
                   ` : ''}
+                </div>
+                <div style="font-size: 11px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
+                  <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Current Customer Wallet Balance (Backend Live)">
+                    <span>💳</span> <span>Wallet: ${currentBalStr}</span>
+                  </span>
+                  <span style="color: var(--text-secondary); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;" title="Customer Wallet Balance at Order Checkout Time">
+                    <span>⏱️</span> <span>At Order: ${balAtOrderStr || '₹0.00'}</span>
+                  </span>
                 </div>
               </div>
             </div>
@@ -4266,6 +4315,33 @@ const AdminApp = {
     }).join('');
   },
 
+  renderQueuedBanner(queuedOrders = []) {
+    if (!queuedOrders || queuedOrders.length === 0) return '';
+    return `
+      <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
+      <div class="card" style="margin-bottom: 2px; padding: 18px 20px; border: 1.5px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 16px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 26px;">🚨</span>
+            <div>
+              <h4 style="font-size: 16.5px; font-weight: 800; color: #DC2626; margin: 0;">
+                ${queuedOrders.length} Order(s) Queued — Waiting for Provider Top-Up
+              </h4>
+              <p style="font-size: 13px; color: #B45309; margin: 3px 0 0;">
+                Customer payment received. Recharge provider account and click <strong>"1-Click Dispatch All"</strong> or dispatch individual orders below.
+              </p>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 7px 18px; font-size: 13px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);" onclick="AdminApp.dispatchAllQueuedOrders()">
+              ⚡ 1-Click Dispatch All Queued (${queuedOrders.length})
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
   updateAdminOrdersTableView() {
     const store = window.store;
     const tbody = document.getElementById('admin-orders-table-body');
@@ -4281,13 +4357,38 @@ const AdminApp = {
       return;
     }
 
+    // Preserve horizontal and vertical scroll positions
+    const tableScrollParent = tbody.closest('.sync-table-container') || tbody.closest('div[style*="overflow"]');
+    const prevScrollLeft = tableScrollParent ? tableScrollParent.scrollLeft : 0;
+    const prevScrollTop = tableScrollParent ? tableScrollParent.scrollTop : 0;
+    const prevWindowY = window.scrollY;
+
     const allOrders = (store.getAllAdminOrders ? store.getAllAdminOrders() : store.data.orders) || [];
     const filtered = this.getFilteredOrders(store);
 
     tbody.innerHTML = this.renderAdminOrderRows(filtered, store);
 
+    if (tableScrollParent) {
+      tableScrollParent.scrollLeft = prevScrollLeft;
+      tableScrollParent.scrollTop = prevScrollTop;
+    }
+    if (typeof window.scrollTo === 'function') {
+      window.scrollTo(window.scrollX, prevWindowY);
+    }
+
     if (bulkContainer) {
       bulkContainer.innerHTML = this.renderAdminOrdersBulkBar();
+    }
+
+    const queuedOrders = allOrders.filter(o => {
+      if (!o) return false;
+      const st = (o.status || '').toLowerCase();
+      return o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
+    });
+
+    const queuedBanner = document.getElementById('admin-orders-queued-banner-container');
+    if (queuedBanner) {
+      queuedBanner.innerHTML = this.renderQueuedBanner(queuedOrders);
     }
 
     if (masterCb) {
@@ -4309,7 +4410,7 @@ const AdminApp = {
       searchInput.value = this.adminOrdersSearch || '';
     }
 
-    // Update filter pills active state
+    // Update filter pills active state and dynamic counts
     document.querySelectorAll('.orders-filter-pill').forEach(btn => {
       const filterAttr = btn.getAttribute('data-filter');
       if (filterAttr === this.adminOrdersFilter) {
@@ -4317,7 +4418,30 @@ const AdminApp = {
       } else {
         btn.classList.remove('active');
       }
+      if (filterAttr === 'all') {
+        btn.textContent = `All (${allOrders.length})`;
+      } else if (filterAttr === 'queued') {
+        btn.textContent = `🚨 Queued / Top-Up (${queuedOrders.length})`;
+        btn.style.borderColor = queuedOrders.length > 0 ? '#EF4444' : '';
+        btn.style.color = queuedOrders.length > 0 ? '#DC2626' : '';
+        btn.style.fontWeight = queuedOrders.length > 0 ? '800' : '';
+      }
     });
+
+    // If an Order Details Modal is currently open, dynamically update customer wallet balance in-place
+    if (this.activeOrderDetailsId) {
+      const activeOrd = allOrders.find(o => String(o.id) === String(this.activeOrderDetailsId) || String(o.likeXOrderId) === String(this.activeOrderDetailsId) || String(o.providerOrderId) === String(this.activeOrderDetailsId));
+      if (activeOrd) {
+        const custEmail = activeOrd.userEmail || activeOrd.customerEmail || '';
+        const custUserId = activeOrd.customerUserId || activeOrd.user_id || null;
+        const custCode = activeOrd.customerId || activeOrd.customerCode || (custEmail ? store.getCustomerId(custEmail) : null);
+        const liveBal = store.getCustomerWalletBalance ? store.getCustomerWalletBalance(custEmail || custUserId || custCode) : null;
+        const liveBalEl = document.getElementById('order-detail-user-wallet-balance');
+        if (liveBalEl && liveBal !== null && liveBal !== undefined) {
+          liveBalEl.textContent = store.formatMoney(liveBal);
+        }
+      }
+    }
   },
 
   renderAdminOrders(store) {
@@ -4340,29 +4464,10 @@ const AdminApp = {
           ${this.renderAdminOrdersBulkBar()}
         </div>
 
-        ${queuedOrders.length > 0 ? `
-          <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
-          <div class="card" style="margin-bottom: 2px; padding: 18px 20px; border: 1.5px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 16px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);">
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
-              <div style="display: flex; align-items: center; gap: 12px;">
-                <span style="font-size: 26px;">🚨</span>
-                <div>
-                  <h4 style="font-size: 16.5px; font-weight: 800; color: #DC2626; margin: 0;">
-                    ${queuedOrders.length} Order(s) Queued — Waiting for Provider Top-Up
-                  </h4>
-                  <p style="font-size: 13px; color: #B45309; margin: 3px 0 0;">
-                    Customer payment received. Recharge provider account and click <strong>"1-Click Dispatch All"</strong> or dispatch individual orders below.
-                  </p>
-                </div>
-              </div>
-              <div style="display: flex; gap: 8px;">
-                <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 7px 18px; font-size: 13px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);" onclick="AdminApp.dispatchAllQueuedOrders()">
-                  ⚡ 1-Click Dispatch All Queued (${queuedOrders.length})
-                </button>
-              </div>
-            </div>
-          </div>
-        ` : ''}
+        <!-- High-Priority Queued Orders Banner Container -->
+        <div id="admin-orders-queued-banner-container">
+          ${this.renderQueuedBanner(queuedOrders)}
+        </div>
 
         <!-- Top Toolbar with Live Search, Manual Order Creation & Live Sync -->
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap;">
@@ -4471,6 +4576,8 @@ const AdminApp = {
       store.showToast(`Order #${orderId} not found.`, 'error');
       return;
     }
+
+    this.activeOrderDetailsId = String(order.id || orderId);
 
     const sheet = document.getElementById('generic-modal-sheet');
     if (!sheet) return;

@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   }
 
   const {
-    type = 'low_balance', // 'low_balance' | 'queued_order' | 'test'
+    type = 'low_balance', // 'low_balance' | 'queued_order' | 'live_order' | 'test'
     providerName = 'WorldOfSMM', // 'WorldOfSMM' | 'SocialFans'
     providerKey = 'worldofsmm',
     balance = '0.00',
@@ -34,10 +34,27 @@ export default async function handler(req, res) {
     quantity = '',
     customerPaid = '',
     customerEmail = '',
+    reason = '',
+    isLowBalance = false,
     adminEmail = 'support@likex.in',
     telegramBotToken = '8874080054:AAFazn2iknlJMDppQuXlTM0UwQsYFP9Dwik',
     telegramChatId = '2057136429'
   } = body;
+
+  // STRICT PROTECTION: If type is 'low_balance', verify balance is actually below threshold
+  if (type === 'low_balance') {
+    const balNum = parseFloat(balance) || 0.00;
+    const threshNum = parseFloat(threshold) || 100.00;
+    if (balNum >= threshNum) {
+      return res.status(200).json({
+        success: true,
+        type,
+        providerName,
+        suppressed: true,
+        message: `Suppressed false low balance alert: ${providerName} balance (₹${balNum.toFixed(2)}) is sufficient (threshold ₹${threshNum.toFixed(2)}).`
+      });
+    }
+  }
 
   const results = {
     telegram: null,
@@ -60,16 +77,31 @@ export default async function handler(req, res) {
       `💰 *Customer Paid:* ₹${customerPaid}\n` +
       `⚡ *Status:* Processing Live on ${providerName}`;
   } else if (type === 'queued_order') {
-    alertTitle = `🚨 [LikeX Urgent] Order #${orderId} Queued — Top-Up ${providerName}`;
-    messageText = `🚨 *LikeX Queued Order Alert!*\n\n` +
-      `🛒 *Order ID:* #${orderId}\n` +
-      `🔌 *Target Provider:* ${providerName}\n` +
-      `📦 *Service:* ${serviceName}\n` +
-      `🔗 *Target Link:* ${target}\n` +
-      `👥 *Quantity:* ${Number(quantity || 0).toLocaleString()}\n` +
-      `💰 *Customer Paid:* ₹${customerPaid} (Wallet Deducted)\n` +
-      `⚠️ *Status:* Queued (Provider balance low / pending top-up)\n\n` +
-      `⚡ *Action Required:* Recharge ${providerName} and dispatch from LikeX Admin Console!`;
+    const isGenuinelyLowBal = Boolean(isLowBalance || String(reason || '').toLowerCase().includes('balance') || String(reason || '').toLowerCase().includes('fund'));
+    if (isGenuinelyLowBal) {
+      alertTitle = `🚨 [LikeX Urgent] Order #${orderId} Queued — Top-Up ${providerName}`;
+      messageText = `🚨 *LikeX Queued Order Alert (Provider Top-Up Needed)*\n\n` +
+        `🛒 *Order ID:* #${orderId}\n` +
+        `🔌 *Target Provider:* ${providerName}\n` +
+        `📦 *Service:* ${serviceName}\n` +
+        `🔗 *Target Link:* ${target}\n` +
+        `👥 *Quantity:* ${Number(quantity || 0).toLocaleString()}\n` +
+        `💰 *Customer Paid:* ₹${customerPaid} (Wallet Deducted)\n` +
+        `⚠️ *Status:* Queued (Provider balance low / pending top-up)\n\n` +
+        `⚡ *Action Required:* Recharge ${providerName} balance and 1-click dispatch from LikeX Admin Console!`;
+    } else {
+      const cleanReason = String(reason || 'Upstream provider pending review').replace(/###.*?###/g, '');
+      alertTitle = `⚠️ [LikeX Notice] Order #${orderId} Queued (${providerName})`;
+      messageText = `⚠️ *LikeX Order Status Notice*\n\n` +
+        `🛒 *Order ID:* #${orderId}\n` +
+        `🔌 *Provider:* ${providerName}\n` +
+        `📦 *Service:* ${serviceName}\n` +
+        `🔗 *Target Link:* ${target}\n` +
+        `👥 *Quantity:* ${Number(quantity || 0).toLocaleString()}\n` +
+        `💰 *Customer Paid:* ₹${customerPaid}\n` +
+        `⚠️ *Provider Response:* ${cleanReason}\n\n` +
+        `⚡ *Action:* Check Order Details in LikeX Admin Console. (Note: Provider balance is sufficient).`;
+    }
   } else if (type === 'test') {
     alertTitle = `🧪 [LikeX Test Alert] Live Notifications Active`;
     messageText = `🧪 *LikeX Alert System Test*\n\n` +
@@ -77,7 +109,7 @@ export default async function handler(req, res) {
       `📧 *Gmail Address:* ${adminEmail}\n` +
       `📉 *Alert Threshold:* ₹${threshold}\n` +
       `🔌 *Monitored Providers:* WorldOfSMM & SocialFans\n\n` +
-      `⚡ You will receive instant sound alerts whenever top-up is needed!`;
+      `⚡ You will receive instant alerts only when top-up is genuinely needed!`;
   } else {
     alertTitle = `⚠️ [LikeX Alert] Low Provider Balance: ${providerName}`;
     messageText = `⚠️ *LikeX Low Balance Warning!*\n\n` +

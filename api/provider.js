@@ -37,42 +37,7 @@ export default async function handler(req, res) {
   }
 
   const action = paramsObj.action || 'balance';
-  const requestedProvider = (paramsObj.provider || 'worldofsmm').toLowerCase();
-
-  // Helper to query an upstream provider
-  const callProvider = async (providerConfig, customParams = {}) => {
-    const formData = new URLSearchParams();
-    formData.append('key', providerConfig.key);
-    formData.append('action', customParams.action || action);
-
-    if (customParams.service || paramsObj.service) formData.append('service', String(customParams.service || paramsObj.service));
-    if (customParams.link || paramsObj.link) formData.append('link', String(customParams.link || paramsObj.link));
-    if (customParams.quantity || paramsObj.quantity) formData.append('quantity', String(customParams.quantity || paramsObj.quantity));
-    if (customParams.comments || paramsObj.comments) formData.append('comments', String(customParams.comments || paramsObj.comments));
-    if (customParams.order || paramsObj.order) formData.append('order', String(customParams.order || paramsObj.order));
-    if (customParams.orders || paramsObj.orders) formData.append('orders', String(customParams.orders || paramsObj.orders));
-    if (customParams.refill || paramsObj.refill) formData.append('refill', String(customParams.refill || paramsObj.refill));
-
-    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    let response;
-    try {
-      response = await fetch(providerConfig.url, {
-        method: 'POST',
-        body: formData,
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
-        }
-      });
-    } finally {
-      clearTimeout(timeoutId);
-    }
-    return await response.json();
-  };
+  const requestedProvider = String(paramsObj.provider || '').toLowerCase();
 
   // Universal Provider Response Parsers
   function extractProviderOrderId(data) {
@@ -104,6 +69,106 @@ export default async function handler(req, res) {
     return null;
   }
 
+  // Clean Service ID helper: strictly strip any prefix (sf-, wos-, jap-, etc.) and suffix (-likex)
+  function cleanServiceId(raw) {
+    if (!raw) return '';
+    return String(raw)
+      .trim()
+      .replace(/^(wos|sf|jap)[-_]/i, '')
+      .replace(/[-_]likex$/i, '')
+      .trim();
+  }
+
+  // Clean Target Link helper: strip analytics tracking queries (igsh, utm, etc.) while preserving valid destination
+  function cleanTargetLink(raw) {
+    if (!raw) return '';
+    let link = String(raw).trim();
+    try {
+      // Remove trailing tracking parameters that cause upstream SMM nodes to fail
+      link = link.replace(/([?&])(igsh|utm_[a-z]+|fbclid)=[^&#]*/gi, '$1')
+                 .replace(/[?&]+$/, '')
+                 .replace(/\?&/, '?');
+    } catch (_) {}
+    return link;
+  }
+
+  // Helper to query an upstream provider with auto-sanitization, safe JSON parse, and rapid retry
+  const callProvider = async (providerConfig, customParams = {}, attempt = 1) => {
+    const formData = new URLSearchParams();
+    formData.append('key', providerConfig.key);
+    formData.append('action', customParams.action || action);
+
+    const rawSvc = customParams.service || paramsObj.service || paramsObj.serviceId;
+    if (rawSvc) {
+      const sanitizedSvc = cleanServiceId(rawSvc);
+      if (sanitizedSvc) formData.append('service', sanitizedSvc);
+    }
+
+    const rawLnk = customParams.link || paramsObj.link;
+    if (rawLnk) {
+      const sanitizedLnk = cleanTargetLink(rawLnk);
+      if (sanitizedLnk) formData.append('link', sanitizedLnk);
+    }
+
+    const qty = customParams.quantity || paramsObj.quantity;
+    if (qty) formData.append('quantity', String(qty));
+
+    const comments = customParams.comments || paramsObj.comments;
+    if (comments) formData.append('comments', String(comments));
+
+    const ord = customParams.order || paramsObj.order;
+    if (ord) formData.append('order', String(ord));
+
+    const ords = customParams.orders || paramsObj.orders;
+    if (ords) formData.append('orders', String(ords));
+
+    const refill = customParams.refill || paramsObj.refill;
+    if (refill) formData.append('refill', String(refill));
+
+    // 15-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    let response;
+    let resText = '';
+    try {
+      response = await fetch(providerConfig.url, {
+        method: 'POST',
+        body: formData,
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0 (compatible; LikeX-SMM/2.0)'
+        }
+      });
+      resText = await response.text();
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      // Automatic 1-time rapid retry on transient connection drops / aborts for order placement
+      if (attempt === 1 && (customParams.action === 'add' || action === 'add')) {
+        console.warn(`[LikeX Backend] Transient upstream dispatch error (${fetchErr.message}), retrying once...`);
+        await new Promise(r => setTimeout(r, 1000));
+        return callProvider(providerConfig, customParams, 2);
+      }
+      throw fetchErr;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
+    // Safe JSON parsing (handles HTML Cloudflare / 502 error pages cleanly)
+    let parsedJson = null;
+    try {
+      parsedJson = JSON.parse(resText);
+    } catch (parseErr) {
+      if (!response.ok) {
+        return { error: `Upstream HTTP ${response.status} Error: ${resText.slice(0, 80).trim()}` };
+      }
+      return { error: `Upstream returned non-JSON response: ${resText.slice(0, 80).trim()}` };
+    }
+
+    return parsedJson;
+  };
+
   // Multi-balance check
   try {
     if (action === 'balance' && (requestedProvider === 'all' || requestedProvider === 'both')) {
@@ -118,7 +183,11 @@ export default async function handler(req, res) {
       });
     }
 
-    const providerKey = requestedProvider in PROVIDERS ? requestedProvider : 'worldofsmm';
+    let providerKey = requestedProvider in PROVIDERS ? requestedProvider : null;
+    if (!providerKey) {
+      const svcCandidate = String(paramsObj.serviceId || paramsObj.service || '').toLowerCase();
+      providerKey = svcCandidate.startsWith('sf-') ? 'socialfans' : 'worldofsmm';
+    }
     const providerConfig = PROVIDERS[providerKey];
 
     // =========================================================
@@ -333,11 +402,18 @@ export default async function handler(req, res) {
         }
       }
 
+      // Check if error is genuinely a low balance rejection
+      const isLowBalanceError = !isSuccess && liveError && (
+        liveError.toLowerCase().includes('balance') ||
+        liveError.toLowerCase().includes('fund') ||
+        liveError.toLowerCase().includes('credit')
+      );
+
       const orderStatus = isSuccess ? (providerData.status || 'Processing') : (isFatalRejection ? 'Canceled' : 'Queued');
-      const orderErrorNote = liveError ? `Error: ${String(liveError).slice(0, 40)}` : null;
+      const orderErrorNote = liveError ? `Error: ${String(liveError)}` : null;
 
       const snapshotPayload = {
-        rawServiceId: String(paramsObj.service || ''),
+        rawServiceId: String(cleanServiceId(paramsObj.service || paramsObj.serviceId || '')),
         serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
         serviceName: serviceName,
         category: String(paramsObj.category || ''),
@@ -351,13 +427,14 @@ export default async function handler(req, res) {
         walletBalanceBeforeOrder: userBalanceBefore,
         walletBalanceAtOrder: userBalanceBefore,
         walletBalanceAfter: balanceAfter,
-        note: orderErrorNote || null
+        note: orderErrorNote || null,
+        isLowBalanceError: Boolean(isLowBalanceError)
       };
 
       // 5. Fast Non-blocking Order Logging into Supabase orders table
-      const rawTargetLink = String(paramsObj.link || '').trim();
+      const rawTargetLink = cleanTargetLink(paramsObj.link || '');
       const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
-      const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 45);
+      const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 95);
 
       const logPromise = fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
         method: 'POST',
@@ -396,10 +473,14 @@ export default async function handler(req, res) {
         providerOrderId: liveOrderId || null,
         success: isSuccess,
         error: liveError || null,
+        isLowBalanceError: Boolean(isLowBalanceError),
         provider: providerKey,
         providerName: providerConfig.name,
         newBalance: balanceAfter,
-        customerId: customerCode
+        customerId: customerCode,
+        walletBalanceAtOrder: userBalanceBefore,
+        walletBalanceBeforeOrder: userBalanceBefore,
+        walletBalanceAfter: balanceAfter
       });
     }
 
@@ -421,22 +502,28 @@ export default async function handler(req, res) {
     if (action === 'add' && paramsObj.likeXOrderId) {
       const rawLikeXStr = String(paramsObj.likeXOrderId).replace(/\D/g, '');
       const orderIdNum = rawLikeXStr ? parseInt(rawLikeXStr, 10) : Math.floor(10000 + Math.random() * 90000);
+      const resolvedProv = (requestedProvider === 'socialfans' || String(paramsObj.serviceId || paramsObj.service || '').toLowerCase().startsWith('sf-')) ? 'socialfans' : 'worldofsmm';
       const snapshotPayload = {
-        rawServiceId: String(paramsObj.service || ''),
+        rawServiceId: String(cleanServiceId(paramsObj.service || paramsObj.serviceId || '')),
         serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
         serviceName: String(paramsObj.serviceName || ''),
         category: String(paramsObj.category || ''),
         platform: String(paramsObj.platform || ''),
-        provider: requestedProvider === 'socialfans' ? 'socialfans' : 'worldofsmm',
+        provider: resolvedProv,
         wholesaleCost: Number(paramsObj.wholesaleCost || 0),
         charge: Number(paramsObj.charge || 0),
         email: paramsObj.customerEmail || '',
         name: paramsObj.customerName || '',
-        note: `Timeout: ${error.message.slice(0, 35)}`
+        customerCode: paramsObj.customerCode || null,
+        walletBalanceBeforeOrder: Number(paramsObj.walletBalanceBeforeOrder || paramsObj.currentBalance || 0),
+        walletBalanceAtOrder: Number(paramsObj.walletBalanceBeforeOrder || paramsObj.currentBalance || 0),
+        walletBalanceAfter: Number(paramsObj.walletBalanceAfter || 0),
+        note: `Error: ${error.message.slice(0, 80)}`,
+        isLowBalanceError: false
       };
-      const rawTargetLink = String(paramsObj.link || '').trim();
+      const rawTargetLink = cleanTargetLink(paramsObj.link || '');
       const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
-      const safeRefillStatus = `Timeout: ${error.message.slice(0, 35)}`;
+      const safeRefillStatus = `Error: ${error.message.slice(0, 80)}`;
 
       try {
         await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {

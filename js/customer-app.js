@@ -4994,6 +4994,9 @@ const CustomerApp = {
   closeModal() {
     const modal = document.getElementById('generic-modal-backdrop');
     if (modal) modal.classList.remove('active');
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (sheet) sheet.innerHTML = '';
+    if (window.AdminApp) window.AdminApp.activeOrderDetailsId = null;
   },
 
   openTrustpilotRewardModal() {
