@@ -2571,16 +2571,10 @@ class SmmStateStore {
         date: fullDateStr
       });
 
-      this.data.orders.unshift(newOrder);
+      // Update order in memory and all persistent storages cleanly
+      this.updateOrderInAllStorages(newOrder);
 
-      // Save to global likex_master_orders
-      try {
-        const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
-        master.unshift(newOrder);
-        localStorage.setItem('likex_master_orders', JSON.stringify(master));
-      } catch (e) {}
-
-      // Track customer registration
+      // Track customer registration if not present
       try {
         if (this.data.customer?.email) {
           const reg = JSON.parse(localStorage.getItem('likex_registered_customers') || '[]');
@@ -2590,8 +2584,6 @@ class SmmStateStore {
           }
         }
       } catch (e) {}
-
-      this.saveUserData();
 
       this.data.recentActivity.unshift({
         id: `act-${now}`,
@@ -2603,7 +2595,10 @@ class SmmStateStore {
         icon: '🛒'
       });
 
-      this.recalculateAdminStats();
+      // Recalculate stats only if currently viewing admin
+      if (this.persona === 'admin') {
+        this.recalculateAdminStats();
+      }
 
       if (!options.silent) {
         if (dispatchResult.providerOrderId) {
@@ -2726,7 +2721,6 @@ class SmmStateStore {
         });
       }
 
-      this.notify();
       return {
         success: !order.isQueued && Boolean(order.providerOrderId),
         providerOrderId: order.providerOrderId || null,

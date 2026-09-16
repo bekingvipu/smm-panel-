@@ -136,48 +136,24 @@ export default async function handler(req, res) {
       const serviceName = String(paramsObj.serviceName || 'Social Growth Service');
       const orderCharge = Number(paramsObj.charge || 0);
 
-      // 1. Fetch user from Supabase to verify existence & balance
-      let user = null;
-      try {
-        const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(customerEmail)}&select=id,username,email,balance,spent,customer_code`, {
-          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-        });
-        if (uRes.ok) {
-          const uData = await uRes.json();
-          if (Array.isArray(uData) && uData.length > 0) {
-            user = uData[0];
-          }
-        }
-      } catch (uErr) {
-        console.warn('[LikeX Backend] Error fetching customer:', uErr);
-      }
-
-      if (!user) {
-        return res.status(400).json({ error: 'Customer account not found in system. Please sign in.', success: false });
-      }
-
-      const customerCode = user.customer_code || `LX-${10000 + user.id}`;
-      let userBalanceBefore = Number(user.balance || 0);
-
-      // Strict enforcement: Customer LX-11219 (paswanvashisath@gmail.com) final balance is 0.00
-      if (customerEmail === 'paswanvashisath@gmail.com' || customerCode === 'LX-11219' || Number(user.id) === 1219) {
-        userBalanceBefore = 0;
-      }
-
-      // 2. Strict Balance Verification BEFORE contacting provider
-      if (userBalanceBefore < orderCharge) {
+      // Strict check: Customer LX-11219 balance is strictly 0.00
+      if (customerEmail === 'paswanvashisath@gmail.com') {
         return res.status(400).json({
-          error: `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $${userBalanceBefore.toFixed(2)}. Please recharge your wallet.`,
-          balance: userBalanceBefore,
+          error: `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $0.00. Please recharge your wallet.`,
+          balance: 0,
           required: orderCharge,
           success: false
         });
       }
 
-      // 3. Atomic Debit via RPC or direct REST
+      // 1. Direct Atomic Debit & Row-Level Lock via Supabase RPC (Single fast round-trip)
       let debitSuccess = false;
-      let balanceAfter = userBalanceBefore;
-      let rpcError = null;
+      let balanceAfter = 0;
+      let userBalanceBefore = 0;
+      let userId = null;
+      let customerCode = null;
+      let userName = paramsObj.customerName || '';
+      let userSpent = 0;
 
       try {
         const rpcRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/process_wallet_order`, {
@@ -200,29 +176,52 @@ export default async function handler(req, res) {
           if (rpcData && rpcData.success) {
             debitSuccess = true;
             balanceAfter = Number(rpcData.new_balance);
+            userBalanceBefore = Number(rpcData.previous_balance || 0);
+            userId = rpcData.user_id;
+            customerCode = rpcData.customer_code;
           } else {
-            rpcError = rpcData?.error || 'Insufficient balance';
+            const currentBal = Number(rpcData?.current_balance || 0);
+            const isInsufficient = String(rpcData?.error || '').toLowerCase().includes('insufficient');
+            return res.status(400).json({
+              error: isInsufficient 
+                ? `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $${currentBal.toFixed(2)}. Please recharge your wallet.`
+                : (rpcData?.error || 'Customer account error'),
+              balance: currentBal,
+              required: orderCharge,
+              success: false
+            });
           }
         }
       } catch (err) {
         console.warn('[LikeX Backend] RPC debit attempt notice:', err.message);
       }
 
-      // Fallback direct atomic debit if RPC not yet created in Supabase
+      // Fallback only if RPC is offline
       if (!debitSuccess) {
-        if (rpcError && rpcError.includes('Insufficient')) {
-          return res.status(400).json({
-            error: 'Insufficient wallet balance. Please add funds to your wallet.',
-            balance: userBalanceBefore,
-            required: orderCharge,
-            success: false
+        let user = null;
+        try {
+          const uRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?email=eq.${encodeURIComponent(customerEmail)}&select=id,username,email,balance,spent,customer_code`, {
+            headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
           });
+          if (uRes.ok) {
+            const uData = await uRes.json();
+            if (Array.isArray(uData) && uData.length > 0) user = uData[0];
+          }
+        } catch (e) {}
+
+        if (!user) {
+          return res.status(400).json({ error: 'Customer account not found in system. Please sign in.', success: false });
         }
 
-        // Re-verify current balance
+        userId = user.id;
+        customerCode = user.customer_code || `LX-${10000 + user.id}`;
+        userName = user.username || userName;
+        userBalanceBefore = Number(user.balance || 0);
+        userSpent = Number(user.spent || 0);
+
         if (userBalanceBefore < orderCharge) {
           return res.status(400).json({
-            error: 'Insufficient wallet balance. Please add funds to your wallet.',
+            error: `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $${userBalanceBefore.toFixed(2)}. Please recharge your wallet.`,
             balance: userBalanceBefore,
             required: orderCharge,
             success: false
@@ -230,10 +229,9 @@ export default async function handler(req, res) {
         }
 
         balanceAfter = Number((userBalanceBefore - orderCharge).toFixed(4));
-        const newSpent = Number(((user.spent || 0) + orderCharge).toFixed(4));
+        const newSpent = Number((userSpent + orderCharge).toFixed(4));
 
         try {
-          // Update user balance
           await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${user.id}`, {
             method: 'PATCH',
             headers: {
@@ -244,7 +242,6 @@ export default async function handler(req, res) {
             body: JSON.stringify({ balance: balanceAfter, spent: newSpent })
           });
 
-          // Insert ledger entry
           await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
             method: 'POST',
             headers: {
@@ -300,14 +297,14 @@ export default async function handler(req, res) {
         // Rollback / Refund customer balance
         const refundedBalance = Number((balanceAfter + orderCharge).toFixed(4));
         try {
-          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${user.id}`, {
+          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${userId}`, {
             method: 'PATCH',
             headers: {
               apikey: SUPABASE_ANON_KEY,
               Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ balance: refundedBalance, spent: user.spent || 0 })
+            body: JSON.stringify({ balance: refundedBalance, spent: userSpent || 0 })
           });
 
           await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
@@ -319,7 +316,7 @@ export default async function handler(req, res) {
             },
             body: JSON.stringify({
               id: `TXN-REF-${orderIdNum}-${Date.now()}`,
-              user_id: user.id,
+              user_id: userId,
               type: 'Refund',
               description: `Refund for Order #${displayLikeXId} (Provider Rejected: ${liveError.slice(0, 40)})`,
               amount: orderCharge,
@@ -349,7 +346,7 @@ export default async function handler(req, res) {
         wholesaleCost: Number(paramsObj.wholesaleCost || 0),
         charge: orderCharge,
         email: customerEmail,
-        name: user.username || paramsObj.customerName || '',
+        name: userName || paramsObj.customerName || '',
         customerCode: customerCode,
         walletBalanceBeforeOrder: userBalanceBefore,
         walletBalanceAtOrder: userBalanceBefore,
@@ -357,39 +354,41 @@ export default async function handler(req, res) {
         note: orderErrorNote || null
       };
 
-      // 5. Log Order into Supabase orders table
+      // 5. Fast Non-blocking Order Logging into Supabase orders table
       const rawTargetLink = String(paramsObj.link || '').trim();
       const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
       const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 45);
 
-      try {
-        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-          method: 'POST',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({
-            id: orderIdNum,
-            user_id: user.id,
-            service_id: null,
-            target_url: encodedTargetUrl,
-            quantity: Number(paramsObj.quantity) || 1000,
-            charge: orderCharge,
-            provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
-            provider_order_id: liveOrderId || null,
-            assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
-            status: orderStatus,
-            remains: Number(paramsObj.quantity) || 1000,
-            refill_status: safeRefillStatus,
-            created_at: new Date().toISOString()
-          })
-        });
-      } catch (dbErr) {
-        console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message);
-      }
+      const logPromise = fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          id: orderIdNum,
+          user_id: userId,
+          service_id: null,
+          target_url: encodedTargetUrl,
+          quantity: Number(paramsObj.quantity) || 1000,
+          charge: orderCharge,
+          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
+          provider_order_id: liveOrderId || null,
+          assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
+          status: orderStatus,
+          remains: Number(paramsObj.quantity) || 1000,
+          refill_status: safeRefillStatus,
+          created_at: new Date().toISOString()
+        })
+      }).catch(dbErr => console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message));
+
+      // Wait max 50ms so client receives immediate snappy response
+      await Promise.race([
+        logPromise,
+        new Promise(resolve => setTimeout(resolve, 50))
+      ]);
 
       return res.status(200).json({
         ...providerData,
