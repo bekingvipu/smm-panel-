@@ -248,6 +248,31 @@ export default async function handler(req, res) {
             userBalanceBefore = Number(rpcData.previous_balance || 0);
             userId = rpcData.user_id;
             customerCode = rpcData.customer_code;
+
+            // Idempotency check: if order was already processed, fetch and return existing order
+            if (rpcData.already_processed) {
+              try {
+                const existingRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?id=eq.${orderIdNum}&select=*`, {
+                  headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+                });
+                if (existingRes.ok) {
+                  const existingData = await existingRes.json();
+                  if (Array.isArray(existingData) && existingData.length > 0) {
+                    const exOrd = existingData[0];
+                    return res.status(200).json({
+                      success: true,
+                      already_processed: true,
+                      order: exOrd.provider_order_id || null,
+                      providerOrderId: exOrd.provider_order_id || null,
+                      provider: providerKey,
+                      providerName: providerConfig.name,
+                      newBalance: balanceAfter,
+                      customerId: customerCode
+                    });
+                  }
+                }
+              } catch (_) {}
+            }
           } else {
             const currentBal = Number(rpcData?.current_balance || 0);
             const isInsufficient = String(rpcData?.error || '').toLowerCase().includes('insufficient');
@@ -339,7 +364,59 @@ export default async function handler(req, res) {
         }
       }
 
-      // 4. Submit order to Upstream Wholesale Provider
+      // 2. Create LikeX order record in Supabase database IMMEDIATELY (AWAITED)
+      // Admin -> Orders can see this order record right away without waiting for external provider response
+      const rawTargetLink = cleanTargetLink(paramsObj.link || '');
+      const snapshotPayload = {
+        rawServiceId: String(cleanServiceId(paramsObj.service || paramsObj.serviceId || '')),
+        serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
+        serviceName: serviceName,
+        category: String(paramsObj.category || ''),
+        platform: String(paramsObj.platform || ''),
+        provider: providerKey,
+        wholesaleCost: Number(paramsObj.wholesaleCost || 0),
+        charge: orderCharge,
+        email: customerEmail,
+        name: userName || paramsObj.customerName || '',
+        customerCode: customerCode,
+        walletBalanceBeforeOrder: userBalanceBefore,
+        walletBalanceAtOrder: userBalanceBefore,
+        walletBalanceAfter: balanceAfter,
+        note: null,
+        isLowBalanceError: false
+      };
+      const initialEncodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
+
+      try {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            id: orderIdNum,
+            user_id: userId,
+            service_id: null,
+            target_url: initialEncodedTargetUrl,
+            quantity: Number(paramsObj.quantity) || 1000,
+            charge: orderCharge,
+            provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
+            provider_order_id: null,
+            assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
+            status: 'Processing',
+            remains: Number(paramsObj.quantity) || 1000,
+            refill_status: 'Dispatched to Provider',
+            created_at: new Date().toISOString()
+          })
+        });
+      } catch (dbErr) {
+        console.warn('[LikeX Backend] Immediate order creation error:', dbErr.message);
+      }
+
+      // 3. Submit order to Upstream Wholesale Provider
       let providerData = null;
       try {
         providerData = await callProvider(providerConfig);
@@ -412,56 +489,32 @@ export default async function handler(req, res) {
       const orderStatus = isSuccess ? (providerData.status || 'Processing') : (isFatalRejection ? 'Canceled' : 'Queued');
       const orderErrorNote = liveError ? `Error: ${String(liveError)}` : null;
 
-      const snapshotPayload = {
-        rawServiceId: String(cleanServiceId(paramsObj.service || paramsObj.serviceId || '')),
-        serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
-        serviceName: serviceName,
-        category: String(paramsObj.category || ''),
-        platform: String(paramsObj.platform || ''),
-        provider: providerKey,
-        wholesaleCost: Number(paramsObj.wholesaleCost || 0),
-        charge: orderCharge,
-        email: customerEmail,
-        name: userName || paramsObj.customerName || '',
-        customerCode: customerCode,
-        walletBalanceBeforeOrder: userBalanceBefore,
-        walletBalanceAtOrder: userBalanceBefore,
-        walletBalanceAfter: balanceAfter,
-        note: orderErrorNote || null,
-        isLowBalanceError: Boolean(isLowBalanceError)
-      };
+      snapshotPayload.note = orderErrorNote || null;
+      snapshotPayload.isLowBalanceError = Boolean(isLowBalanceError);
+      snapshotPayload.walletBalanceAfter = balanceAfter;
+      const updatedEncodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
 
-      // 5. Fast Non-blocking Order Logging into Supabase orders table
-      const rawTargetLink = cleanTargetLink(paramsObj.link || '');
-      const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
-      const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 95);
+      // 4. Update existing DB order record with real provider order ID and status (AWAITED)
+      try {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?id=eq.${orderIdNum}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            provider_order_id: liveOrderId || null,
+            status: orderStatus,
+            refill_status: String(orderErrorNote || (liveOrderId ? `Provider Order #${liveOrderId}` : 'Standard')).slice(0, 95),
+            target_url: updatedEncodedTargetUrl
+          })
+        });
+      } catch (dbErr) {
+        console.warn('[LikeX Backend] Supabase order update notice:', dbErr.message);
+      }
 
-      const logPromise = fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          id: orderIdNum,
-          user_id: userId,
-          service_id: null,
-          target_url: encodedTargetUrl,
-          quantity: Number(paramsObj.quantity) || 1000,
-          charge: orderCharge,
-          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
-          provider_order_id: liveOrderId || null,
-          assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
-          status: orderStatus,
-          remains: Number(paramsObj.quantity) || 1000,
-          refill_status: safeRefillStatus,
-          created_at: new Date().toISOString()
-        })
-      }).catch(dbErr => console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message));
-
-      // Non-blocking response delivery to customer as soon as provider responds
+      // Response delivery to customer after provider submission and DB update
       return res.status(200).json({
         ...providerData,
         order: liveOrderId || providerData?.order || null,

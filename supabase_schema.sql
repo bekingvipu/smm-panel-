@@ -366,7 +366,30 @@ DECLARE
     v_new_balance NUMERIC;
     v_new_spent NUMERIC;
     v_txn_id TEXT;
+    v_existing_bal NUMERIC;
 BEGIN
+    v_txn_id := 'TXN-ORD-' || p_order_id;
+
+    -- Idempotency check: if transaction already processed successfully, return current state without re-deducting
+    IF EXISTS (SELECT 1 FROM public.wallet_transactions WHERE id = v_txn_id AND status = 'Success') THEN
+        SELECT id, balance, customer_code INTO v_user
+        FROM public.users
+        WHERE lower(trim(email)) = lower(trim(p_user_email));
+
+        IF FOUND THEN
+            RETURN jsonb_build_object(
+                'success', true,
+                'already_processed', true,
+                'user_id', v_user.id,
+                'customer_code', COALESCE(v_user.customer_code, 'LX-' || (10000 + v_user.id)),
+                'previous_balance', COALESCE(v_user.balance, 0),
+                'new_balance', COALESCE(v_user.balance, 0),
+                'deducted_amount', 0,
+                'transaction_id', v_txn_id
+            );
+        END IF;
+    END IF;
+
     -- Atomic row-level lock on customer account
     SELECT id, balance, spent, email, customer_code INTO v_user
     FROM public.users
@@ -396,7 +419,6 @@ BEGIN
     WHERE id = v_user.id;
 
     -- Insert ledger record
-    v_txn_id := 'TXN-ORD-' || p_order_id;
     INSERT INTO public.wallet_transactions (id, user_id, type, description, amount, balance_before, balance_after, order_id, status, created_at)
     VALUES (v_txn_id, v_user.id, 'Order Deduction', p_description, -p_amount, v_user.balance, v_new_balance, p_order_id, 'Success', NOW())
     ON CONFLICT (id) DO UPDATE
@@ -405,6 +427,7 @@ BEGIN
 
     RETURN jsonb_build_object(
         'success', true,
+        'already_processed', false,
         'user_id', v_user.id,
         'customer_code', COALESCE(v_user.customer_code, 'LX-' || (10000 + v_user.id)),
         'previous_balance', v_user.balance,
