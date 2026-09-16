@@ -1998,17 +1998,84 @@ class SmmStateStore {
       if (balKey) {
         const saved = localStorage.getItem(balKey);
         if (saved !== null && !isNaN(parseFloat(saved))) {
-          const num = parseFloat(saved);
-          // If cached value is the corrupt 0.1048 (₹9.99), ignore it and rely on live DB
-          if (Math.abs(num - 0.1048) < 0.0001) {
-            return null;
-          }
-          return num;
+          return parseFloat(saved);
         }
       }
     }
 
     return null;
+  }
+
+  // Safe deduplication of transactions: Eliminates duplicate phantom records while preserving all genuine orders
+  deduplicateTransactions(txns) {
+    if (!Array.isArray(txns) || txns.length === 0) return [];
+
+    const seenIds = new Set();
+    const authoritativeOrderIds = new Set();
+    const seenOrderIds = new Set();
+    const seenUtrs = new Set();
+    const result = [];
+
+    // Pass 1: Identify all genuine authoritative order IDs (e.g. from Supabase ORD- records or Success status)
+    for (const t of txns) {
+      if (!t) continue;
+      const idStr = String(t.id || '').trim();
+      const descStr = String(t.description || '').trim();
+
+      let orderId = t.orderId || null;
+      if (!orderId) {
+        const match = descStr.match(/(?:Order:\s*|ORD-)(LKX\d+)/i) || idStr.match(/(?:ORD-)(LKX\d+)/i);
+        if (match) orderId = match[1];
+      }
+
+      if (idStr.startsWith('ORD-') && orderId) {
+        authoritativeOrderIds.add(orderId);
+      }
+    }
+
+    // Pass 2: Deduplicate and prune phantom duplicate records
+    for (const t of txns) {
+      if (!t || !t.id) continue;
+      const idStr = String(t.id).trim();
+      const descStr = String(t.description || '').trim();
+
+      // Exact ID check
+      if (seenIds.has(idStr)) continue;
+
+      // Extract Order ID if applicable
+      let orderId = t.orderId || null;
+      if (!orderId) {
+        const match = descStr.match(/(?:Order:\s*|ORD-)(LKX\d+)/i) || idStr.match(/(?:ORD-)(LKX\d+)/i);
+        if (match) orderId = match[1];
+      }
+
+      // Extract UTR if applicable
+      let utr = null;
+      const utrMatch = descStr.match(/UTR:\s*([A-Za-z0-9]+)/i);
+      if (utrMatch) utr = utrMatch[1];
+
+      // If this is a synthetic local TXN- record for an order that already has an authoritative ORD- record: DISCARD
+      if (idStr.startsWith('TXN-') && !idStr.startsWith('TXN-ORD-') && orderId && authoritativeOrderIds.has(orderId)) {
+        continue;
+      }
+
+      // If this order ID was already added by a previous transaction: DISCARD DUPLICATE
+      if (orderId && seenOrderIds.has(orderId)) {
+        continue;
+      }
+
+      // If this bank UTR was already added by another successful deposit: DISCARD DUPLICATE
+      if (utr && utr.length >= 8 && seenUtrs.has(utr)) {
+        continue;
+      }
+
+      seenIds.add(idStr);
+      if (orderId) seenOrderIds.add(orderId);
+      if (utr && utr.length >= 8) seenUtrs.add(utr);
+      result.push(t);
+    }
+
+    return result;
   }
 
   loadUserData(email) {
@@ -2019,13 +2086,10 @@ class SmmStateStore {
     const txnsKey = this._getUserStorageKey(cleanEmail, 'txns');
 
     const savedBal = localStorage.getItem(balKey);
-    // Ignore corrupt 0.1048 (₹9.99) or special account
     if (cleanEmail === 'paswanvashisath@gmail.com') {
       this.data.customer.balance = 0.00;
-    } else if (savedBal !== null && Math.abs(parseFloat(savedBal) - 0.1048) < 0.0001) {
-      this.data.customer.balance = 0.00; // Reset stale corrupted balance immediately
     } else {
-      this.data.customer.balance = savedBal !== null ? parseFloat(savedBal) : 0.00;
+      this.data.customer.balance = savedBal !== null && !isNaN(parseFloat(savedBal)) ? parseFloat(savedBal) : 0.00;
     }
 
     const savedCustomerId = localStorage.getItem('smm_user_customer_id');
@@ -2046,84 +2110,96 @@ class SmmStateStore {
     });
 
     const savedTxns = localStorage.getItem(txnsKey);
-    this.data.transactions = savedTxns ? JSON.parse(savedTxns) : [];
+    const rawTxns = savedTxns ? JSON.parse(savedTxns) : [];
+    this.data.transactions = this.deduplicateTransactions(rawTxns);
+    // Persist sanitized transactions immediately if duplicates were purged
+    if (rawTxns.length !== this.data.transactions.length) {
+      localStorage.setItem(txnsKey, JSON.stringify(this.data.transactions));
+    }
+
     this.data.customer.ordersCount = this.data.orders.length;
     this.data.customer.spent = this.data.orders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
 
-    // Authoritative Live Sync from Supabase
-    if (window.supabaseClient) {
-      // 1. Fetch user authoritative balance & customer_code from public.users
-      window.supabaseClient
-        .from('users')
-        .select('id, balance, spent, customer_code, created_at')
-        .eq('email', cleanEmail)
-        .limit(1)
-        .then(({ data: supaUserData, error: userErr }) => {
-          if (!userErr && Array.isArray(supaUserData) && supaUserData.length > 0) {
-            const u = supaUserData[0];
-            const code = u.customer_code || `LX-${10000 + Number(u.id)}`;
-
-            // Special exception: Customer LX-11219 is strictly 0.00
-            if (cleanEmail === 'paswanvashisath@gmail.com' || code === 'LX-11219' || Number(u.id) === 1219) {
-              this.data.customer.balance = 0.00;
-            } else if (u.balance !== null && u.balance !== undefined) {
-              this.data.customer.balance = Number(u.balance);
-            }
-            if (u.spent !== null && u.spent !== undefined) {
-              this.data.customer.spent = Number(u.spent);
-            }
-            this.data.customer.customerId = code;
-            localStorage.setItem('smm_user_customer_id', code);
-            this.saveUserData();
-            this.notify();
-            this.updateCustomerHeader();
-
-            // 2. Fetch authoritative transactions from Supabase wallet_transactions
-            window.supabaseClient
-              .from('wallet_transactions')
-              .select('*')
-              .or(`user_id.eq.${u.id},description.ilike.%${cleanEmail}%`)
-              .order('created_at', { ascending: false })
-              .then(({ data: cloudTxns, error: txnErr }) => {
-                if (!txnErr && Array.isArray(cloudTxns) && cloudTxns.length > 0) {
-                  const seenIds = new Set();
-                  const merged = [];
-
-                  cloudTxns.forEach(ctxn => {
-                    seenIds.add(String(ctxn.id));
-                    merged.push({
-                      id: ctxn.id,
-                      type: ctxn.type,
-                      description: ctxn.description,
-                      amount: Number(ctxn.amount),
-                      balanceBefore: ctxn.balance_before !== undefined ? Number(ctxn.balance_before) : undefined,
-                      balanceAfter: Number(ctxn.balance_after),
-                      status: ctxn.status || 'Success',
-                      orderId: ctxn.order_id || null,
-                      createdAt: ctxn.created_at ? new Date(ctxn.created_at).getTime() : Date.now(),
-                      date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
-                    });
-                  });
-
-                  this.data.transactions.forEach(ltxn => {
-                    if (ltxn && ltxn.id && !seenIds.has(String(ltxn.id))) {
-                      merged.push(ltxn);
-                      seenIds.add(String(ltxn.id));
-                    }
-                  });
-
-                  merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-                  this.data.transactions = merged;
-                  this.saveUserData();
-                  this.notify();
-                }
-              })
-              .catch(() => {});
-          }
-        })
-        .catch(() => {});
-    }
+    // Live Authoritative Sync from Supabase Cloud
+    this.syncUserDataFromCloud(cleanEmail);
   }
+
+  // Reusable authoritative live sync from Supabase
+  syncUserDataFromCloud(email) {
+    if (!email || !window.supabaseClient) return;
+    const cleanEmail = email.trim().toLowerCase();
+
+    // 1. Fetch user authoritative balance & customer_code from public.users
+    window.supabaseClient
+      .from('users')
+      .select('id, balance, spent, customer_code, created_at')
+      .eq('email', cleanEmail)
+      .limit(1)
+      .then(({ data: supaUserData, error: userErr }) => {
+        if (!userErr && Array.isArray(supaUserData) && supaUserData.length > 0) {
+          const u = supaUserData[0];
+          const code = u.customer_code || `LX-${10000 + Number(u.id)}`;
+
+          // Special exception: Customer LX-11219 is strictly 0.00
+          if (cleanEmail === 'paswanvashisath@gmail.com' || code === 'LX-11219' || Number(u.id) === 1219) {
+            this.data.customer.balance = 0.00;
+          } else if (u.balance !== null && u.balance !== undefined) {
+            this.data.customer.balance = Number(u.balance);
+          }
+          if (u.spent !== null && u.spent !== undefined) {
+            this.data.customer.spent = Number(u.spent);
+          }
+          this.data.customer.customerId = code;
+          localStorage.setItem('smm_user_customer_id', code);
+          this.saveUserData();
+          this.notify();
+          this.updateCustomerHeader();
+
+          // 2. Fetch authoritative transactions from Supabase wallet_transactions
+          window.supabaseClient
+            .from('wallet_transactions')
+            .select('*')
+            .or(`user_id.eq.${u.id},description.ilike.%${cleanEmail}%`)
+            .order('created_at', { ascending: false })
+            .then(({ data: cloudTxns, error: txnErr }) => {
+              if (!txnErr && Array.isArray(cloudTxns) && cloudTxns.length > 0) {
+                const combined = [];
+
+                cloudTxns.forEach(ctxn => {
+                  combined.push({
+                    id: ctxn.id,
+                    type: ctxn.type,
+                    description: ctxn.description,
+                    amount: Number(ctxn.amount),
+                    balanceBefore: ctxn.balance_before !== undefined ? Number(ctxn.balance_before) : undefined,
+                    balanceAfter: Number(ctxn.balance_after),
+                    status: ctxn.status || 'Success',
+                    orderId: ctxn.order_id || null,
+                    createdAt: ctxn.created_at ? new Date(ctxn.created_at).getTime() : Date.now(),
+                    date: ctxn.created_at ? new Date(ctxn.created_at).toLocaleString('en-IN') : new Date().toLocaleString('en-IN')
+                  });
+                });
+
+                // Add existing local transactions
+                this.data.transactions.forEach(ltxn => {
+                  if (ltxn && ltxn.id) combined.push(ltxn);
+                });
+
+                // Run strict deduplication
+                const deduplicated = this.deduplicateTransactions(combined);
+                deduplicated.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+                this.data.transactions = deduplicated;
+                this.saveUserData();
+                this.notify();
+              }
+            })
+            .catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }
+
 
   updateCustomerHeader() {
     const el = document.querySelector('.header-balance-val');
@@ -3349,7 +3425,89 @@ class SmmStateStore {
     this.notify();
   }
 
-  addFunds(amountInUsd, method = 'UPI / Instant Pay') {
+  // Authoritative Dynamic UPI deposit handler: Exactly 1 Payment = 1 Wallet Credit = 1 Transaction Record
+  applyVerifiedDeposit({ orderId, amountInInr, usdAmount, utr, authoritativeBalance }) {
+    if (!orderId) return;
+
+    if (!this._processedOrderIds) this._processedOrderIds = new Set();
+    if (this._processedOrderIds.has(orderId)) {
+      console.log(`[LikeX Wallet] Order ${orderId} already applied locally. Skipping duplicate.`);
+      return;
+    }
+    this._processedOrderIds.add(orderId);
+
+    const email = this.data.customer?.email || 'customer@likex.in';
+    const txnId = `ORD-${orderId}`;
+    const cleanUtr = utr ? String(utr).trim() : '';
+
+    // Calculate or accept authoritative balance
+    let finalBal = this.data.customer.balance;
+    if (authoritativeBalance !== undefined && authoritativeBalance !== null && !isNaN(Number(authoritativeBalance))) {
+      finalBal = Number(authoritativeBalance);
+    } else {
+      finalBal = Number((this.data.customer.balance + Number(usdAmount)).toFixed(4));
+    }
+    this.data.customer.balance = finalBal;
+
+    const desc = cleanUtr 
+      ? `Paytm Dynamic UPI (UTR: ${cleanUtr}) [Order: ${orderId}] [${email}]`
+      : `Paytm Dynamic UPI [Order: ${orderId}] [${email}]`;
+
+    const now = Date.now();
+    const formattedDate = this.formatRealDate(now);
+
+    const txnObj = {
+      id: txnId,
+      type: 'Deposit',
+      description: desc,
+      amount: Number(usdAmount),
+      balanceAfter: finalBal,
+      status: 'Success',
+      orderId: orderId,
+      createdAt: now,
+      date: formattedDate
+    };
+
+    // Replace any pending/existing record with the authoritative success record
+    const existingIndex = this.data.transactions.findIndex(t => 
+      t && (String(t.id) === txnId || (t.description && t.description.includes(orderId)))
+    );
+
+    if (existingIndex >= 0) {
+      this.data.transactions[existingIndex] = {
+        ...this.data.transactions[existingIndex],
+        ...txnObj
+      };
+    } else {
+      this.data.transactions.unshift(txnObj);
+    }
+
+    // Deduplicate transaction array to ensure no duplicate entries exist
+    this.data.transactions = this.deduplicateTransactions(this.data.transactions);
+
+    // Add recent activity idempotently
+    const existingAct = this.data.recentActivity.find(a => a && (a.id === `act-ord-${orderId}` || a.sub?.includes(orderId)));
+    if (!existingAct) {
+      this.data.recentActivity.unshift({
+        id: `act-ord-${orderId}`,
+        type: 'deposit',
+        title: 'Wallet Recharged',
+        sub: `Paytm Dynamic UPI • ₹${amountInInr}`,
+        amount: `+${this.formatMoney(usdAmount)}`,
+        time: formattedDate,
+        icon: '⚡'
+      });
+    }
+
+    this.saveUserData();
+    this.notify();
+    this.updateCustomerHeader();
+
+    // Trigger background cloud sync to guarantee database alignment
+    this.syncUserDataFromCloud(email);
+  }
+
+  addFunds(amountInUsd, method = 'UPI / Instant Pay', orderId = null) {
     if (!this.data.isLoggedIn) {
       this.showToast('Please sign in to add funds to your wallet', 'error');
       CustomerApp.openAuthModal();
@@ -3362,21 +3520,34 @@ class SmmStateStore {
       return;
     }
 
+    // Idempotency guard for orderId if passed
+    if (orderId) {
+      const alreadyExists = this.data.transactions.some(t => 
+        t && (String(t.id) === `ORD-${orderId}` || (t.description && t.description.includes(orderId)))
+      );
+      if (alreadyExists) {
+        console.log(`[LikeX Wallet] Transaction for Order ${orderId} already exists. Skipping addFunds.`);
+        return;
+      }
+    }
+
     this.data.customer.balance += numericAmount;
 
     const now = Date.now();
     const formattedDate = this.formatRealDate(now);
 
     this.data.transactions.unshift({
-      id: `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
+      id: orderId ? `ORD-${orderId}` : `TXN-${Math.floor(10000 + Math.random() * 90000)}`,
       type: 'Wallet Deposit',
-      description: `Manual Topup via ${method}`,
+      description: orderId ? `Paytm Dynamic UPI (Order: ${orderId})` : `Manual Topup via ${method}`,
       amount: numericAmount,
       balanceAfter: this.data.customer.balance,
       status: 'Success',
+      orderId: orderId || null,
       createdAt: now,
       date: formattedDate
     });
+
 
     this.data.recentActivity.unshift({
       id: `act-${now}`,

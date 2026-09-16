@@ -491,5 +491,93 @@ UPDATE public.users
 SET balance = 0.0000
 WHERE customer_code = 'LX-11219' OR lower(trim(email)) = 'paswanvashisath@gmail.com';
 
+-- =========================================================
+-- 14. ATOMIC IDEMPOTENT WALLET DEPOSIT FUNCTION
+-- Protects against concurrent webhooks, repeated polls & duplicates
+-- =========================================================
+CREATE OR REPLACE FUNCTION public.process_wallet_deposit(
+    p_order_id TEXT,
+    p_user_id BIGINT,
+    p_amount NUMERIC,
+    p_utr TEXT,
+    p_description TEXT,
+    p_email TEXT
+) RETURNS JSONB AS $$
+DECLARE
+    v_target_user_id BIGINT := p_user_id;
+    v_txn_id TEXT := 'ORD-' || p_order_id;
+    v_existing_status TEXT;
+    v_current_balance NUMERIC;
+    v_new_balance NUMERIC;
+BEGIN
+    -- 1. Check if this transaction has already been successfully processed
+    SELECT status INTO v_existing_status
+    FROM public.wallet_transactions
+    WHERE id = v_txn_id
+    FOR UPDATE;
 
+    IF v_existing_status = 'Success' THEN
+        SELECT balance INTO v_current_balance FROM public.users WHERE id = v_target_user_id;
+        RETURN jsonb_build_object(
+            'success', true,
+            'already_processed', true,
+            'balance', COALESCE(v_current_balance, 0),
+            'order_id', p_order_id,
+            'message', 'Transaction was already processed and credited.'
+        );
+    END IF;
 
+    -- 2. Resolve target user if id is missing or default
+    IF (v_target_user_id IS NULL OR v_target_user_id <= 1) AND p_email IS NOT NULL AND length(trim(p_email)) > 0 AND p_email != 'customer@likex.in' THEN
+        SELECT id INTO v_target_user_id
+        FROM public.users
+        WHERE lower(trim(email)) = lower(trim(p_email))
+        LIMIT 1;
+    END IF;
+
+    IF v_target_user_id IS NULL THEN
+        v_target_user_id := 1;
+    END IF;
+
+    -- 3. Lock user row and fetch authoritative current balance
+    SELECT balance INTO v_current_balance
+    FROM public.users
+    WHERE id = v_target_user_id
+    FOR UPDATE;
+
+    IF v_current_balance IS NULL THEN
+        v_current_balance := 0;
+    END IF;
+
+    v_new_balance := ROUND((v_current_balance + p_amount)::numeric, 4);
+
+    -- 4. Atomically update user balance
+    UPDATE public.users
+    SET balance = v_new_balance
+    WHERE id = v_target_user_id;
+
+    -- 5. Upsert wallet_transactions as Success
+    INSERT INTO public.wallet_transactions (
+        id, user_id, type, description, amount, balance_before, balance_after, order_id, status, created_at
+    ) VALUES (
+        v_txn_id, v_target_user_id, 'Deposit', p_description, p_amount, v_current_balance, v_new_balance, p_order_id, 'Success', NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        type = EXCLUDED.type,
+        description = EXCLUDED.description,
+        amount = EXCLUDED.amount,
+        balance_before = EXCLUDED.balance_before,
+        balance_after = EXCLUDED.balance_after,
+        status = 'Success';
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'already_processed', false,
+        'user_id', v_target_user_id,
+        'balance', v_new_balance,
+        'amount', p_amount,
+        'order_id', p_order_id
+    );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;

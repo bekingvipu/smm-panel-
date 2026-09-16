@@ -2358,8 +2358,15 @@ const CustomerApp = {
     const store = window.store;
 
     let countdownSeconds = 300; // 5 minutes timer
-    if (this._depositPollInterval) clearInterval(this._depositPollInterval);
-    if (this._depositTimerInterval) clearInterval(this._depositTimerInterval);
+    if (this._depositPollInterval) {
+      clearInterval(this._depositPollInterval);
+      this._depositPollInterval = null;
+    }
+    if (this._depositTimerInterval) {
+      clearInterval(this._depositTimerInterval);
+      this._depositTimerInterval = null;
+    }
+    this._isVerifyingStatus = false;
 
     sheet.innerHTML = `
       <div style="max-width: 520px; width: 100%; margin: 0 auto; text-align: center;">
@@ -2450,7 +2457,11 @@ const CustomerApp = {
   },
 
   async verifyDynamicPaymentStatus(orderId, amount, isManual = false) {
-    if (this._isVerifyingStatus && isManual) return;
+    if (!CustomerApp._confirmedOrders) CustomerApp._confirmedOrders = new Set();
+    if (CustomerApp._confirmedOrders.has(orderId)) return;
+
+    // Guard against concurrent overlapping checks (both auto-poll and manual clicks)
+    if (this._isVerifyingStatus) return;
     this._isVerifyingStatus = true;
 
     const verifyBtn = document.getElementById('btn-manual-verify-qr');
@@ -2464,17 +2475,33 @@ const CustomerApp = {
       const data = await res.json().catch(() => ({}));
 
       if (data && data.paid) {
-        // Payment Confirmed!
-        if (this._depositPollInterval) clearInterval(this._depositPollInterval);
-        if (this._depositTimerInterval) clearInterval(this._depositTimerInterval);
+        // Payment Confirmed — Lock immediately to prevent duplicate executions
+        CustomerApp._confirmedOrders.add(orderId);
+
+        if (this._depositPollInterval) {
+          clearInterval(this._depositPollInterval);
+          this._depositPollInterval = null;
+        }
+        if (this._depositTimerInterval) {
+          clearInterval(this._depositTimerInterval);
+          this._depositTimerInterval = null;
+        }
 
         CustomerApp.closeModal();
 
         // Calculate USD credit using exact storefront conversion
         const usdAmount = Number((amount / (window.store.data.exchangeRate || 95.385)).toFixed(4));
-        window.store.addFunds(usdAmount, `Paytm Dynamic UPI (Order: ${orderId})`);
+        
+        // Authoritative deposit application: 1 Payment = 1 Wallet Credit = 1 Transaction Record
+        await window.store.applyVerifiedDeposit({
+          orderId: orderId,
+          amountInInr: amount,
+          usdAmount: usdAmount,
+          utr: data.utr || orderId,
+          authoritativeBalance: data.balance
+        });
 
-        // Trigger celebratory confirmation modal
+        // Trigger celebratory confirmation modal with authoritative balance
         CustomerApp.showDepositCelebrationModal({
           amount: amount,
           utr: data.utr || orderId,
@@ -2517,10 +2544,18 @@ const CustomerApp = {
   },
 
   closeDynamicPaymentModal() {
-    if (this._depositPollInterval) clearInterval(this._depositPollInterval);
-    if (this._depositTimerInterval) clearInterval(this._depositTimerInterval);
+    if (this._depositPollInterval) {
+      clearInterval(this._depositPollInterval);
+      this._depositPollInterval = null;
+    }
+    if (this._depositTimerInterval) {
+      clearInterval(this._depositTimerInterval);
+      this._depositTimerInterval = null;
+    }
+    this._isVerifyingStatus = false;
     CustomerApp.closeModal();
   },
+
 
   // Legacy fallback redirects to secure dynamic deposit
   handleDeposit() {

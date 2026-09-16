@@ -47,11 +47,11 @@ export default async function handler(req, res) {
   try {
     const exchangeRate = 95.385; // 1 USD = 95.385 INR (Matched to LikeX Storefront)
     const usdCredit = Number((amount / exchangeRate).toFixed(4));
-
-    // 1. Check if this order or UTR has already been successfully credited (Idempotency)
     const pendingTxnId = `ORD-${orderId}`;
+
+    // 1. First check if already successfully credited
     const checkRes = await fetch(
-      `${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?or=(id.eq.${encodeURIComponent(pendingTxnId)},description.ilike.*${encodeURIComponent(orderId)}*)&select=id,status,user_id`,
+      `${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?or=(id.eq.${encodeURIComponent(pendingTxnId)},description.ilike.*${encodeURIComponent(orderId)}*)&select=id,status,user_id,balance_after`,
       {
         headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
       }
@@ -62,11 +62,11 @@ export default async function handler(req, res) {
       const existing = existingTxns[0];
       if (existing.status === 'Success') {
         console.log(`[ZapUPI Webhook] Order ${orderId} was already credited. Skipping duplicate.`);
-        return res.status(200).json({ status: 'ok', message: 'Already processed' });
+        return res.status(200).json({ status: 'ok', message: 'Already processed', order_id: orderId, balance: existing.balance_after });
       }
     }
 
-    // 2. Fetch User to update balance
+    // Resolve user email and ID from pending transaction or payload
     let targetUserId = (existingTxns && existingTxns[0] && existingTxns[0].user_id) ? existingTxns[0].user_id : null;
     let userEmail = 'customer@likex.in';
 
@@ -91,51 +91,116 @@ export default async function handler(req, res) {
 
     if (!targetUserId) targetUserId = 1;
 
-    const userRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${targetUserId}&select=id,email,balance`, {
-      headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
-    });
-    const userData = await userRes.json();
-    let currentBalance = 0;
+    let creditApplied = false;
+    let newBalance = 0;
 
-    if (Array.isArray(userData) && userData.length > 0) {
-      currentBalance = Number(userData[0].balance || 0);
-      userEmail = userData[0].email || userEmail;
+    // 2. Try Atomic Supabase RPC (Row-Level Locking FOR UPDATE)
+    try {
+      const rpcRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/rpc/process_wallet_deposit`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          p_order_id: orderId,
+          p_user_id: targetUserId,
+          p_amount: usdCredit,
+          p_utr: utr || txnId,
+          p_description: `Paytm Dynamic UPI (UTR: ${utr || txnId}) [Order: ${orderId}] [${userEmail}]`,
+          p_email: userEmail
+        })
+      });
+
+      if (rpcRes.ok) {
+        const rpcData = await rpcRes.json();
+        if (rpcData && rpcData.success) {
+          creditApplied = true;
+          newBalance = Number(rpcData.balance);
+          if (rpcData.already_processed) {
+            console.log(`[ZapUPI Webhook] Order ${orderId} already processed per atomic RPC.`);
+            return res.status(200).json({ status: 'ok', message: 'Already processed', order_id: orderId, balance: newBalance });
+          }
+        }
+      }
+    } catch (rpcErr) {
+      console.warn('[ZapUPI Webhook] RPC attempt notice:', rpcErr.message);
     }
 
-    const newBalance = Number((currentBalance + usdCredit).toFixed(4));
+    // 3. Fallback conditional atomic update if RPC unavailable
+    if (!creditApplied) {
+      // Attempt conditional claim from Pending -> Processing
+      const claimRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?id=eq.${encodeURIComponent(pendingTxnId)}&status=eq.Pending`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation'
+        },
+        body: JSON.stringify({ status: 'Processing' })
+      });
 
-    // 3. Atomically update user balance
-    await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${targetUserId}`, {
-      method: 'PATCH',
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ balance: newBalance })
-    });
+      const claimedRows = await claimRes.json().catch(() => []);
+      if (Array.isArray(claimedRows) && claimedRows.length === 0) {
+        // Re-check if another thread already finished or marked Success
+        const doubleCheck = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?id=eq.${encodeURIComponent(pendingTxnId)}&select=id,status,balance_after`, {
+          headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+        });
+        const dcRows = await doubleCheck.json().catch(() => []);
+        if (Array.isArray(dcRows) && dcRows.length > 0 && dcRows[0].status === 'Success') {
+          return res.status(200).json({ status: 'ok', message: 'Already processed by concurrent worker', order_id: orderId, balance: dcRows[0].balance_after });
+        }
+      }
 
-    // 4. Update or Insert wallet_transaction as 'Success'
-    await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
-      method: 'POST',
-      headers: {
-        apikey: SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-        'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates'
-      },
-      body: JSON.stringify({
-        id: pendingTxnId,
-        user_id: targetUserId,
-        type: 'Deposit',
-        description: `Paytm Dynamic UPI (UTR: ${utr || txnId}) [Order: ${orderId}] [${userEmail}]`,
-        amount: usdCredit,
-        balance_after: newBalance,
-        status: 'Success'
-      })
-    });
+      // Fetch user balance
+      const userRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${targetUserId}&select=id,email,balance`, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
+      });
+      const userData = await userRes.json();
+      let currentBalance = 0;
 
-    // 5. Also record claimed UTR to secondary ledger in users config row 999
+      if (Array.isArray(userData) && userData.length > 0) {
+        currentBalance = Number(userData[0].balance || 0);
+        userEmail = userData[0].email || userEmail;
+      }
+
+      newBalance = Number((currentBalance + usdCredit).toFixed(4));
+
+      // Update user balance
+      await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${targetUserId}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ balance: newBalance })
+      });
+
+      // Upsert wallet_transaction as Success
+      await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify({
+          id: pendingTxnId,
+          user_id: targetUserId,
+          type: 'Deposit',
+          description: `Paytm Dynamic UPI (UTR: ${utr || txnId}) [Order: ${orderId}] [${userEmail}]`,
+          amount: usdCredit,
+          balance_after: newBalance,
+          status: 'Success'
+        })
+      });
+    }
+
+    // 4. Also record claimed UTR to secondary ledger in users config row 999
     if (utr) {
       try {
         const cfgRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.999&select=password_hash`, {
@@ -191,7 +256,7 @@ export default async function handler(req, res) {
     }
 
     console.log(`[ZapUPI Webhook SUCCESS] Order ${orderId} for ₹${amount} credited to user ${userEmail}.`);
-    return res.status(200).json({ status: 'ok', message: 'Deposit credited successfully', order_id: orderId });
+    return res.status(200).json({ status: 'ok', message: 'Deposit credited successfully', order_id: orderId, balance: newBalance });
 
   } catch (err) {
     console.error('[ZapUPI Webhook Error]', err);
