@@ -114,28 +114,6 @@ class SmmStateStore {
       };
     }
 
-    // Initialize Header Notification & Notice Board (Multi-Line with Gaps Preserved)
-    try {
-      const savedNotice = localStorage.getItem('likex_header_notice_config');
-      if (savedNotice) {
-        this.data.headerNotification = JSON.parse(savedNotice);
-      } else {
-        this.data.headerNotification = {
-          enabled: true,
-          title: "📢 Official Notice & Updates",
-          message: "⚡ Welcome to LikeX!\n\n👑 India's Wholesale SMM & Creator Platform.\n🚀 All services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!",
-          updatedAt: new Date().toISOString()
-        };
-      }
-    } catch (e) {
-      this.data.headerNotification = {
-        enabled: true,
-        title: "📢 Official Notice & Updates",
-        message: "⚡ Welcome to LikeX!\n\n👑 India's Wholesale SMM & Creator Platform.\n🚀 All services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!",
-        updatedAt: new Date().toISOString()
-      };
-    }
-
     // Initialize Wallet Video Tutorial Config
     try {
       const savedVideo = localStorage.getItem('likex_wallet_tutorial_config');
@@ -566,24 +544,6 @@ class SmmStateStore {
 
     this.notify();
     this.showToast('✅ Announcement ticker updated & synced across all devices!', 'success');
-  }
-
-  updateHeaderNotification(config) {
-    this.data.headerNotification = {
-      enabled: config.enabled !== undefined ? Boolean(config.enabled) : true,
-      title: String(config.title || '📢 Official Notice & Updates').trim(),
-      message: String(config.message || ''),
-      updatedAt: new Date().toISOString()
-    };
-    try {
-      localStorage.setItem('likex_header_notice_config', JSON.stringify(this.data.headerNotification));
-    } catch (e) {}
-
-    // Cloud sync to Supabase (site_settings + row 999)
-    this.saveCloudConfig({ header_notification: this.data.headerNotification });
-
-    this.notify();
-    this.showToast('✅ Header notification note updated & synced across all devices!', 'success');
   }
 
   updatePixelSettings(pixelId, enabled = true) {
@@ -1163,8 +1123,6 @@ class SmmStateStore {
             updateIfDifferent('earnTutorial', 'likex_earn_tutorial_config', { ...this.data.earnTutorial, ...item.value });
           } else if (item.key === 'announcement_config' && item.value) {
             updateIfDifferent('announcement', 'likex_announcement_config', { ...this.data.announcement, ...item.value });
-          } else if (item.key === 'header_notification' && item.value) {
-            updateIfDifferent('headerNotification', 'likex_header_notice_config', { ...this.data.headerNotification, ...item.value });
           } else if (item.key === 'about_reels' && Array.isArray(item.value)) {
             updateIfDifferent('aboutReels', 'likex_about_reels_config', item.value);
           } else if (item.key === 'pixel_config' && item.value) {
@@ -1247,9 +1205,6 @@ class SmmStateStore {
           }
           if (parsed.announcement_config && parsed.announcement_config.text) {
             updateIfDifferent('announcement', 'likex_announcement_config', { ...this.data.announcement, ...parsed.announcement_config });
-          }
-          if (parsed.header_notification) {
-            updateIfDifferent('headerNotification', 'likex_header_notice_config', { ...this.data.headerNotification, ...parsed.header_notification });
           }
           if (parsed.recommended_followers) {
             updateIfDifferent('recommendedFollowers', 'likex_recommended_followers_config', { ...this.data.recommendedFollowers, ...parsed.recommended_followers });
@@ -2273,12 +2228,18 @@ class SmmStateStore {
       const inrVal = absUsd * inrRate;
 
       let formatted = '';
-      if (inrVal >= 1) {
-        // Strictly 2 digits after the decimal point (e.g. 9.9963 becomes 9.99)
-        const truncated2 = Math.floor((inrVal + 0.000001) * 100) / 100;
-        formatted = truncated2.toLocaleString('en-IN', {
+      if (inrVal >= 100) {
+        formatted = inrVal.toLocaleString('en-IN', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
+        });
+      } else if (inrVal >= 1) {
+        const rounded100 = Math.round(inrVal * 100);
+        const rounded10000 = Math.round(inrVal * 10000);
+        const hasDeepDecimals = (rounded100 * 100) !== rounded10000;
+        formatted = inrVal.toLocaleString('en-IN', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: hasDeepDecimals ? 4 : 2
         });
       } else {
         // Micro amounts (< ₹1) e.g. ₹0.2862, ₹0.1431 (Never rounds down to ₹0!)
