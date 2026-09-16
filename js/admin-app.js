@@ -2563,6 +2563,24 @@ const AdminApp = {
                   const beforeVal = (t.balance_before !== undefined && t.balance_before !== null) ? Number(t.balance_before) : (t.balanceBefore !== undefined ? Number(t.balanceBefore) : null);
                   const afterVal = (t.balance_after !== undefined && t.balance_after !== null) ? Number(t.balance_after) : (t.balanceAfter !== undefined ? Number(t.balanceAfter) : null);
 
+                  const statusRaw = String(t.status || 'Success').toLowerCase();
+                  const isPending = statusRaw === 'pending' || statusRaw === 'payment initiated';
+                  const isFailed = statusRaw === 'failed' || statusRaw === 'cancelled' || statusRaw === 'expired';
+
+                  let statusBadgeHtml = `<span class="badge badge-success" style="font-size: 10.5px; padding: 2px 6px;">Success</span>`;
+                  let amtColorStyle = isCredit ? '#059669' : '#DC2626';
+                  let amtPrefixStr = isCredit ? '+' : '-';
+
+                  if (isPending) {
+                    statusBadgeHtml = `<span class="badge" style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3); font-size: 10.5px; padding: 2px 6px;">Pending</span>`;
+                    amtColorStyle = '#D97706';
+                    amtPrefixStr = '';
+                  } else if (isFailed) {
+                    statusBadgeHtml = `<span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; font-size: 10.5px; padding: 2px 6px;">${t.status || 'Failed'}</span>`;
+                    amtColorStyle = 'var(--text-muted)';
+                    amtPrefixStr = '';
+                  }
+
                   return `
                     <tr style="border-bottom: 1px solid var(--border-color);">
                       <td style="padding: 10px 12px;">
@@ -2578,8 +2596,8 @@ const AdminApp = {
                           ${typeLabel}
                         </span>
                       </td>
-                      <td style="padding: 10px 12px; font-weight: 800; color: ${isCredit ? '#059669' : '#DC2626'};">
-                        ${isCredit ? '+' : '-'}${store.formatMoney(amtNum)}
+                      <td style="padding: 10px 12px; font-weight: 800; color: ${amtColorStyle}; ${isFailed ? 'text-decoration: line-through;' : ''}">
+                        ${amtPrefixStr}${store.formatMoney(amtNum)}
                       </td>
                       <td style="padding: 10px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--text-muted);">
                         ${beforeVal !== null && afterVal !== null ? `
@@ -2594,9 +2612,7 @@ const AdminApp = {
                         ` : '<span style="color: var(--text-muted);">&mdash;</span>'}
                       </td>
                       <td style="padding: 10px 12px;">
-                        <span class="badge badge-success" style="font-size: 10.5px; padding: 2px 6px;">
-                          ${t.status || 'Success'}
-                        </span>
+                        ${statusBadgeHtml}
                       </td>
                     </tr>
                   `;

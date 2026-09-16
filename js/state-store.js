@@ -2124,6 +2124,19 @@ class SmmStateStore {
   deduplicateTransactions(txns) {
     if (!Array.isArray(txns) || txns.length === 0) return [];
 
+    // Sort so that Success status records take precedence over Pending records for the same order/payment ID
+    const sortedTxns = [...txns].sort((a, b) => {
+      const statusA = String(a?.status || '').toLowerCase();
+      const statusB = String(b?.status || '').toLowerCase();
+      const isSuccA = statusA === 'success' || statusA === 'completed' || statusA === 'paid';
+      const isSuccB = statusB === 'success' || statusB === 'completed' || statusB === 'paid';
+      if (isSuccA && !isSuccB) return -1;
+      if (isSuccB && !isSuccA) return 1;
+      const tsA = Number(a?.createdAt) || (a?.created_at ? new Date(a.created_at).getTime() : 0);
+      const tsB = Number(b?.createdAt) || (b?.created_at ? new Date(b.created_at).getTime() : 0);
+      return tsB - tsA;
+    });
+
     const seenIds = new Set();
     const authoritativeOrderIds = new Set();
     const seenOrderIds = new Set();
@@ -2131,7 +2144,7 @@ class SmmStateStore {
     const result = [];
 
     // Pass 1: Identify all genuine authoritative order IDs (e.g. from Supabase ORD- records or Success status)
-    for (const t of txns) {
+    for (const t of sortedTxns) {
       if (!t) continue;
       const idStr = String(t.id || '').trim();
       const descStr = String(t.description || '').trim();
@@ -2451,6 +2464,7 @@ class SmmStateStore {
       url.searchParams.set('tab', tab);
       window.history.replaceState(null, '', url);
     } catch (e) {}
+    this.syncSupabaseDataForAdmin();
     this.notify();
   }
 

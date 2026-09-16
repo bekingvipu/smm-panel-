@@ -3651,22 +3651,54 @@ const CustomerApp = {
                 <div style="font-weight: 700; font-size: 14.5px; color: var(--text-main);">No Transactions Yet</div>
                 <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Your deposits and order payments will appear here.</div>
               </div>
-            ` : transactions.map(txn => `
-              <div class="card" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
-                <div>
-                  <div style="font-size: 14px; font-weight: 700; color: var(--text-main);">${txn.description}</div>
-                  <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
-                    ${txn.id} • ${txn.date}
+            ` : transactions.map(txn => {
+              const statusLower = String(txn.status || 'Success').toLowerCase();
+              const isPending = statusLower === 'pending' || statusLower === 'payment initiated';
+              const isFailed = statusLower === 'failed' || statusLower === 'cancelled' || statusLower === 'expired';
+              const isSuccess = statusLower === 'success' || statusLower === 'completed' || statusLower === 'paid';
+              const isPositive = Number(txn.amount || 0) >= 0;
+
+              let statusBadge = `<span style="background: rgba(16, 185, 129, 0.15); color: #059669; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">✓ Top-up Successful</span>`;
+              let amountColor = 'var(--success)';
+              let amountPrefix = '+';
+              let subText = `Bal: ${store.formatMoney(txn.balanceAfter)}`;
+
+              if (isPending) {
+                statusBadge = `<span style="background: rgba(245, 158, 11, 0.15); color: #D97706; border: 1px solid rgba(245, 158, 11, 0.3); padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">⌛ Payment Initiated / Pending</span>`;
+                amountColor = '#D97706';
+                amountPrefix = '';
+                subText = `Unpaid / Pending`;
+              } else if (isFailed) {
+                statusBadge = `<span style="background: rgba(239, 68, 68, 0.15); color: #DC2626; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800;">❌ ${txn.status}</span>`;
+                amountColor = 'var(--text-muted)';
+                amountPrefix = '';
+                subText = `Not Credited`;
+              } else if (!isPositive) {
+                statusBadge = '';
+                amountColor = 'var(--text-main)';
+                amountPrefix = '';
+              }
+
+              return `
+                <div class="card" style="padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                  <div>
+                    <div style="font-size: 14px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <span>${txn.description}</span>
+                      ${statusBadge}
+                    </div>
+                    <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                      ${txn.id} • ${txn.date}
+                    </div>
+                  </div>
+                  <div style="text-align: right;">
+                    <strong style="font-size: 15px; color: ${amountColor}; ${isFailed ? 'text-decoration: line-through;' : ''}">
+                      ${amountPrefix}${store.formatMoney(txn.amount)}
+                    </strong>
+                    <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">${subText}</div>
                   </div>
                 </div>
-                <div style="text-align: right;">
-                  <strong style="font-size: 15px; color: ${txn.amount >= 0 ? 'var(--success)' : 'var(--text-main)'};">
-                    ${txn.amount >= 0 ? '+' : ''}${store.formatMoney(txn.amount)}
-                  </strong>
-                  <div style="font-size: 11.5px; color: var(--text-muted);">Bal: ${store.formatMoney(txn.balanceAfter)}</div>
-                </div>
-              </div>
-            `).join('')}
+              `;
+            }).join('')}
           </div>
         </div>
       </div>

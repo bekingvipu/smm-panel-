@@ -339,7 +339,63 @@ export default async function handler(req, res) {
         }
       }
 
-      // 4. Submit order to Upstream Wholesale Provider
+      const rawTargetLink = cleanTargetLink(paramsObj.link || '');
+      const rawSvcId = String(cleanServiceId(paramsObj.service || paramsObj.serviceId || ''));
+      const providerCostVal = Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0);
+
+      // 2. IMMEDIATE ORDER INSERTION into Supabase orders table (AWAITED BEFORE PROVIDER SUBMISSION)
+      // This ensures the order exists in Admin & Customer DB immediately after wallet debit
+      const initialSnapshot = {
+        rawServiceId: rawSvcId,
+        serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
+        serviceName: serviceName,
+        category: String(paramsObj.category || ''),
+        platform: String(paramsObj.platform || ''),
+        provider: providerKey,
+        wholesaleCost: Number(paramsObj.wholesaleCost || 0),
+        charge: orderCharge,
+        email: customerEmail,
+        name: userName || paramsObj.customerName || '',
+        customerCode: customerCode,
+        walletBalanceBeforeOrder: userBalanceBefore,
+        walletBalanceAtOrder: userBalanceBefore,
+        walletBalanceAfter: balanceAfter,
+        note: null,
+        isLowBalanceError: false
+      };
+
+      const initialTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(initialSnapshot)}`;
+
+      try {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            id: orderIdNum,
+            user_id: userId,
+            service_id: null,
+            target_url: initialTargetUrl,
+            quantity: Number(paramsObj.quantity) || 1000,
+            charge: orderCharge,
+            provider_cost: providerCostVal,
+            provider_order_id: null,
+            assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
+            status: 'Processing',
+            remains: Number(paramsObj.quantity) || 1000,
+            refill_status: 'Standard',
+            created_at: new Date().toISOString()
+          })
+        });
+      } catch (insertErr) {
+        console.warn('[LikeX Backend] Initial Supabase order insertion notice:', insertErr.message);
+      }
+
+      // 3. Submit order to Upstream Wholesale Provider
       let providerData = null;
       try {
         providerData = await callProvider(providerConfig);
@@ -412,56 +468,37 @@ export default async function handler(req, res) {
       const orderStatus = isSuccess ? (providerData.status || 'Processing') : (isFatalRejection ? 'Canceled' : 'Queued');
       const orderErrorNote = liveError ? `Error: ${String(liveError)}` : null;
 
-      const snapshotPayload = {
-        rawServiceId: String(cleanServiceId(paramsObj.service || paramsObj.serviceId || '')),
-        serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
-        serviceName: serviceName,
-        category: String(paramsObj.category || ''),
-        platform: String(paramsObj.platform || ''),
-        provider: providerKey,
-        wholesaleCost: Number(paramsObj.wholesaleCost || 0),
-        charge: orderCharge,
-        email: customerEmail,
-        name: userName || paramsObj.customerName || '',
-        customerCode: customerCode,
-        walletBalanceBeforeOrder: userBalanceBefore,
-        walletBalanceAtOrder: userBalanceBefore,
+      const finalSnapshotPayload = {
+        ...initialSnapshot,
         walletBalanceAfter: balanceAfter,
         note: orderErrorNote || null,
         isLowBalanceError: Boolean(isLowBalanceError)
       };
 
-      // 5. Fast Non-blocking Order Logging into Supabase orders table
-      const rawTargetLink = cleanTargetLink(paramsObj.link || '');
-      const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
+      const updatedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(finalSnapshotPayload)}`;
       const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 95);
 
-      const logPromise = fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          id: orderIdNum,
-          user_id: userId,
-          service_id: null,
-          target_url: encodedTargetUrl,
-          quantity: Number(paramsObj.quantity) || 1000,
-          charge: orderCharge,
-          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
-          provider_order_id: liveOrderId || null,
-          assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
-          status: orderStatus,
-          remains: Number(paramsObj.quantity) || 1000,
-          refill_status: safeRefillStatus,
-          created_at: new Date().toISOString()
-        })
-      }).catch(dbErr => console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message));
+      // 4. AWAITED UPDATE of order record in Supabase orders table with Provider Order ID & Live Status
+      try {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?id=eq.${orderIdNum}`, {
+          method: 'PATCH',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            provider_order_id: liveOrderId || null,
+            status: orderStatus,
+            refill_status: safeRefillStatus,
+            target_url: updatedTargetUrl
+          })
+        });
+      } catch (updateErr) {
+        console.warn('[LikeX Backend] Supabase order status update notice:', updateErr.message);
+      }
 
-      // Non-blocking response delivery to customer as soon as provider responds
+      // Return response delivery to customer with provider order ID and status
       return res.status(200).json({
         ...providerData,
         order: liveOrderId || providerData?.order || null,
