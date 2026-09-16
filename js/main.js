@@ -68,22 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (store.persona === 'admin') {
         document.title = 'Admin Console — LikeX System Management';
         const adminShell = document.querySelector('.admin-shell');
-        const isModalActive = document.getElementById('generic-modal-backdrop')?.classList.contains('active');
-
-        // If background poller or state notification occurs while admin shell is active, preserve active UI & open modals
-        if (!immediate && adminShell && _lastPersona === 'admin') {
-          if (store.adminTab === 'orders' && window.AdminApp && typeof window.AdminApp.updateAdminOrdersTableView === 'function') {
+        // If background poller or state notification occurs while already on admin orders view, update in-place
+        if (!immediate && adminShell && _lastPersona === 'admin' && store.adminTab === 'orders' && _lastAdminTab === 'orders') {
+          if (window.AdminApp && typeof window.AdminApp.updateAdminOrdersTableView === 'function') {
             window.AdminApp.updateAdminOrdersTableView();
             return;
           }
-          if (isModalActive) {
-            if (store.adminTab === 'orders' && window.AdminApp && typeof window.AdminApp.updateAdminOrdersTableView === 'function') {
-              window.AdminApp.updateAdminOrdersTableView();
-            }
-            return;
-          }
         }
-
         _lastPersona = 'admin';
         _lastAdminTab = store.adminTab;
         AdminApp.render(screenContainer);
