@@ -105,6 +105,9 @@ export default async function handler(req, res) {
   }
 
   // Multi-balance check
+  let activeUserId = null;
+  let activeCustomerCode = null;
+
   try {
     if (action === 'balance' && (requestedProvider === 'all' || requestedProvider === 'both')) {
       const [wosRes, sfRes] = await Promise.allSettled([
@@ -179,6 +182,8 @@ export default async function handler(req, res) {
             userBalanceBefore = Number(rpcData.previous_balance || 0);
             userId = rpcData.user_id;
             customerCode = rpcData.customer_code;
+            activeUserId = userId;
+            activeCustomerCode = customerCode;
           } else {
             const currentBal = Number(rpcData?.current_balance || 0);
             const isInsufficient = String(rpcData?.error || '').toLowerCase().includes('insufficient');
@@ -215,6 +220,8 @@ export default async function handler(req, res) {
 
         userId = user.id;
         customerCode = user.customer_code || `LX-${10000 + user.id}`;
+        activeUserId = userId;
+        activeCustomerCode = customerCode;
         userName = user.username || userName;
         userBalanceBefore = Number(user.balance || 0);
         userSpent = Number(user.spent || 0);
@@ -354,41 +361,46 @@ export default async function handler(req, res) {
         note: orderErrorNote || null
       };
 
-      // 5. Fast Non-blocking Order Logging into Supabase orders table
+      // 5. Authoritative Order Logging into Supabase orders table (Awaited to ensure persistence in Vercel Serverless)
       const rawTargetLink = String(paramsObj.link || '').trim();
       const encodedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(snapshotPayload)}`;
       const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 45);
 
-      const logPromise = fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify({
-          id: orderIdNum,
-          user_id: userId,
-          service_id: null,
-          target_url: encodedTargetUrl,
-          quantity: Number(paramsObj.quantity) || 1000,
-          charge: orderCharge,
-          provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
-          provider_order_id: liveOrderId || null,
-          assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
-          status: orderStatus,
-          remains: Number(paramsObj.quantity) || 1000,
-          refill_status: safeRefillStatus,
-          created_at: new Date().toISOString()
-        })
-      }).catch(dbErr => console.warn('[LikeX Backend] Supabase order logging notice:', dbErr.message));
+      try {
+        const orderInsertRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'return=minimal,resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            id: orderIdNum,
+            user_id: userId,
+            service_id: null,
+            target_url: encodedTargetUrl,
+            quantity: Number(paramsObj.quantity) || 1000,
+            charge: orderCharge,
+            provider_cost: Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0),
+            provider_order_id: liveOrderId || null,
+            assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
+            status: orderStatus,
+            remains: Number(paramsObj.quantity) || 1000,
+            refill_status: safeRefillStatus,
+            created_at: new Date().toISOString()
+          })
+        });
 
-      // Wait max 50ms so client receives immediate snappy response
-      await Promise.race([
-        logPromise,
-        new Promise(resolve => setTimeout(resolve, 50))
-      ]);
+        if (!orderInsertRes.ok) {
+          const errText = await orderInsertRes.text().catch(() => '');
+          console.error(`[LikeX Backend] Supabase order #${orderIdNum} insert notice: HTTP ${orderInsertRes.status}`, errText);
+        } else {
+          console.log(`[LikeX Backend] Order #${orderIdNum} successfully logged into Supabase (Provider Order ID: ${liveOrderId})`);
+        }
+      } catch (dbErr) {
+        console.error('[LikeX Backend] Supabase order logging network error:', dbErr.message);
+      }
 
       return res.status(200).json({
         ...providerData,
@@ -432,6 +444,7 @@ export default async function handler(req, res) {
         charge: Number(paramsObj.charge || 0),
         email: paramsObj.customerEmail || '',
         name: paramsObj.customerName || '',
+        customerCode: activeCustomerCode || null,
         note: `Timeout: ${error.message.slice(0, 35)}`
       };
       const rawTargetLink = String(paramsObj.link || '').trim();
@@ -445,11 +458,11 @@ export default async function handler(req, res) {
             apikey: SUPABASE_ANON_KEY,
             Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
             'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates'
+            Prefer: 'return=minimal,resolution=merge-duplicates'
           },
           body: JSON.stringify({
             id: orderIdNum,
-            user_id: null,
+            user_id: activeUserId,
             service_id: null,
             target_url: encodedTargetUrl,
             quantity: Number(paramsObj.quantity) || 1000,
