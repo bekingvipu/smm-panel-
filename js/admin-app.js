@@ -1368,6 +1368,85 @@ const AdminApp = {
         </button>
       </div>
 
+      <!-- HEADER NOTIFICATION & NOTICE BOARD MANAGER (MULTI-LINE WITH EXACT GAPS) -->
+      <div class="card" style="margin-top: 24px; padding: 24px; border: 1.5px solid #8B5CF6; background: var(--bg-surface); border-radius: 18px; box-shadow: 0 4px 20px rgba(139, 92, 246, 0.08);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+          <div>
+            <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 800; color: #8B5CF6; text-transform: uppercase; letter-spacing: 0.5px;">
+              <span>🔔</span> <span>STOREFRONT HEADER NOTIFICATION & NOTICE BOARD</span>
+            </div>
+            <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 2px;">
+              Header Notice & Note Editor (Multi-Line & Gaps Preserved)
+            </h3>
+            <p style="font-size: 13px; color: var(--text-secondary);">
+              This note opens when customers click the Bell (🔔) in the header. Enter, spaces, and line breaks are 100% preserved (no cramped text).
+            </p>
+          </div>
+
+          <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 700; font-size: 13.5px;">
+            <input type="checkbox" id="admin-notice-toggle" ${(store.data.headerNotification && store.data.headerNotification.enabled !== false) ? 'checked' : ''} style="width: 18px; height: 18px; accent-color: #8B5CF6;" />
+            <span>Enable Header Notice</span>
+          </label>
+        </div>
+
+        <!-- Notice Title Input -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" style="font-weight: 700; font-size: 13px;">Notice Title</label>
+          <input 
+            type="text" 
+            id="admin-notice-title" 
+            class="form-input" 
+            style="font-weight: 700; border-radius: 12px; padding: 10px 14px;" 
+            value="${(store.data.headerNotification && store.data.headerNotification.title) || '📢 Official Notice & Updates'}" 
+            placeholder="e.g. 📢 Important Notice & Server Updates"
+            oninput="AdminApp.updateNoticePreview()"
+          />
+        </div>
+
+        <!-- Input Area (Preserves Enters & Gaps) -->
+        <div class="form-group" style="margin-bottom: 14px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="font-weight: 700; font-size: 13px; margin: 0;">Notice Message Text / Note</label>
+            <span style="font-size: 11px; font-weight: 600; color: #10B981; background: rgba(16, 185, 129, 0.1); padding: 2px 8px; border-radius: 6px;">
+              ✓ Exact Enters & Gaps Preserved (No Cramping)
+            </span>
+          </div>
+          <textarea 
+            id="admin-notice-message" 
+            class="form-input" 
+            rows="6" 
+            style="width: 100%; border-radius: 12px; font-size: 13.5px; line-height: 1.6; padding: 14px; resize: vertical; font-family: inherit;"
+            placeholder="Yahan aap jo bhi likhenge (enter, gap, bullet points) customer ko exact waisa hi khula-khula dikhega..."
+            oninput="AdminApp.updateNoticePreview()"
+          >${(store.data.headerNotification && store.data.headerNotification.message) || ''}</textarea>
+        </div>
+
+        <!-- Live Accurate Preview with white-space: pre-wrap -->
+        <div style="margin-bottom: 16px;">
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">
+            Live Customer Preview (Exact Spacing & Gaps):
+          </label>
+          <div style="background: var(--bg-subtle); border: 1.5px dashed #8B5CF6; border-radius: 14px; padding: 16px;">
+            <div style="font-weight: 800; font-size: 15px; color: var(--text-main); margin-bottom: 8px;" id="admin-notice-preview-title">
+              ${(store.data.headerNotification && store.data.headerNotification.title) || '📢 Official Notice & Updates'}
+            </div>
+            <div style="font-size: 13.5px; line-height: 1.65; color: var(--text-main); white-space: pre-wrap; word-break: break-word;" id="admin-notice-preview-body">
+              ${(store.data.headerNotification && store.data.headerNotification.message) || 'No notice content set yet.'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="AdminApp.saveHeaderNotification()" style="font-weight: 800; padding: 11px 26px; border-radius: 12px; background: linear-gradient(135deg, #6366F1, #8B5CF6); box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);">
+            💾 Save Notification Note (Live Cloud Sync)
+          </button>
+          <button type="button" class="btn btn-secondary" onclick="AdminApp.insertNoticeTemplate()" style="font-size: 12.5px; font-weight: 700; padding: 11px 18px; border-radius: 12px;">
+            📝 Insert Sample Template
+          </button>
+        </div>
+      </div>
+
       <!-- MULTI-CHANNEL ALERT GATEWAY (WHATSAPP & GMAIL) -->
       <div class="card" style="margin-top: 24px; padding: 24px; border: 1.5px solid #10B981; background: var(--bg-surface); border-radius: 18px;">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
@@ -1613,6 +1692,38 @@ const AdminApp = {
     const text = textEl.value.trim();
     const enabled = toggleEl.checked;
     window.store.updateAnnouncement(text, enabled);
+  },
+
+  updateNoticePreview() {
+    const titleEl = document.getElementById('admin-notice-title');
+    const msgEl = document.getElementById('admin-notice-message');
+    const prevTitle = document.getElementById('admin-notice-preview-title');
+    const prevBody = document.getElementById('admin-notice-preview-body');
+
+    if (prevTitle && titleEl) prevTitle.innerText = titleEl.value || '📢 Official Notice & Updates';
+    if (prevBody && msgEl) prevBody.innerText = msgEl.value || 'No notice content set yet.';
+  },
+
+  saveHeaderNotification() {
+    const titleEl = document.getElementById('admin-notice-title');
+    const msgEl = document.getElementById('admin-notice-message');
+    const toggleEl = document.getElementById('admin-notice-toggle');
+
+    const title = titleEl ? titleEl.value.trim() : '📢 Official Notice & Updates';
+    const message = msgEl ? msgEl.value : '';
+    const enabled = toggleEl ? toggleEl.checked : true;
+
+    window.store.updateHeaderNotification({ title, message, enabled });
+  },
+
+  insertNoticeTemplate() {
+    const titleEl = document.getElementById('admin-notice-title');
+    const msgEl = document.getElementById('admin-notice-message');
+    if (titleEl) titleEl.value = '⚡ LikeX Live Server & Speed Updates';
+    if (msgEl) {
+      msgEl.value = `👑 Welcome to LikeX Wholesale Platform!\n\n🔥 Live Services Status:\n• Instagram Followers: 100% Active (Instant Start)\n• YouTube Views & Subs: Non-Drop & Stable\n• Telegram Members: 0-5 Mins Fast Delivery\n\n💬 Need help? Our VIP Desk is available 24/7:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!\nThank you for choosing LikeX!`;
+    }
+    this.updateNoticePreview();
   },
 
   previewEarnVideoUrl(val) {

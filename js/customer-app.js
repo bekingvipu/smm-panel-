@@ -91,6 +91,62 @@ const CustomerApp = {
     `;
   },
 
+  escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  },
+
+  openNoticeModal() {
+    const modal = document.getElementById('generic-modal-backdrop');
+    const sheet = document.getElementById('generic-modal-sheet');
+    if (!modal || !sheet) return;
+
+    const notice = (window.store && window.store.data && window.store.data.headerNotification) || {};
+    const title = notice.title || '📢 Official Notice & Updates';
+    const message = notice.message || '⚡ Welcome to LikeX!\n\n👑 India\'s Wholesale SMM & Creator Platform.\nAll services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support';
+    const updateDate = notice.updatedAt ? new Date(notice.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Live Broadcast';
+
+    // Mark as seen so unread pulse stops
+    try {
+      localStorage.setItem('likex_notice_seen_time', Date.now().toString());
+      document.querySelectorAll('.header-notice-badge').forEach(el => el.classList.remove('pulse'));
+    } catch (e) {}
+
+    sheet.innerHTML = `
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 14px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="width: 38px; height: 38px; border-radius: 12px; background: linear-gradient(135deg, #4F46E5, #7C3AED); display: flex; align-items: center; justify-content: center; font-size: 18px; color: white; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); flex-shrink: 0;">
+            🔔
+          </div>
+          <div>
+            <h3 class="modal-title" style="font-size: 16px; font-weight: 800; margin: 0; color: var(--text-main);">${CustomerApp.escapeHtml(title)}</h3>
+            <div style="font-size: 11.5px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; margin-top: 2px;">
+              <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #10B981;"></span>
+              <span>Updated: ${updateDate}</span>
+            </div>
+          </div>
+        </div>
+        <button class="modal-close" onclick="CustomerApp.closeModal()">&times;</button>
+      </div>
+
+      <div class="notice-modal-body" style="display: flex; flex-direction: column; gap: 14px;">
+        <!-- Clean Note Card with exact spacing preservation (no cramped text) -->
+        <div class="notice-card-content" style="background: var(--bg-subtle); border: 1px solid var(--border-color); border-radius: 14px; padding: 18px 16px; font-size: 14px; line-height: 1.65; color: var(--text-main); white-space: pre-wrap; word-break: break-word; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-height: 55vh; overflow-y: auto;">${CustomerApp.escapeHtml(message)}</div>
+
+        <button type="button" class="btn btn-primary btn-block btn-lg" onclick="CustomerApp.closeModal()" style="font-weight: 800; border-radius: 14px; height: 48px; background: linear-gradient(135deg, #4F46E5, #7C3AED); box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35);">
+          ✓ Understood, Close
+        </button>
+      </div>
+    `;
+
+    this.openModal();
+  },
+
   openAdminUnlockModal() {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
@@ -203,6 +259,26 @@ const CustomerApp = {
     else if (tab === 'support') contentHtml = this.renderSupportTab(store);
     else contentHtml = this.renderNewOrderTab(store);
 
+    // Live Notice indicator computation
+    const headerNotice = store.data.headerNotification || {};
+    const hasActiveNotice = headerNotice.enabled !== false && Boolean(headerNotice.message && headerNotice.message.trim());
+    let isNoticeUnread = false;
+    try {
+      const lastSeenNotice = localStorage.getItem('likex_notice_seen_time') || 0;
+      const noticeTime = headerNotice.updatedAt ? new Date(headerNotice.updatedAt).getTime() : 1;
+      isNoticeUnread = hasActiveNotice && (Number(noticeTime) > Number(lastSeenNotice));
+    } catch (e) {}
+
+    const noticeBtnHtml = `
+      <button type="button" class="header-notice-btn" onclick="CustomerApp.openNoticeModal()" title="Updates & Announcements" aria-label="Notifications">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+          <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+        ${hasActiveNotice ? `<span class="header-notice-badge ${isNoticeUnread ? 'pulse' : ''}"></span>` : ''}
+      </button>
+    `;
+
     container.innerHTML = `
       ${adminPreviewBannerHtml}
       <!-- Desktop Header (Screens >= 768px) -->
@@ -240,9 +316,11 @@ const CustomerApp = {
 
         <div class="desktop-nav-actions">
           <div class="header-balance-pill" onclick="store.setCustomerTab('wallet')" title="Click to Add Funds">
-            <span class="header-balance-val">${isLoggedIn ? store.formatMoney(store.data.customer.balance) : '₹0'}</span>
+            <span class="header-balance-val">${isLoggedIn ? store.formatMoney(store.data.customer.balance) : '₹0.00'}</span>
             <span class="add-plus-badge">＋</span>
           </div>
+
+          ${noticeBtnHtml}
 
           <button class="drawer-hamburger-btn" onclick="CustomerApp.openSideDrawer()" title="Menu & Settings">
             <span>☰</span>
@@ -280,6 +358,7 @@ const CustomerApp = {
               Sign In
             </button>
           `}
+          ${noticeBtnHtml}
         </div>
       </header>
 
