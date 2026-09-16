@@ -4150,7 +4150,11 @@ const AdminApp = {
               <span>➕</span>
               <span>Create Manual Order</span>
             </button>
-            <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700;" onclick="store.syncOrdersStatus()">
+            <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700; border-color: var(--primary); color: var(--primary);" onclick="store.syncSupabaseDataForAdmin(); store.showToast('🔄 Synchronizing latest orders from cloud database...', 'info');" title="Refresh all orders directly from Supabase Cloud Database">
+              <span>☁️</span>
+              <span>Sync Cloud Orders</span>
+            </button>
+            <button class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; font-weight: 700;" onclick="store.syncOrdersStatus()" title="Query upstream providers for live progress and delivery status">
               <span>🔄</span>
               <span>Sync Live Status</span>
             </button>
