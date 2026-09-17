@@ -250,10 +250,13 @@ export default async function handler(req, res) {
             customerCode = rpcData.customer_code;
           } else {
             const currentBal = Number(rpcData?.current_balance || 0);
+            const inrRate = 95.385;
+            const reqInr = (orderCharge * inrRate).toFixed(2);
+            const availInr = (currentBal * inrRate).toFixed(2);
             const isInsufficient = String(rpcData?.error || '').toLowerCase().includes('insufficient');
             return res.status(400).json({
               error: isInsufficient 
-                ? `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $${currentBal.toFixed(2)}. Please recharge your wallet.`
+                ? `Insufficient wallet balance. Required ₹${reqInr}, available ₹${availInr}. Please recharge your wallet.`
                 : (rpcData?.error || 'Customer account error'),
               balance: currentBal,
               required: orderCharge,
@@ -289,8 +292,11 @@ export default async function handler(req, res) {
         userSpent = Number(user.spent || 0);
 
         if (userBalanceBefore < orderCharge) {
+          const inrRate = 95.385;
+          const reqInr = (orderCharge * inrRate).toFixed(2);
+          const availInr = (userBalanceBefore * inrRate).toFixed(2);
           return res.status(400).json({
-            error: `Insufficient wallet balance. Required $${orderCharge.toFixed(2)}, available $${userBalanceBefore.toFixed(2)}. Please recharge your wallet.`,
+            error: `Insufficient wallet balance. Required ₹${reqInr}, available ₹${availInr}. Please recharge your wallet.`,
             balance: userBalanceBefore,
             required: orderCharge,
             success: false

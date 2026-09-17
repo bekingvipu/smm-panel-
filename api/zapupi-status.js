@@ -173,21 +173,31 @@ export default async function handler(req, res) {
 
           const claimedRows = await claimRes.json().catch(() => []);
           if (Array.isArray(claimedRows) && claimedRows.length === 0) {
-            const doubleCheck = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?id=eq.${encodeURIComponent(pendingTxnId)}&select=id,status,balance_after`, {
+            const doubleCheck = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/wallet_transactions?or=(id.eq.${encodeURIComponent(pendingTxnId)},description.ilike.*${encodeURIComponent(orderId)}*)&select=id,status,balance_after`, {
               headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` }
             });
             const dcRows = await doubleCheck.json().catch(() => []);
-            if (Array.isArray(dcRows) && dcRows.length > 0 && dcRows[0].status === 'Success') {
-              return res.status(200).json({
-                paid: true,
-                status: 'Success',
-                order_id: orderId,
-                amount: usdCredit,
-                balance: dcRows[0].balance_after,
-                utr: utr || orderId,
-                source: 'zapupi_live_query'
-              });
+            if (Array.isArray(dcRows) && dcRows.length > 0) {
+              if (dcRows[0].status === 'Success') {
+                return res.status(200).json({
+                  paid: true,
+                  status: 'Success',
+                  order_id: orderId,
+                  amount: usdCredit,
+                  balance: dcRows[0].balance_after,
+                  utr: utr || orderId,
+                  source: 'zapupi_live_query'
+                });
+              }
             }
+            // STRICT RACE-CONDITION GUARD: If status claim failed, STOP IMMEDIATELY!
+            console.log(`[ZapUPI Status] Order ${orderId} claim taken by concurrent worker. Aborting duplicate credit.`);
+            return res.status(200).json({
+              paid: true,
+              status: 'Processing',
+              order_id: orderId,
+              message: 'Deposit currently being processed by concurrent worker'
+            });
           }
 
           const userRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/users?id=eq.${targetUserId}&select=id,email,balance`, {
