@@ -125,9 +125,9 @@ export default async function handler(req, res) {
     const refill = customParams.refill || paramsObj.refill;
     if (refill) formData.append('refill', String(refill));
 
-    // 10-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
+    // 7-second timeout to allow upstream SMM nodes (WorldOfSMM / SocialFans) to process and return live order ID
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 7000);
 
     let response;
     let resText = '';
@@ -349,9 +349,7 @@ export default async function handler(req, res) {
       const rawSvcId = String(cleanServiceId(paramsObj.service || paramsObj.serviceId || ''));
       const providerCostVal = Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0);
 
-      // 2. IMMEDIATE ORDER INSERTION into Supabase orders table (AWAITED BEFORE PROVIDER SUBMISSION)
-      // This ensures the order exists in Admin & Customer DB immediately after wallet debit
-      const initialSnapshot = {
+      const baseSnapshot = {
         rawServiceId: rawSvcId,
         serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
         serviceName: serviceName,
@@ -370,44 +368,13 @@ export default async function handler(req, res) {
         isLowBalanceError: false
       };
 
-      const initialTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(initialSnapshot)}`;
-
-      try {
-        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-          method: 'POST',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json',
-            Prefer: 'resolution=merge-duplicates'
-          },
-          body: JSON.stringify({
-            id: orderIdNum,
-            user_id: userId,
-            service_id: null,
-            target_url: initialTargetUrl,
-            quantity: Number(paramsObj.quantity) || 1000,
-            charge: orderCharge,
-            provider_cost: providerCostVal,
-            provider_order_id: null,
-            assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
-            status: 'Processing',
-            remains: Number(paramsObj.quantity) || 1000,
-            refill_status: 'Standard',
-            created_at: new Date().toISOString()
-          })
-        });
-      } catch (insertErr) {
-        console.warn('[LikeX Backend] Initial Supabase order insertion notice:', insertErr.message);
-      }
-
-      // 3. Submit order to Upstream Wholesale Provider
+      // 2. IMMEDIATE Provider Dispatch (Wallet ALREADY debited & locked safely via RPC!)
       let providerData = null;
       try {
         providerData = await callProvider(providerConfig);
       } catch (provErr) {
         console.warn('[LikeX Backend] Provider dispatch timeout/error:', provErr.message);
-        providerData = { error: provErr.name === 'AbortError' ? 'Provider timeout (15s)' : provErr.message };
+        providerData = { error: provErr.name === 'AbortError' ? 'Provider timeout (7s)' : provErr.message };
       }
 
       const liveOrderId = extractProviderOrderId(providerData);
@@ -475,7 +442,7 @@ export default async function handler(req, res) {
       const orderErrorNote = liveError ? `Error: ${String(liveError)}` : null;
 
       const finalSnapshotPayload = {
-        ...initialSnapshot,
+        ...baseSnapshot,
         walletBalanceAfter: balanceAfter,
         note: orderErrorNote || null,
         isLowBalanceError: Boolean(isLowBalanceError)
@@ -484,25 +451,35 @@ export default async function handler(req, res) {
       const updatedTargetUrl = `${rawTargetLink}###LKX_META###${JSON.stringify(finalSnapshotPayload)}`;
       const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 95);
 
-      // 4. AWAITED UPDATE of order record in Supabase orders table with Provider Order ID & Live Status
-      try {
-        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?id=eq.${orderIdNum}`, {
-          method: 'PATCH',
-          headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            provider_order_id: liveOrderId || null,
-            status: orderStatus,
-            refill_status: safeRefillStatus,
-            target_url: updatedTargetUrl
-          })
-        });
-      } catch (updateErr) {
-        console.warn('[LikeX Backend] Supabase order status update notice:', updateErr.message);
-      }
+      // 3. Fast Single Database Order Log Persistence (Non-blocking async insertion)
+      const orderDbPayload = {
+        id: orderIdNum,
+        user_id: userId,
+        service_id: null,
+        target_url: updatedTargetUrl,
+        quantity: Number(paramsObj.quantity) || 1000,
+        charge: orderCharge,
+        provider_cost: providerCostVal,
+        provider_order_id: liveOrderId || null,
+        assigned_provider_id: providerKey === 'socialfans' ? 3 : 2,
+        status: orderStatus,
+        remains: Number(paramsObj.quantity) || 1000,
+        refill_status: safeRefillStatus,
+        created_at: new Date().toISOString()
+      };
+
+      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        method: 'POST',
+        headers: {
+          apikey: SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates'
+        },
+        body: JSON.stringify(orderDbPayload)
+      }).catch(insertErr => {
+        console.warn('[LikeX Backend] Supabase order insertion notice:', insertErr.message);
+      });
 
       // Return response delivery to customer with provider order ID and status
       return res.status(200).json({
