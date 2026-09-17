@@ -4142,8 +4142,8 @@ const AdminApp = {
                   ` : ''}
                 </div>
                 <div style="font-size: 11px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
-                  <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Current Customer Wallet Balance (Backend Live)">
-                    <span>💳</span> <span>Wallet: ${currentBalStr}</span>
+                  <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Current Customer Live Wallet Balance in Database Right Now">
+                    <span>💳</span> <span>Live Wallet: ${currentBalStr}</span>
                   </span>
                   <span style="color: var(--text-secondary); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;" title="Customer Wallet Balance at Order Checkout Time">
                     <span>⏱️</span> <span>At Order: ${balAtOrderStr || '₹0.00'}</span>
