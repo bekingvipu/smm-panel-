@@ -4044,6 +4044,17 @@ const AdminApp = {
             : (o.serviceSnapshot?.walletBalanceAtOrder ?? o.serviceSnapshot?.walletBalanceBeforeOrder ?? null));
       const balAtOrderStr = (balAtOrderNum !== null && balAtOrderNum !== undefined) ? store.formatMoney(balAtOrderNum) : (liveBalVal !== null ? store.formatMoney(liveBalVal) : '₹0.00');
 
+      const balAfterNum = o.walletBalanceAfter !== undefined && o.walletBalanceAfter !== null
+        ? o.walletBalanceAfter
+        : (o.serviceSnapshot?.walletBalanceAfter !== undefined && o.serviceSnapshot?.walletBalanceAfter !== null
+            ? o.serviceSnapshot.walletBalanceAfter
+            : (balAtOrderNum !== null && balAtOrderNum !== undefined ? Math.max(0, balAtOrderNum - Number(o.amount || 0)) : null));
+      const balAfterStr = (balAfterNum !== null && balAfterNum !== undefined) ? store.formatMoney(balAfterNum) : balAtOrderStr;
+      
+      const balDisplayStr = balAfterStr !== balAtOrderStr 
+        ? `${balAtOrderStr} → ${balAfterStr}` 
+        : balAtOrderStr;
+
       // Formatted IDs
       const rawIdVal = o.likeXOrderId || o.id;
       const displayLikeXId = store.formatLikeXOrderId ? store.formatLikeXOrderId(rawIdVal) : (String(rawIdVal).startsWith('LX') ? rawIdVal : 'LX' + rawIdVal);
@@ -4142,11 +4153,8 @@ const AdminApp = {
                   ` : ''}
                 </div>
                 <div style="font-size: 11px; margin-top: 4px; display: flex; flex-direction: column; gap: 2px;">
-                  <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Current Customer Live Wallet Balance in Database Right Now">
-                    <span>💳</span> <span>Live Wallet: ${currentBalStr}</span>
-                  </span>
-                  <span style="color: var(--text-secondary); font-size: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 3px;" title="Customer Wallet Balance at Order Checkout Time">
-                    <span>⏱️</span> <span>At Order: ${balAtOrderStr || '₹0.00'}</span>
+                  <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Wallet Balance Before Order → Wallet Balance After Order Deduction">
+                    <span>💳</span> <span>Wallet: ${balDisplayStr}</span>
                   </span>
                 </div>
               </div>
