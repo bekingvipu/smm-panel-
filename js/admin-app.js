@@ -3211,18 +3211,165 @@ const AdminApp = {
   handleCategoryFilter(cat) {
     this.selectedCategory = cat;
     this.selectedServiceIds.clear();
-    this.render(document.getElementById('screen-container'));
+    const tbody = document.getElementById('admin-services-table-tbody');
+    if (tbody) {
+      this.updateAdminServicesTableView();
+    } else {
+      this.render(document.getElementById('screen-container'));
+    }
   },
 
   handleServiceSearch(query) {
     this.serviceSearchQuery = query;
-    this.render(document.getElementById('screen-container'));
+    const tbody = document.getElementById('admin-services-table-tbody');
+    if (tbody) {
+      this.updateAdminServicesTableView();
+    } else {
+      this.render(document.getElementById('screen-container'));
+    }
   },
 
   handleStatusFilter(status) {
     this.statusFilter = status;
     this.selectedServiceIds.clear();
-    this.render(document.getElementById('screen-container'));
+    const tbody = document.getElementById('admin-services-table-tbody');
+    if (tbody) {
+      this.updateAdminServicesTableView();
+    } else {
+      this.render(document.getElementById('screen-container'));
+    }
+  },
+
+  updateAdminServicesTableView() {
+    const tbody = document.getElementById('admin-services-table-tbody');
+    if (!tbody) return;
+    const store = window.store;
+    const prov = this.currentProviderTab;
+    const isWos = prov === 'worldofsmm' || prov === 'wos';
+    const rawServices = isWos ? (window.WOS_SERVICES || []) : (window.SF_SERVICES || []);
+    const normalized = rawServices.map(s => {
+      const sId = String(s.service || s.id || s.serviceId || '');
+      const rawId = s.rawId ? String(s.rawId) : sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
+      const costVal = Number(s.rate || s.cost || 0);
+      return {
+        id: s.id ? String(s.id) : (isWos ? `wos-${rawId}` : `sf-${rawId}`),
+        rawId: rawId,
+        name: s.name || `Service #${rawId}`,
+        category: s.category || 'General Services',
+        cost: costVal,
+        min: Number(s.min || 10),
+        max: Number(s.max || 100000),
+        refill: Boolean(s.refill),
+        provider: isWos ? 'worldofsmm' : 'socialfans'
+      };
+    });
+
+    const selectedCat = this.selectedCategory || 'all';
+    const statusF = this.statusFilter || 'all';
+    const query = (this.serviceSearchQuery || '').trim().toLowerCase();
+    const cleanQuery = query.replace(/^#/, '').trim();
+
+    const filtered = normalized.filter(s => {
+      if (selectedCat !== 'all' && s.category !== selectedCat) return false;
+      if (statusF === 'active' && !store.isServiceActiveInCatalog(s.id, s.rawId)) return false;
+      if (statusF === 'inactive' && store.isServiceActiveInCatalog(s.id, s.rawId)) return false;
+
+      if (cleanQuery) {
+        const cleanId = String(s.rawId || s.id).toLowerCase();
+        const fullId = String(s.id).toLowerCase();
+        const name = (s.name || '').toLowerCase();
+        const cat = (s.category || '').toLowerCase();
+        return cleanId.includes(cleanQuery) || fullId.includes(cleanQuery) || name.includes(cleanQuery) || cat.includes(cleanQuery);
+      }
+      return true;
+    });
+
+    this._currentRenderedServices = filtered;
+    tbody.innerHTML = this.renderAdminServicesRows(filtered, store, isWos, prov);
+
+    const countEl = document.getElementById('admin-services-count-text');
+    if (countEl) {
+      countEl.innerHTML = `Showing <strong>${filtered.length}</strong> of ${normalized.length} services`;
+    }
+  },
+
+  renderAdminServicesRows(filtered, store, isWos, prov) {
+    if (filtered.length === 0) {
+      return `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
+            No services match the selected category or search query.
+          </td>
+        </tr>
+      `;
+    }
+
+    return filtered.slice(0, 100).map(s => {
+      const sKey = String(s.rawId || s.id);
+      const isSelected = this.selectedServiceIds.has(sKey);
+      const isActive = store.isServiceActiveInCatalog(s.id, s.rawId);
+      const wholesaleInr = store.formatMoney(s.cost);
+      const sellingPriceUsd = store.getSellingPrice(s.cost, s.id, s.rawId);
+      const sellingPriceInr = store.formatMoney(sellingPriceUsd);
+
+      return `
+        <tr style="${isSelected ? 'background: rgba(99, 102, 241, 0.08);' : ''}">
+          <td style="text-align: center;">
+            <input 
+              type="checkbox" 
+              ${isSelected ? 'checked' : ''} 
+              onchange="AdminApp.handleToggleServiceSelect('${sKey}')" 
+            />
+          </td>
+          <td>
+            <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 700;">
+              #${sKey}
+            </span>
+            <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${isWos ? 'WorldOfSMM' : (prov === 'socialfans' ? 'SocialFans' : prov)}</div>
+          </td>
+          <td>
+            <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); line-height: 1.3;">
+              ${s.name}
+            </div>
+            <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 3px;">
+              📂 <em>${s.category}</em>
+            </div>
+          </td>
+          <td>
+            <div style="font-weight: 700; font-size: 13px; color: var(--text-muted);">$${s.cost.toFixed(4)}</div>
+            <div style="font-size: 11px; color: var(--text-secondary);">${wholesaleInr} / 1K</div>
+          </td>
+          <td>
+            <div style="font-weight: 800; font-size: 14px; color: var(--primary);">${sellingPriceInr} / 1K</div>
+            <div style="font-size: 11px; color: #10B981; font-weight: 600;">+$${(sellingPriceUsd - s.cost).toFixed(4)} profit</div>
+          </td>
+          <td>
+            <div style="font-size: 12px; font-weight: 600;">${Number(s.min).toLocaleString()} - ${Number(s.max).toLocaleString()}</div>
+            <div style="font-size: 11px; color: var(--text-muted);">${s.refill ? '🛡️ Refill' : 'No Refill'}</div>
+          </td>
+          <td>
+            ${isActive ? `
+              <span class="badge-active-likex">
+                <span>●</span> Active in LikeX
+              </span>
+            ` : `
+              <span class="badge-inactive-likex">
+                <span>○</span> Not in Catalog
+              </span>
+            `}
+          </td>
+          <td style="text-align: right;">
+            <button 
+              class="btn btn-sm ${isActive ? 'btn-outline' : 'btn-primary'}" 
+              style="${isActive ? 'color: #EF4444; border-color: #EF4444; font-size: 12px; padding: 5px 12px;' : 'font-size: 12px; padding: 5px 12px;'}"
+              onclick="AdminApp.handleToggleSingleServiceById('${sKey}')"
+            >
+              ${isActive ? '🗑️ Remove' : '➕ Add to LikeX'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
   },
 
   handleToggleServiceSelect(serviceId) {
@@ -3397,6 +3544,11 @@ const AdminApp = {
               </label>
               <input 
                 type="text" 
+                id="admin-services-search-input"
+                inputmode="search"
+                autocomplete="off"
+                autocapitalize="off"
+                spellcheck="false"
                 class="form-input" 
                 style="height: 40px; font-size: 13px;" 
                 placeholder="Search e.g. Followers, Views, Likes, 1407..." 
@@ -3418,7 +3570,7 @@ const AdminApp = {
           </div>
 
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--text-secondary); padding-top: 4px; border-top: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px;">
-            <span>Showing <strong>${filtered.length}</strong> of ${normalized.length} services</span>
+            <span id="admin-services-count-text">Showing <strong>${filtered.length}</strong> of ${normalized.length} services</span>
             <div style="display: flex; align-items: center; gap: 12px;">
               <label style="display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-weight: 700;">
                 <input type="checkbox" ${allVisibleSelected ? 'checked' : ''} onchange="AdminApp.handleSelectAllVisible(this.checked)" />
@@ -3446,79 +3598,8 @@ const AdminApp = {
                 <th style="text-align: right;">Action</th>
               </tr>
             </thead>
-            <tbody>
-              ${filtered.length === 0 ? `
-                <tr>
-                  <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                    No services match the selected category or search query.
-                  </td>
-                </tr>
-              ` : filtered.slice(0, 100).map(s => {
-                const sKey = String(s.rawId || s.id);
-                const isSelected = this.selectedServiceIds.has(sKey);
-                const isActive = store.isServiceActiveInCatalog(s.id, s.rawId);
-                const wholesaleInr = store.formatMoney(s.cost);
-                const sellingPriceUsd = store.getSellingPrice(s.cost, s.id, s.rawId);
-                const sellingPriceInr = store.formatMoney(sellingPriceUsd);
-
-                return `
-                  <tr style="${isSelected ? 'background: rgba(99, 102, 241, 0.08);' : ''}">
-                    <td style="text-align: center;">
-                      <input 
-                        type="checkbox" 
-                        ${isSelected ? 'checked' : ''} 
-                        onchange="AdminApp.handleToggleServiceSelect('${sKey}')" 
-                      />
-                    </td>
-                    <td>
-                      <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 700;">
-                        #${sKey}
-                      </span>
-                      <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${isWos ? 'WorldOfSMM' : (prov === 'socialfans' ? 'SocialFans' : prov)}</div>
-                    </td>
-                    <td>
-                      <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); line-height: 1.3;">
-                        ${s.name}
-                      </div>
-                      <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 3px;">
-                        📂 <em>${s.category}</em>
-                      </div>
-                    </td>
-                    <td>
-                      <div style="font-weight: 700; font-size: 13px; color: var(--text-muted);">$${s.cost.toFixed(4)}</div>
-                      <div style="font-size: 11px; color: var(--text-secondary);">${wholesaleInr} / 1K</div>
-                    </td>
-                    <td>
-                      <div style="font-weight: 800; font-size: 14px; color: var(--primary);">${sellingPriceInr} / 1K</div>
-                      <div style="font-size: 11px; color: #10B981; font-weight: 600;">+$${(sellingPriceUsd - s.cost).toFixed(4)} profit</div>
-                    </td>
-                    <td>
-                      <div style="font-size: 12px; font-weight: 600;">${Number(s.min).toLocaleString()} - ${Number(s.max).toLocaleString()}</div>
-                      <div style="font-size: 11px; color: var(--text-muted);">${s.refill ? '🛡️ Refill' : 'No Refill'}</div>
-                    </td>
-                    <td>
-                      ${isActive ? `
-                        <span class="badge-active-likex">
-                          <span>●</span> Active in LikeX
-                        </span>
-                      ` : `
-                        <span class="badge-inactive-likex">
-                          <span>○</span> Not in Catalog
-                        </span>
-                      `}
-                    </td>
-                    <td style="text-align: right;">
-                      <button 
-                        class="btn btn-sm ${isActive ? 'btn-outline' : 'btn-primary'}" 
-                        style="${isActive ? 'color: #EF4444; border-color: #EF4444; font-size: 12px; padding: 5px 12px;' : 'font-size: 12px; padding: 5px 12px;'}"
-                        onclick="AdminApp.handleToggleSingleServiceById('${sKey}')"
-                      >
-                        ${isActive ? '🗑️ Remove' : '➕ Add to LikeX'}
-                      </button>
-                    </td>
-                  </tr>
-                `;
-              }).join('')}
+            <tbody id="admin-services-table-tbody">
+              ${this.renderAdminServicesRows(filtered, store, isWos, prov)}
             </tbody>
           </table>
           ${filtered.length > 100 ? `
@@ -4034,26 +4115,32 @@ const AdminApp = {
       const avatarLetter = (custName || 'C').charAt(0).toUpperCase();
       const custCode = o.customerId || o.customerCode || (custEmail ? store.getCustomerId(custEmail) : null);
 
-      // Customer Wallet Balances (Live & Snapshot at Order Time)
-      const liveBalVal = store.getCustomerWalletBalance ? store.getCustomerWalletBalance(custEmail || o.customerUserId || custCode) : null;
-      const currentBalStr = (liveBalVal !== null && liveBalVal !== undefined) ? store.formatMoney(liveBalVal) : '₹0.00';
-      const balAtOrderNum = o.walletBalanceAtOrder !== undefined && o.walletBalanceAtOrder !== null 
-        ? o.walletBalanceAtOrder 
-        : (o.walletBalanceBeforeOrder !== undefined && o.walletBalanceBeforeOrder !== null 
-            ? o.walletBalanceBeforeOrder 
-            : (o.serviceSnapshot?.walletBalanceAtOrder ?? o.serviceSnapshot?.walletBalanceBeforeOrder ?? null));
-      const balAtOrderStr = (balAtOrderNum !== null && balAtOrderNum !== undefined) ? store.formatMoney(balAtOrderNum) : (liveBalVal !== null ? store.formatMoney(liveBalVal) : '₹0.00');
+      // Customer Wallet Balances (Authoritative Database Ledger Before/After)
+      let balBeforeNum = o.walletBalanceBeforeOrder ?? o.walletBalanceAtOrder ?? (o.serviceSnapshot?.walletBalanceBeforeOrder ?? o.serviceSnapshot?.walletBalanceAtOrder ?? null);
+      let balAfterNum = o.walletBalanceAfter ?? (o.serviceSnapshot?.walletBalanceAfter ?? null);
 
-      const balAfterNum = o.walletBalanceAfter !== undefined && o.walletBalanceAfter !== null
-        ? o.walletBalanceAfter
-        : (o.serviceSnapshot?.walletBalanceAfter !== undefined && o.serviceSnapshot?.walletBalanceAfter !== null
-            ? o.serviceSnapshot.walletBalanceAfter
-            : (balAtOrderNum !== null && balAtOrderNum !== undefined ? Math.max(0, balAtOrderNum - Number(o.amount || 0)) : null));
-      const balAfterStr = (balAfterNum !== null && balAfterNum !== undefined) ? store.formatMoney(balAfterNum) : balAtOrderStr;
+      const orderChargeNum = Number(o.amount || 0);
+
+      // If one of the balances is missing, compute mathematically with exact precision (Before - Charge = After)
+      if (balBeforeNum === null && balAfterNum !== null) {
+        balBeforeNum = Number((balAfterNum + orderChargeNum).toFixed(4));
+      } else if (balBeforeNum !== null && balAfterNum === null) {
+        balAfterNum = Math.max(0, Number((balBeforeNum - orderChargeNum).toFixed(4)));
+      } else if (balBeforeNum === null && balAfterNum === null) {
+        const liveBal = store.getCustomerWalletBalance ? store.getCustomerWalletBalance(custEmail || o.customerUserId || custCode) : null;
+        if (liveBal !== null && liveBal !== undefined) {
+          balAfterNum = Number(liveBal);
+          balBeforeNum = Number((balAfterNum + orderChargeNum).toFixed(4));
+        } else {
+          balBeforeNum = 0.00;
+          balAfterNum = 0.00;
+        }
+      }
+
+      const balAtOrderStr = store.formatMoney(balBeforeNum);
+      const balAfterStr = store.formatMoney(balAfterNum);
       
-      const balDisplayStr = balAfterStr !== balAtOrderStr 
-        ? `${balAtOrderStr} → ${balAfterStr}` 
-        : balAtOrderStr;
+      const balDisplayStr = `${balAtOrderStr} → ${balAfterStr}`;
 
       // Formatted IDs
       const rawIdVal = o.likeXOrderId || o.id;

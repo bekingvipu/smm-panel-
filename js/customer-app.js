@@ -1009,9 +1009,8 @@ const CustomerApp = {
     return '⚡ Instant - Fast';
   },
 
-  // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
-  renderNewOrderTab(store) {
-    const rawServices = store.getActiveServices ? store.getActiveServices() : (window.JAP_SERVICES || []);
+  getFilteredOrderData(store) {
+    const rawServices = (store && store.getActiveServices) ? store.getActiveServices() : (window.JAP_SERVICES || []);
     const plat = this.currentPlatform || 'instagram';
     const query = (this.searchQuery || '').trim().toLowerCase();
     const cleanQuery = query.replace(/^#/, '').trim();
@@ -1239,11 +1238,183 @@ const CustomerApp = {
     }
 
     const activeService = activePackages.length > 0 ? activePackages[0] : null;
-    const sellingPrice = activeService ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId) : 0;
+    const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId) : (activeService.cost || 0.10)) : 0;
     const isCommentService = activeService ? ((activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'))) : false;
     const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom'));
     const effectiveMin = activeService ? (isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10)) : 10;
     const avgTime = activeService ? this.getServiceAverageTime(activeService) : '—';
+
+    return {
+      rawServices,
+      filteredServices,
+      categories,
+      activePackages,
+      activeService,
+      sellingPrice,
+      isCommentService,
+      isCustomComment,
+      effectiveMin,
+      avgTime,
+      isLikeXSpecial,
+      cleanQuery
+    };
+  },
+
+  renderCategoryDropdownGroupHtml(categories, filteredServices, currentCategory) {
+    const isSpecialCurrent = (currentCategory || '').toLowerCase().includes('likex special');
+    return `
+      <label class="form-label">
+        <span style="font-weight: 800;">1. Select Category</span>
+        <span class="form-label-hint">${categories.length} Categories Available</span>
+      </label>
+
+      <!-- Hidden Native Select for 100% calculation compatibility -->
+      <select id="new-order-category-select" style="display: none;" onchange="CustomerApp.handleCategoryChange(this.value)">
+        ${categories.map(c => `<option value="${c.replace(/"/g, '&quot;')}" ${c === currentCategory ? 'selected' : ''}>${c}</option>`).join('')}
+      </select>
+
+      <!-- Custom Category Trigger Card -->
+      <div class="custom-dropdown-card ${isSpecialCurrent ? 'likex-special-trigger' : ''}" id="custom-cat-trigger-card" onclick="CustomerApp.toggleCategoryDropdown(event)">
+        <div class="custom-dropdown-trigger">
+          <div class="custom-dropdown-value" id="custom-cat-selected-text">
+            <span style="font-size: 16px; flex-shrink: 0; line-height: 1;">${isSpecialCurrent ? '⭐' : '📂'}</span>
+            <span class="custom-dropdown-title" style="font-size: 14px; font-weight: 800;">${currentCategory || 'Select Category'}</span>
+          </div>
+          <svg class="custom-dropdown-chevron" id="custom-cat-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 12 15 18 9"></polyline>
+          </svg>
+        </div>
+
+        <!-- Custom Category Dropdown List (White Clean Menu) -->
+        <div class="custom-dropdown-menu" id="custom-cat-dropdown-menu" style="display: none;">
+          ${categories.map(c => {
+            const count = filteredServices.filter(s => s.category === c).length;
+            const isSelected = c === currentCategory;
+            const isSpecial = c.toLowerCase().includes('likex special') || c.toLowerCase().includes('special very good');
+            return `
+              <div class="custom-dropdown-item ${isSpecial ? 'likex-special-category-item' : ''} ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectCategoryItem(event, '${c.replace(/'/g, "\\'")}')">
+                <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap;">
+                  <span class="custom-item-text" style="${isSpecial ? 'font-weight: 900; color: inherit;' : ''}">📁 ${c}</span>
+                  ${isSpecial ? `<span class="likex-special-pill">⭐ VIP CHOICE</span>` : ''}
+                </div>
+                <span class="custom-item-count ${isSpecial ? 'special-count' : ''}">(${count})</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  },
+
+  renderServiceDropdownGroupHtml(activePackages, activeService, store, isLikeXSpecial) {
+    const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId) : (activeService.cost || 0.10)) : 0;
+    return `
+      <label class="form-label">
+        <span style="font-weight: 800;">2. Select Service Package</span>
+        <span class="form-label-hint">${activePackages.length} Options in this Category</span>
+      </label>
+
+      <!-- Hidden Native Select for 100% calculation & form compatibility -->
+      <select id="new-order-service-select" style="display: none;" onchange="CustomerApp.handleServiceChange(this.value)">
+        ${activePackages.length > 0 ? activePackages.map(s => {
+          const p = store.getSellingPrice ? store.getSellingPrice(s.cost || 0.1, s.id, s.rawId) : (s.cost || 0.1);
+          const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
+          const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
+          const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+          const sProv = s.provider || (String(s.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+          return `
+            <option 
+              value="${s.id}" 
+              data-raw-id="${cleanId}"
+              data-provider="${sProv}"
+              data-category="${(s.category || CustomerApp.currentCategory || '').replace(/"/g, '&quot;')}"
+              data-platform="${(s.platform || 'instagram').replace(/"/g, '&quot;')}"
+              data-cost="${s.cost}" 
+              data-min="${sMin}" 
+              data-max="${s.max}" 
+              data-refill="${s.refill ? '1' : '0'}" 
+              data-name="${(s.name || '').replace(/"/g, '&quot;')}" 
+              ${activeService && String(s.id) === String(activeService.id) ? 'selected' : ''}>
+              #${s.id} - ${s.name} (${store.formatMoney ? store.formatMoney(p) : '₹' + p}/1K)
+            </option>
+          `;
+        }).join('') : `<option value="">No service packages in this category yet</option>`}
+      </select>
+
+      <!-- Custom Service Package Trigger Card -->
+      <div class="custom-dropdown-card" id="custom-service-trigger-card" onclick="CustomerApp.toggleServiceDropdown(event)">
+        <div class="custom-dropdown-trigger">
+          <div class="trigger-service-info">
+            <span class="service-id-pill" id="trigger-service-id-badge">${activeService ? String(activeService.rawId || activeService.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '') : '—'}</span>
+            <span class="trigger-service-text" id="trigger-service-name-text">${activeService ? activeService.name : 'No service packages in this category yet'}</span>
+          </div>
+          <div class="trigger-right-badge">
+            <span class="trigger-service-rate" id="trigger-service-rate-text">${activeService ? `≈ ${store.formatMoney ? store.formatMoney(sellingPrice) : '₹' + sellingPrice}/1K` : '—'}</span>
+            <svg class="custom-dropdown-chevron" id="custom-service-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="6 9 12 15 18 9"></polyline>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Custom Service Dropdown List (White Clean Menu with ID Pills & Tags) -->
+        <div class="custom-dropdown-menu" id="custom-service-dropdown-menu" style="display: none;">
+          ${activePackages.length > 0 ? activePackages.map(s => {
+            const isSelected = activeService && String(s.id) === String(activeService.id);
+            const p = store.getSellingPrice ? store.getSellingPrice(s.cost || 0.1, s.id, s.rawId) : (s.cost || 0.1);
+            const tags = this.getServiceTags(s);
+            const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+            return `
+              <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackageItem(event, '${s.id}')">
+                <div class="service-row-top">
+                  <span class="service-row-id">${cleanId}</span>
+                  <span class="service-row-title">${s.name}</span>
+                </div>
+                <div class="service-row-bottom">
+                  <div class="service-tag-badges">
+                    ${tags.map(t => `<span class="service-tag-pill ${t.type}">${t.label}</span>`).join('')}
+                  </div>
+                  <div class="service-row-price">
+                    ≈ ${store.formatMoney ? store.formatMoney(p) : '₹' + p} per 1000
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('') : `
+            <div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13.5px;">
+              <div style="font-size: 26px; margin-bottom: 6px;">📂</div>
+              <strong>No service packages currently in this category.</strong>
+              <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Services are being updated. Please check back shortly.</div>
+            </div>
+          `}
+        </div>
+      </div>
+    `;
+  },
+
+  // 2. NEW ORDER TAB WITH CLEANED SEARCH BOX & CASCADING DROPDOWNS
+  renderNewOrderTab(store) {
+    const {
+      rawServices,
+      filteredServices,
+      categories,
+      activePackages,
+      activeService,
+      sellingPrice,
+      isCommentService,
+      isCustomComment,
+      effectiveMin,
+      avgTime,
+      isLikeXSpecial,
+      cleanQuery
+    } = this.getFilteredOrderData(store);
+
+    const isExcluded = (s) => {
+      const cat = (s.category || '').toLowerCase();
+      const name = (s.name || '').toLowerCase();
+      if (cat.includes('jap exclusive') || name.includes('jap exclusive')) return true;
+      if (cat.includes('ai growth') || name.includes('ai growth')) return true;
+      return false;
+    };
 
     const platforms = [
       { id: 'all', label: 'All', icon: '⚡' },
@@ -1386,165 +1557,49 @@ const CustomerApp = {
             class="order-search-input-field" 
             id="service-search-input" 
             placeholder="Search service name, ID (e.g. 10349), or keyword..." 
-            value="${this.searchQuery || ''}" 
+            value="${CustomerApp.escapeHtml(this.searchQuery || '')}" 
+            inputmode="search"
+            autocomplete="off"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
             oninput="CustomerApp.handleSearch(this.value)" 
           />
-          ${this.searchQuery ? `
-            <button type="button" class="order-search-clear-btn" onclick="CustomerApp.clearSearch()" title="Clear Search">
-              ✕
-            </button>
-          ` : ''}
+          <button type="button" id="order-search-clear-btn" class="order-search-clear-btn" onclick="CustomerApp.clearSearch()" title="Clear Search" style="${this.searchQuery ? 'display: flex;' : 'display: none;'}">
+            ✕
+          </button>
         </div>
 
         <!-- Branded Platform Chips with Dynamic Counter -->
-        ${!query ? `
-          <div class="order-platforms-container">
-            <div class="platform-chips-scroll">
-              ${platforms.map(p => {
-                const count = rawServices.filter(s => (s.platform || 'other') === p.id && !isExcluded(s)).length;
-                const isActive = (this.currentPlatform || 'instagram') === p.id;
-                return `
-                  <button 
-                    type="button" 
-                    class="platform-chip ${isActive ? 'active' : ''}" 
-                    data-platform="${p.id}"
-                    onclick="CustomerApp.selectPlatform('${p.id}')"
-                  >
-                    <span class="platform-chip-icon">${p.icon}</span>
-                    <span class="platform-chip-label">${p.label}</span>
-                    ${p.id !== 'all' ? `<span class="platform-chip-count">${count}</span>` : ''}
-                  </button>
-                `;
-              }).join('')}
-            </div>
+        <div class="order-platforms-container" style="${cleanQuery ? 'display: none;' : 'display: block;'}">
+          <div class="platform-chips-scroll">
+            ${platforms.map(p => {
+              const count = rawServices.filter(s => (s.platform || 'other') === p.id && !isExcluded(s)).length;
+              const isActive = (this.currentPlatform || 'instagram') === p.id;
+              return `
+                <button 
+                  type="button" 
+                  class="platform-chip ${isActive ? 'active' : ''}" 
+                  data-platform="${p.id}"
+                  onclick="CustomerApp.selectPlatform('${p.id}')"
+                >
+                  <span class="platform-chip-icon">${p.icon}</span>
+                  <span class="platform-chip-label">${p.label}</span>
+                  ${p.id !== 'all' ? `<span class="platform-chip-count">${count}</span>` : ''}
+                </button>
+              `;
+            }).join('')}
           </div>
-        ` : ''}
+        </div>
 
         <!-- Cascading Dropdown 1: Category Selection (Custom Inline Dropdown) -->
         <div class="form-group" style="position: relative;" id="custom-cat-dropdown-group">
-          <label class="form-label">
-            <span style="font-weight: 800;">1. Select Category</span>
-            <span class="form-label-hint">${categories.length} Categories Available</span>
-          </label>
-
-          <!-- Hidden Native Select for 100% calculation compatibility -->
-          <select id="new-order-category-select" style="display: none;" onchange="CustomerApp.handleCategoryChange(this.value)">
-            ${categories.map(c => `<option value="${c.replace(/"/g, '&quot;')}" ${c === this.currentCategory ? 'selected' : ''}>${c}</option>`).join('')}
-          </select>
-
-          <!-- Custom Category Trigger Card -->
-          <div class="custom-dropdown-card ${(this.currentCategory || '').toLowerCase().includes('likex special') ? 'likex-special-trigger' : ''}" id="custom-cat-trigger-card" onclick="CustomerApp.toggleCategoryDropdown(event)">
-            <div class="custom-dropdown-trigger">
-              <div class="custom-dropdown-value" id="custom-cat-selected-text">
-                <span style="font-size: 16px; flex-shrink: 0; line-height: 1;">${(this.currentCategory || '').toLowerCase().includes('likex special') ? '⭐' : '📂'}</span>
-                <span class="custom-dropdown-title" style="font-size: 14px; font-weight: 800;">${this.currentCategory || 'Select Category'}</span>
-              </div>
-              <svg class="custom-dropdown-chevron" id="custom-cat-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="6 9 12 15 18 9"></polyline>
-              </svg>
-            </div>
-
-            <!-- Custom Category Dropdown List (White Clean Menu) -->
-            <div class="custom-dropdown-menu" id="custom-cat-dropdown-menu" style="display: none;">
-              ${categories.map(c => {
-                const count = filteredServices.filter(s => s.category === c).length;
-                const isSelected = c === this.currentCategory;
-                const isSpecial = c.toLowerCase().includes('likex special') || c.toLowerCase().includes('special very good');
-                return `
-                  <div class="custom-dropdown-item ${isSpecial ? 'likex-special-category-item' : ''} ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectCategoryItem(event, '${c.replace(/'/g, "\\'")}')">
-                    <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; flex-wrap: wrap;">
-                      <span class="custom-item-text" style="${isSpecial ? 'font-weight: 900; color: inherit;' : ''}">📁 ${c}</span>
-                      ${isSpecial ? `<span class="likex-special-pill">⭐ VIP CHOICE</span>` : ''}
-                    </div>
-                    <span class="custom-item-count ${isSpecial ? 'special-count' : ''}">(${count})</span>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
+          ${this.renderCategoryDropdownGroupHtml(categories, filteredServices, this.currentCategory)}
         </div>
 
         <!-- Cascading Dropdown 2: Specific Service Package (Custom Inline Dropdown) -->
         <div class="form-group" style="position: relative;" id="custom-service-dropdown-group">
-          <label class="form-label">
-            <span style="font-weight: 800;">2. Select Service Package</span>
-            <span class="form-label-hint">${activePackages.length} Options in this Category</span>
-          </label>
-
-          <!-- Hidden Native Select for 100% calculation & form compatibility -->
-          <select id="new-order-service-select" style="display: none;" onchange="CustomerApp.handleServiceChange(this.value)">
-            ${activePackages.length > 0 ? activePackages.map(s => {
-              const p = store.getSellingPrice(s.cost || 0.1, s.id, s.rawId);
-              const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
-              const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
-              const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
-              const sProv = s.provider || (String(s.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
-              return `
-                <option 
-                  value="${s.id}" 
-                  data-raw-id="${cleanId}"
-                  data-provider="${sProv}"
-                  data-category="${(s.category || CustomerApp.currentCategory || '').replace(/"/g, '&quot;')}"
-                  data-platform="${(s.platform || 'instagram').replace(/"/g, '&quot;')}"
-                  data-cost="${s.cost}" 
-                  data-min="${sMin}" 
-                  data-max="${s.max}" 
-                  data-refill="${s.refill ? '1' : '0'}" 
-                  data-name="${(s.name || '').replace(/"/g, '&quot;')}" 
-                  ${activeService && String(s.id) === String(activeService.id) ? 'selected' : ''}>
-                  #${s.id} - ${s.name} (${store.formatMoney(p)}/1K)
-                </option>
-              `;
-            }).join('') : `<option value="">No service packages in this category yet</option>`}
-          </select>
-
-          <!-- Custom Service Package Trigger Card -->
-          <div class="custom-dropdown-card" id="custom-service-trigger-card" onclick="CustomerApp.toggleServiceDropdown(event)">
-            <div class="custom-dropdown-trigger">
-              <div class="trigger-service-info">
-                <span class="service-id-pill" id="trigger-service-id-badge">${activeService ? String(activeService.rawId || activeService.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '') : '—'}</span>
-                <span class="trigger-service-text" id="trigger-service-name-text">${activeService ? activeService.name : 'No service packages in this category yet'}</span>
-              </div>
-              <div class="trigger-right-badge">
-                <span class="trigger-service-rate" id="trigger-service-rate-text">${activeService ? `≈ ${store.formatMoney(sellingPrice)}/1K` : '—'}</span>
-                <svg class="custom-dropdown-chevron" id="custom-service-chevron" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="6 9 12 15 18 9"></polyline>
-                </svg>
-              </div>
-            </div>
-
-            <!-- Custom Service Dropdown List (White Clean Menu with ID Pills & Tags) -->
-            <div class="custom-dropdown-menu" id="custom-service-dropdown-menu" style="display: none;">
-              ${activePackages.length > 0 ? activePackages.map(s => {
-                const isSelected = activeService && String(s.id) === String(activeService.id);
-                const p = store.getSellingPrice(s.cost || 0.1, s.id, s.rawId);
-                const tags = this.getServiceTags(s);
-                const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
-                return `
-                  <div class="service-option-row ${isSelected ? 'selected' : ''}" onclick="CustomerApp.selectServicePackageItem(event, '${s.id}')">
-                    <div class="service-row-top">
-                      <span class="service-row-id">${cleanId}</span>
-                      <span class="service-row-title">${s.name}</span>
-                    </div>
-                    <div class="service-row-bottom">
-                      <div class="service-tag-badges">
-                        ${tags.map(t => `<span class="service-tag-pill ${t.type}">${t.label}</span>`).join('')}
-                      </div>
-                      <div class="service-row-price">
-                        ≈ ${store.formatMoney(p)} per 1000
-                      </div>
-                    </div>
-                  </div>
-                `;
-              }).join('') : `
-                <div style="padding: 24px; text-align: center; color: var(--text-secondary); font-size: 13.5px;">
-                  <div style="font-size: 26px; margin-bottom: 6px;">📂</div>
-                  <strong>No service packages currently in this category.</strong>
-                  <div style="font-size: 12px; margin-top: 4px; color: var(--text-muted);">Services are being updated. Please check back shortly.</div>
-                </div>
-              `}
-            </div>
-          </div>
+          ${this.renderServiceDropdownGroupHtml(activePackages, activeService, store, isLikeXSpecial)}
         </div>
 
         <!-- High-Tech VIP Service Details Terminal (2x2 Compact Specs Grid with Live Average Time) -->
@@ -1673,12 +1728,6 @@ const CustomerApp = {
         </button>
       </div>
     `;
-  },
-
-  clearSearch() {
-    this.searchQuery = '';
-    const screenContainer = document.getElementById('screen-container');
-    this.render(screenContainer);
   },
 
   scrollActivePlatformIntoView(plat) {
@@ -1849,18 +1898,109 @@ const CustomerApp = {
     if (serviceChevron) serviceChevron.style.transform = 'rotate(0deg)';
   },
 
+  updateNewOrderDropdowns() {
+    const store = window.store || {};
+    const catGroup = document.getElementById('custom-cat-dropdown-group');
+    const svcGroup = document.getElementById('custom-service-dropdown-group');
+    const platformsContainer = document.querySelector('.order-platforms-container');
+
+    if (!catGroup || !svcGroup) {
+      const screenContainer = document.getElementById('screen-container');
+      if (screenContainer) this.render(screenContainer);
+      return;
+    }
+
+    const { rawServices, filteredServices, categories, activePackages, activeService, sellingPrice, effectiveMin, isCommentService, isCustomComment, isLikeXSpecial, cleanQuery, avgTime } = this.getFilteredOrderData(store);
+
+    if (platformsContainer) {
+      platformsContainer.style.display = cleanQuery ? 'none' : 'block';
+    }
+
+    catGroup.innerHTML = this.renderCategoryDropdownGroupHtml(categories, filteredServices, this.currentCategory);
+    svcGroup.innerHTML = this.renderServiceDropdownGroupHtml(activePackages, activeService, store, isLikeXSpecial);
+
+    // Update specs card & details
+    const nameEl = document.getElementById('service-detail-name');
+    const rateEl = document.getElementById('service-detail-rate');
+    const idEl = document.getElementById('service-detail-id');
+    const minEl = document.getElementById('service-detail-min');
+    const timeEl = document.getElementById('service-detail-time');
+    const refillBadge = document.getElementById('service-detail-refill-badge');
+    const submitBtn = document.getElementById('btn-submit-order');
+
+    if (activeService) {
+      const cleanId = String(activeService.rawId || activeService.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      if (nameEl) nameEl.textContent = activeService.name || '—';
+      if (rateEl) rateEl.textContent = `${store.formatMoney ? store.formatMoney(sellingPrice) : '₹' + sellingPrice}/1K`;
+      if (idEl) idEl.textContent = `#${activeService.id}`;
+      if (minEl) minEl.textContent = `${effectiveMin.toLocaleString()} - ${(activeService.max || 100000).toLocaleString()}`;
+      if (timeEl) timeEl.textContent = avgTime;
+      if (refillBadge) {
+        if (activeService.refill) {
+          refillBadge.className = 'badge badge-success';
+          refillBadge.textContent = '🛡️ Refill Guarantee Active (365D)';
+        } else {
+          refillBadge.className = 'badge badge-neutral';
+          refillBadge.textContent = 'No Refill Warranty';
+        }
+      }
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '';
+        submitBtn.style.cursor = '';
+        const span = submitBtn.querySelector('span');
+        if (span) span.textContent = store.data && store.data.isLoggedIn ? '⚡ Confirm & Place Order' : '🔑 Sign In to Place Order';
+      }
+    } else {
+      if (nameEl) nameEl.textContent = 'No services configured in this category yet.';
+      if (rateEl) rateEl.textContent = '—';
+      if (idEl) idEl.textContent = '—';
+      if (minEl) minEl.textContent = '—';
+      if (timeEl) timeEl.textContent = '—';
+      if (refillBadge) {
+        refillBadge.className = 'badge badge-neutral';
+        refillBadge.textContent = 'Awaiting Service Config';
+      }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.6';
+        submitBtn.style.cursor = 'not-allowed';
+        const span = submitBtn.querySelector('span');
+        if (span) span.textContent = '⏳ Category Awaiting Services';
+      }
+    }
+
+    this.bindEvents();
+    const serviceSelect = document.getElementById('new-order-service-select');
+    if (serviceSelect) {
+      serviceSelect.dispatchEvent(new Event('change'));
+    }
+  },
+
   handleSearch(val) {
     this.searchQuery = val;
+    const clrBtn = document.getElementById('order-search-clear-btn');
+    if (clrBtn) {
+      clrBtn.style.display = val ? 'flex' : 'none';
+    }
     clearTimeout(this._searchDebounce);
     this._searchDebounce = setTimeout(() => {
-      const screenContainer = document.getElementById('screen-container');
-      this.render(screenContainer);
-      const input = document.getElementById('service-search-input');
-      if (input) {
-        input.focus();
-        input.setSelectionRange(input.value.length, input.value.length);
-      }
-    }, 250);
+      this.updateNewOrderDropdowns();
+    }, 60);
+  },
+
+  clearSearch() {
+    this.searchQuery = '';
+    const input = document.getElementById('service-search-input');
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    const clrBtn = document.getElementById('order-search-clear-btn');
+    if (clrBtn) {
+      clrBtn.style.display = 'none';
+    }
+    this.updateNewOrderDropdowns();
   },
 
   bindEvents() {

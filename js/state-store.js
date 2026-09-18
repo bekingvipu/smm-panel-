@@ -1903,22 +1903,58 @@ class SmmStateStore {
 
       if (supaOrders && supaOrders.length > 0) {
         const activeServices = this.getActiveServices ? this.getActiveServices() : (window.JAP_SERVICES || []);
+        
+        // Build fast ledger lookup from authoritative Supabase wallet_transactions
+        const txMap = new Map();
+        if (Array.isArray(this.data.allTransactions)) {
+          this.data.allTransactions.forEach(t => {
+            const rawOrd = String(t.order_id || '').trim();
+            if (rawOrd) {
+              txMap.set(rawOrd, t);
+              const cleanOrd = rawOrd.replace(/\D/g, '');
+              if (cleanOrd) {
+                txMap.set(cleanOrd, t);
+                txMap.set(`LX${cleanOrd}`, t);
+                txMap.set(`#LX${cleanOrd}`, t);
+              }
+            }
+          });
+        }
+
         const mapped = supaOrders.map(so => {
           let cleanTargetUrl = String(so.target_url || '').trim();
           let snapshot = null;
 
-          if (cleanTargetUrl.includes('###LKX_META###')) {
+          if (cleanTargetUrl.includes('#meta=')) {
+            const parts = cleanTargetUrl.split('#meta=');
+            cleanTargetUrl = parts[0];
+            try {
+              snapshot = JSON.parse(decodeURIComponent(parts[1]));
+            } catch (e) {
+              try {
+                snapshot = JSON.parse(parts[1]);
+              } catch (e2) {}
+            }
+          } else if (cleanTargetUrl.includes('###LKX_META###')) {
             const parts = cleanTargetUrl.split('###LKX_META###');
             cleanTargetUrl = parts[0];
             try {
-              snapshot = JSON.parse(parts[1]);
-            } catch (e) {}
+              snapshot = JSON.parse(decodeURIComponent(parts[1]));
+            } catch (e) {
+              try {
+                snapshot = JSON.parse(parts[1]);
+              } catch (e2) {}
+            }
           } else if (cleanTargetUrl.includes('###')) {
             const parts = cleanTargetUrl.split('###');
             cleanTargetUrl = parts[0];
             try {
-              snapshot = JSON.parse(parts[1]);
-            } catch (e) {}
+              snapshot = JSON.parse(decodeURIComponent(parts[1]));
+            } catch (e) {
+              try {
+                snapshot = JSON.parse(parts[1]);
+              } catch (e2) {}
+            }
           }
 
           if (!snapshot && so.refill_status && String(so.refill_status).startsWith('SNAPSHOT:')) {
@@ -1980,6 +2016,31 @@ class SmmStateStore {
 
           const resolvedCustCode = matchedUser?.customer_code || snapshot?.customerCode || (matchedUser?.id ? `LX-${10000 + Number(matchedUser.id)}` : (userEmail ? this.getCustomerId(userEmail) : 'LX-Guest'));
 
+          // Authoritative Wallet Balance Ledger Lookup
+          const matchedTx = txMap.get(String(so.id)) || txMap.get(String(so.id).replace(/\D/g, ''));
+          let balBeforeVal = null;
+          let balAfterVal = null;
+
+          if (matchedTx && matchedTx.balance_before !== undefined && matchedTx.balance_before !== null) {
+            balBeforeVal = Number(matchedTx.balance_before);
+          } else if (snapshot?.walletBalanceBeforeOrder !== undefined && snapshot?.walletBalanceBeforeOrder !== null) {
+            balBeforeVal = Number(snapshot.walletBalanceBeforeOrder);
+          } else if (snapshot?.walletBalanceAtOrder !== undefined && snapshot?.walletBalanceAtOrder !== null) {
+            balBeforeVal = Number(snapshot.walletBalanceAtOrder);
+          }
+
+          if (matchedTx && matchedTx.balance_after !== undefined && matchedTx.balance_after !== null) {
+            balAfterVal = Number(matchedTx.balance_after);
+          } else if (snapshot?.walletBalanceAfter !== undefined && snapshot?.walletBalanceAfter !== null) {
+            balAfterVal = Number(snapshot.walletBalanceAfter);
+          } else if (balBeforeVal !== null) {
+            balAfterVal = Math.max(0, Number((balBeforeVal - Number(so.charge || 0)).toFixed(4)));
+          }
+
+          if (balBeforeVal === null && balAfterVal !== null) {
+            balBeforeVal = Number((balAfterVal + Number(so.charge || 0)).toFixed(4));
+          }
+
           return {
             id: String(so.id),
             likeXOrderId: String(so.id),
@@ -2005,9 +2066,10 @@ class SmmStateStore {
             customerUserId: matchedUser?.id || so.user_id || null,
             customerId: resolvedCustCode,
             customerCode: resolvedCustCode,
-            walletBalanceAtOrder: snapshot?.walletBalanceAtOrder ?? snapshot?.walletBalanceBeforeOrder ?? null,
-            walletBalanceBeforeOrder: snapshot?.walletBalanceBeforeOrder ?? null,
-            walletBalanceAfter: snapshot?.walletBalanceAfter ?? null,
+            walletBalanceAtOrder: balBeforeVal,
+            walletBalanceBeforeOrder: balBeforeVal,
+            walletBalanceAfter: balAfterVal,
+            walletTransaction: matchedTx || null,
             serviceSnapshot: snapshot,
             createdAt: orderCreatedAt,
             date: this.formatRealDate(orderCreatedAt)
@@ -2385,10 +2447,12 @@ class SmmStateStore {
 
 
   updateCustomerHeader() {
-    const el = document.querySelector('.header-balance-val');
-    if (el && this.data && this.data.customer) {
-      el.textContent = this.data.isLoggedIn ? this.formatMoney(this.data.customer.balance) : '₹0.00';
-    }
+    if (!this.data || !this.data.customer) return;
+    const balStr = this.data.isLoggedIn ? this.formatMoney(this.data.customer.balance) : '₹0.00';
+    
+    document.querySelectorAll('.header-balance-val, #mobile-header-wallet-balance, #customer-balance-badge, #topup-current-balance, #account-balance-val, #dash-customer-balance, .stat-card-balance').forEach(el => {
+      el.textContent = balStr;
+    });
   }
 
   saveUserData() {

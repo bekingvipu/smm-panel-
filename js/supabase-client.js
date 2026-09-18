@@ -116,13 +116,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!window.supabaseClient) return;
 
   try {
+    let initialUserHandled = false;
+
     // Check initial active session
     const { data: { session } } = await window.supabaseClient.auth.getSession();
     if (session && session.user && window.store) {
+      initialUserHandled = true;
       const u = session.user;
       const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
       const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
-      if (!window.store.data.isLoggedIn || (window.store.data.customer.email && window.store.data.customer.email.toLowerCase() !== u.email.toLowerCase())) {
+      const currentEmail = String(window.store.data.customer?.email || '').toLowerCase();
+      const sessionEmail = String(u.email || '').toLowerCase();
+
+      if (!window.store.data.isLoggedIn || currentEmail !== sessionEmail) {
         window.store.login(name, u.email, avatar, false); // silent login without duplicate toast
       }
       // Ensure user is registered in public.users table for Admin Console
@@ -130,7 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.supabaseClient
           .from('users')
           .upsert({
-            email: u.email.toLowerCase(),
+            email: sessionEmail,
             username: name,
             password_hash: 'auth_user_session',
             role: 'customer'
@@ -145,15 +151,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const u = session.user;
         const name = u.user_metadata?.full_name || u.user_metadata?.name || u.email.split('@')[0];
         const avatar = u.user_metadata?.avatar_url || u.user_metadata?.picture || null;
-        if (!window.store.data.isLoggedIn || (window.store.data.customer.email && window.store.data.customer.email.toLowerCase() !== u.email.toLowerCase())) {
-          window.store.login(name, u.email, avatar, event === 'SIGNED_IN');
+        const currentEmail = String(window.store.data.customer?.email || '').toLowerCase();
+        const sessionEmail = String(u.email || '').toLowerCase();
+
+        if (!window.store.data.isLoggedIn || currentEmail !== sessionEmail) {
+          window.store.login(name, u.email, avatar, event === 'SIGNED_IN' && !initialUserHandled);
         }
+        initialUserHandled = true;
         // Ensure user is registered in public.users table for Admin Console
         if (u.email) {
           window.supabaseClient
             .from('users')
             .upsert({
-              email: u.email.toLowerCase(),
+              email: sessionEmail,
               username: name,
               password_hash: 'auth_user_session',
               role: 'customer'

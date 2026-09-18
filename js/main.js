@@ -75,13 +75,26 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
         }
+        // If already on admin services view and state notification occurs, update in-place
+        if (!immediate && adminShell && _lastPersona === 'admin' && store.adminTab === 'services' && _lastAdminTab === 'services') {
+          if (window.AdminApp && typeof window.AdminApp.updateAdminServicesTableView === 'function') {
+            window.AdminApp.updateAdminServicesTableView();
+            return;
+          }
+        }
         _lastPersona = 'admin';
         _lastAdminTab = store.adminTab;
         AdminApp.render(screenContainer);
       } else {
+        document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
+        const customerShell = document.querySelector('.customer-shell') || document.querySelector('.app-shell') || document.querySelector('.bottom-nav');
+        // If background state notification occurs while already on customer view, update wallet badges in-place without blinking
+        if (!immediate && customerShell && _lastPersona === 'customer') {
+          store.updateCustomerHeader();
+          return;
+        }
         _lastPersona = 'customer';
         _lastAdminTab = null;
-        document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
         CustomerApp.render(screenContainer);
       }
     };
