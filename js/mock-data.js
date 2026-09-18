@@ -193,7 +193,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: '👑👑Instagram Followers [ Premium Top Quality & 100% Non-Drop] 365days RG - 80k/d Speed',
-      pricePer1k: 3.01,
+      pricePer1k: 3.06996,
       min: 100,
       max: 100000,
       deliverySpeed: '⚡ 80K/Day Speed',
@@ -202,7 +202,7 @@ window.SMM_MOCK = {
       refillPeriod: '365 Days',
       description: 'Top tier Instagram followers with 365 days Refill Guarantee via SocialFans (4137).',
       provider: 'socialfans',
-      wholesaleCost: 2.0067,
+      wholesaleCost: 2.04664,
       markupPercent: 50
     },
     {
@@ -229,7 +229,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: 'Instagram Followers [ Max 50k ] | HQ | Low Drop | Instant Start | 365 Days ♻️ | 100K/day 🔥 Suggested',
-      pricePer1k: 2.74,
+      pricePer1k: 2.7714,
       min: 100,
       max: 100000,
       deliverySpeed: '⚡ 100K/Day',
@@ -238,7 +238,7 @@ window.SMM_MOCK = {
       refillPeriod: '365 Days',
       description: 'High quality low drop Instagram followers with 365 days refill via WorldOfSMM (7551).',
       provider: 'worldofsmm',
-      wholesaleCost: 1.827,
+      wholesaleCost: 1.8476,
       markupPercent: 50
     },
     {
@@ -247,7 +247,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: '👑Instagram Followers [ High Quality & 100% Non-Drop] 365days RG - 80k/d Speed',
-      pricePer1k: 3.56,
+      pricePer1k: 3.634783,
       min: 100,
       max: 100000,
       deliverySpeed: '⚡ 80K/Day Speed',
@@ -256,7 +256,7 @@ window.SMM_MOCK = {
       refillPeriod: '365 Days',
       description: 'High quality non-drop Instagram followers with 365 days refill via SocialFans (7365).',
       provider: 'socialfans',
-      wholesaleCost: 2.375877,
+      wholesaleCost: 2.423189,
       markupPercent: 50
     },
     {
@@ -265,7 +265,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
       customerName: '👑👑Instagram 🇮🇳Mixed Indian Followers [ Non-Drop] [ 365 Days RG ] 80k/day',
-      pricePer1k: 3.27,
+      pricePer1k: 4.629505,
       min: 100,
       max: 100000,
       deliverySpeed: '⚡ 80K/Day Speed',
@@ -274,7 +274,7 @@ window.SMM_MOCK = {
       refillPeriod: '365 Days',
       description: 'Mixed Indian non-drop followers with 365 days refill guarantee via SocialFans (7419).',
       provider: 'socialfans',
-      wholesaleCost: 2.179279,
+      wholesaleCost: 3.086337,
       markupPercent: 50
     },
 
@@ -287,7 +287,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Low-Drop Followers — No Refill',
       customerName: '🔔 ⭐ Instagram HQ Followers R365 | 100k/Day [Best Seller Since 2021] Low Drop',
-      pricePer1k: 2.835,
+      pricePer1k: 2.8842,
       min: 100,
       max: 100000,
       deliverySpeed: '⚡ 100K/Day',
@@ -296,7 +296,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Flagship best seller Instagram followers via WorldOfSMM (2868).',
       provider: 'worldofsmm',
-      wholesaleCost: 1.89,
+      wholesaleCost: 1.9228,
       markupPercent: 50
     },
 
@@ -309,7 +309,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
       customerName: '🇮🇳Instagram Indian Followers 365 Days Refill 100k/day [Over Delivery]',
-      pricePer1k: 2.835,
+      pricePer1k: 4.005,
       min: 100,
       max: 100000,
       deliverySpeed: '⚡ 100K/Day',
@@ -318,7 +318,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Indian followers with high speed delivery via WorldOfSMM (1838).',
       provider: 'worldofsmm',
-      wholesaleCost: 1.89,
+      wholesaleCost: 2.67,
       markupPercent: 50
     },
     {
@@ -327,7 +327,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
       customerName: '👑🇮🇳Instagram Followers [Premium Indian] [R365] [10k-20k/day]',
-      pricePer1k: 5.10,
+      pricePer1k: 5.1,
       min: 50,
       max: 50000,
       deliverySpeed: '⚡ 10K-20K/Day',
@@ -336,7 +336,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Premium active Indian followers via WorldOfSMM (6947).',
       provider: 'worldofsmm',
-      wholesaleCost: 3.40,
+      wholesaleCost: 3.4,
       markupPercent: 50
     },
     {
@@ -367,7 +367,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
       customerName: '🇮🇳Instagram Indian Followers [HQ Accounts][10k/day]🚀',
-      pricePer1k: 1.12,
+      pricePer1k: 1.1181,
       min: 100,
       max: 300000,
       deliverySpeed: '⚡ 10K/Day',
@@ -385,7 +385,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
       customerName: '🇮🇳Instagram Indian HQ Mix Followers [All Flag][10k/day] Story Acc + Post [NR]20k/day🚀',
-      pricePer1k: 2.07,
+      pricePer1k: 1.5354,
       min: 10,
       max: 50000,
       deliverySpeed: '⚡ 20K/Day',
@@ -394,7 +394,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Indian HQ mix followers with story accounts via WorldOfSMM (7259).',
       provider: 'worldofsmm',
-      wholesaleCost: 1.38,
+      wholesaleCost: 1.0236,
       markupPercent: 50
     },
 
@@ -407,7 +407,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Views — Non-Drop',
       customerName: '👑👑🎯👁️Instagram Cheap Reel Views [Working Server] 2M/day',
-      pricePer1k: 0.00787,
+      pricePer1k: 0.007898,
       min: 100,
       max: 2147483647,
       deliverySpeed: '⚡ 2M/Day',
@@ -416,7 +416,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Cheap and fast Instagram Reel Views server via SocialFans (5011).',
       provider: 'socialfans',
-      wholesaleCost: 0.00525,
+      wholesaleCost: 0.005265,
       markupPercent: 50
     },
     {
@@ -425,7 +425,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Views — Non-Drop',
       customerName: '👁️Instagram Video Views [ Good Speed ] [Instant Start] - 5M/Day',
-      pricePer1k: 0.00325,
+      pricePer1k: 0.003258,
       min: 100,
       max: 2147483647,
       deliverySpeed: '⚡ 5M/Day',
@@ -434,7 +434,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'High throughput Instagram video views via SocialFans (7294).',
       provider: 'socialfans',
-      wholesaleCost: 0.00217,
+      wholesaleCost: 0.002172,
       markupPercent: 50
     },
     {
@@ -465,7 +465,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Likes — Non-Drop',
       customerName: '👑❣️Instagram Likes [High Quality & Non-drop ] - 50k/day',
-      pricePer1k: 0.111,
+      pricePer1k: 0.111153,
       min: 10,
       max: 10000000,
       deliverySpeed: '⚡ 50K/Day',
@@ -474,7 +474,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'High quality non-drop Instagram likes via SocialFans (4997).',
       provider: 'socialfans',
-      wholesaleCost: 0.0739,
+      wholesaleCost: 0.074102,
       markupPercent: 50
     },
 
@@ -487,7 +487,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
       customerName: 'Instagram Custom Comments [Non Drop] 10k/day [Cheapest] Q1',
-      pricePer1k: 0.468,
+      pricePer1k: 0.72,
       min: 10,
       max: 10000,
       deliverySpeed: '⚡ 10K/Day',
@@ -496,7 +496,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Custom comments with user-defined comment text via WorldOfSMM (6087).',
       provider: 'worldofsmm',
-      wholesaleCost: 0.312,
+      wholesaleCost: 0.48,
       markupPercent: 50
     },
     {
@@ -505,7 +505,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
       customerName: 'Instagram Random Comments [Non Drop] 10k/day [Eng]',
-      pricePer1k: 0.641,
+      pricePer1k: 0.64125,
       min: 10,
       max: 100000,
       deliverySpeed: '⚡ 10K/Day',
@@ -523,7 +523,7 @@ window.SMM_MOCK = {
       platform: 'instagram',
       subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
       customerName: '🇮🇳Instagram Indian Mix Random Comments [10k/day] Non Drop',
-      pricePer1k: 0.855,
+      pricePer1k: 0.8712,
       min: 1,
       max: 100000,
       deliverySpeed: '⚡ 10K/Day',
@@ -532,7 +532,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Indian mix non-drop random comments via WorldOfSMM (6433).',
       provider: 'worldofsmm',
-      wholesaleCost: 0.57,
+      wholesaleCost: 0.5808,
       markupPercent: 50
     },
 
@@ -545,7 +545,7 @@ window.SMM_MOCK = {
       platform: 'facebook',
       subcategory: '💎Facebook Profile / Page followers',
       customerName: 'Facebook Page Followers [Real Worldwide Profiles] (₹79 me 1000)',
-      pricePer1k: 0.83, // ₹79.18
+      pricePer1k: 0.405079, // ₹79.18
       min: 100,
       max: 100000,
       deliverySpeed: '5K - 10K / Day',
@@ -554,7 +554,7 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'Authentic Facebook page followers and likes connected via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.5534,
+      wholesaleCost: 0.270053,
       markupPercent: 50
     },
     {
@@ -563,7 +563,7 @@ window.SMM_MOCK = {
       platform: 'facebook',
       subcategory: '💎Facebook Post Likes [s1]',
       customerName: 'Facebook Post Likes [Instant Worldwide] (₹35 me 1000)',
-      pricePer1k: 0.42, // ₹35.00
+      pricePer1k: 0.377049, // ₹35.00
       min: 50,
       max: 50000,
       deliverySpeed: '20K / Day',
@@ -572,7 +572,7 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'High quality post likes for Facebook status, images, and posts via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.24,
+      wholesaleCost: 0.251366,
       markupPercent: 50
     },
 
@@ -585,7 +585,7 @@ window.SMM_MOCK = {
       platform: 'youtube',
       subcategory: '📸YouTube Views [ Working After Update ]',
       customerName: 'YouTube Views [High Retention 4K Monetizable] (₹95 me 1000)',
-      pricePer1k: 1.14, // ₹95.00
+      pricePer1k: 1.878499, // ₹95.00
       min: 100,
       max: 500000,
       deliverySpeed: '5K - 10K / Day',
@@ -594,7 +594,7 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'Monetization-safe views from worldwide recommendations via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.66,
+      wholesaleCost: 1.252333,
       markupPercent: 50
     },
     {
@@ -603,7 +603,7 @@ window.SMM_MOCK = {
       platform: 'youtube',
       subcategory: '▶️Youtube Best Services👑',
       customerName: 'YouTube Subscribers [Non-Drop Real Accounts] (₹290 me 1000)',
-      pricePer1k: 3.50,
+      pricePer1k: 29.610234,
       min: 50,
       max: 10000,
       deliverySpeed: '100 - 300 / Day',
@@ -612,7 +612,7 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'Safe organic-style subscribers for YouTube monetization via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 2.20,
+      wholesaleCost: 19.740156,
       markupPercent: 50
     },
 
@@ -625,7 +625,7 @@ window.SMM_MOCK = {
       platform: 'tiktok',
       subcategory: '🎵Tiktok Best Services👑',
       customerName: 'TikTok Views [Fast Non-Drop Algorithm Boost] (₹3 me 1000)',
-      pricePer1k: 0.036,
+      pricePer1k: 0.02739,
       min: 100,
       max: 500000,
       deliverySpeed: '500K / Day',
@@ -634,7 +634,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Top tier views for TikTok creator profiles via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.0182,
+      wholesaleCost: 0.01826,
       markupPercent: 50
     },
     {
@@ -643,7 +643,7 @@ window.SMM_MOCK = {
       platform: 'tiktok',
       subcategory: '🎵Tiktok Likes',
       customerName: 'TikTok Likes [Instant ForYou Algorithm Boost] (₹45 me 1000)',
-      pricePer1k: 0.54,
+      pricePer1k: 0.66243,
       min: 100,
       max: 100000,
       deliverySpeed: '50K / Day',
@@ -652,7 +652,7 @@ window.SMM_MOCK = {
       refillPeriod: '15 Days',
       description: 'Fast algorithm likes to push videos onto the TikTok FYP via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.32,
+      wholesaleCost: 0.44162,
       markupPercent: 50
     },
 
@@ -665,7 +665,7 @@ window.SMM_MOCK = {
       platform: 'telegram',
       subcategory: '🎯Telegram Best Services👑',
       customerName: 'Telegram Channel Members [Real Non-Drop] (₹85 me 1000)',
-      pricePer1k: 1.02,
+      pricePer1k: 0.841612,
       min: 100,
       max: 100000,
       deliverySpeed: '20K / Day',
@@ -674,7 +674,7 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'High retention channel members for Telegram channels via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.5597,
+      wholesaleCost: 0.561075,
       markupPercent: 50
     },
     {
@@ -683,7 +683,7 @@ window.SMM_MOCK = {
       platform: 'telegram',
       subcategory: '🎯Telegram Views',
       customerName: 'Telegram Post Views [Instant Delivery] (₹10 me 1000)',
-      pricePer1k: 0.12,
+      pricePer1k: 0.122362,
       min: 100,
       max: 500000,
       deliverySpeed: 'Instant',
@@ -692,7 +692,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'Instant views on Telegram channel posts via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 0.024,
+      wholesaleCost: 0.081575,
       markupPercent: 50
     },
 
@@ -705,7 +705,7 @@ window.SMM_MOCK = {
       platform: 'twitter',
       subcategory: '🎊Twitter Best Services👑',
       customerName: 'Twitter / X Real Followers [Global HQ Accounts] (₹626 me 1000)',
-      pricePer1k: 7.50,
+      pricePer1k: 6.582777,
       min: 50,
       max: 20000,
       deliverySpeed: '5K / Day',
@@ -714,7 +714,7 @@ window.SMM_MOCK = {
       refillPeriod: '30 Days',
       description: 'Real profiles with bio, profile pictures, and active tweets via SocialFans API.',
       provider: 'socialfans',
-      wholesaleCost: 4.3776,
+      wholesaleCost: 4.388518,
       markupPercent: 50
     }
   ],

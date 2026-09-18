@@ -809,21 +809,25 @@ class SmmStateStore {
       }
       const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
-        // Authoritative cost is baseline canonical s.cost, unless cloud override is configured
+        // Authoritative cost priority: overrides -> liveRatesCache -> baseline canonical s.cost
         let effectiveCost = Number(s.cost || 0.1);
+        const liveInfo = this.getLiveRateInfo(sId, rId, s.provider);
+        if (liveInfo && liveInfo.rate !== undefined && !isNaN(Number(liveInfo.rate)) && Number(liveInfo.rate) > 0) {
+          effectiveCost = Number(liveInfo.rate);
+        }
         const ov = overrides[sId] || overrides[rId] || overrides[`wos-${rId}`] || overrides[`sf-${rId}`];
-        if (ov && ov.cost !== undefined && !isNaN(Number(ov.cost))) {
+        if (ov && ov.cost !== undefined && !isNaN(Number(ov.cost)) && Number(ov.cost) > 0) {
           effectiveCost = Number(ov.cost);
         }
 
         activeMap.set(sId, {
           ...s,
           cost: effectiveCost,
-          min: (ov && ov.min !== undefined) ? ov.min : s.min,
-          max: (ov && ov.max !== undefined) ? ov.max : s.max,
-          refill: (ov && ov.refill !== undefined) ? ov.refill : s.refill,
-          cancel: (ov && ov.cancel !== undefined) ? ov.cancel : s.cancel,
-          isLiveSynced: Boolean(ov)
+          min: (ov && ov.min !== undefined) ? ov.min : ((liveInfo && liveInfo.min) ? liveInfo.min : s.min),
+          max: (ov && ov.max !== undefined) ? ov.max : ((liveInfo && liveInfo.max) ? liveInfo.max : s.max),
+          refill: (ov && ov.refill !== undefined) ? ov.refill : ((liveInfo && liveInfo.refill !== undefined) ? liveInfo.refill : s.refill),
+          cancel: (ov && ov.cancel !== undefined) ? ov.cancel : ((liveInfo && liveInfo.cancel !== undefined) ? liveInfo.cancel : s.cancel),
+          isLiveSynced: Boolean(ov || liveInfo)
         });
       }
     }
@@ -842,19 +846,23 @@ class SmmStateStore {
       const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
       if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
         let effectiveCost = Number(s.cost || 0.1);
+        const liveInfo = this.getLiveRateInfo(sId, rId, s.provider);
+        if (liveInfo && liveInfo.rate !== undefined && !isNaN(Number(liveInfo.rate)) && Number(liveInfo.rate) > 0) {
+          effectiveCost = Number(liveInfo.rate);
+        }
         const ov = overrides[sId] || overrides[rId] || overrides[`wos-${rId}`] || overrides[`sf-${rId}`];
-        if (ov && ov.cost !== undefined && !isNaN(Number(ov.cost))) {
+        if (ov && ov.cost !== undefined && !isNaN(Number(ov.cost)) && Number(ov.cost) > 0) {
           effectiveCost = Number(ov.cost);
         }
 
         activeMap.set(sId, {
           ...s,
           cost: effectiveCost,
-          min: (ov && ov.min !== undefined) ? ov.min : s.min,
-          max: (ov && ov.max !== undefined) ? ov.max : s.max,
-          refill: (ov && ov.refill !== undefined) ? ov.refill : s.refill,
-          cancel: (ov && ov.cancel !== undefined) ? ov.cancel : s.cancel,
-          isLiveSynced: Boolean(ov)
+          min: (ov && ov.min !== undefined) ? ov.min : ((liveInfo && liveInfo.min) ? liveInfo.min : s.min),
+          max: (ov && ov.max !== undefined) ? ov.max : ((liveInfo && liveInfo.max) ? liveInfo.max : s.max),
+          refill: (ov && ov.refill !== undefined) ? ov.refill : ((liveInfo && liveInfo.refill !== undefined) ? liveInfo.refill : s.refill),
+          cancel: (ov && ov.cancel !== undefined) ? ov.cancel : ((liveInfo && liveInfo.cancel !== undefined) ? liveInfo.cancel : s.cancel),
+          isLiveSynced: Boolean(ov || liveInfo)
         });
       }
     }
@@ -881,13 +889,17 @@ class SmmStateStore {
   addServicesToCatalog(servicesList) {
     if (!Array.isArray(servicesList) || servicesList.length === 0) return 0;
     let count = 0;
+    const inrRate = this.data.exchangeRate || 95.385;
     servicesList.forEach(rawSvc => {
-      const prov = rawSvc.provider || 'worldofsmm';
-      const sId = String(rawSvc.id || (prov === 'worldofsmm' ? `wos-${rawSvc.service || rawSvc.rawId}` : rawSvc.service));
-      const rId = String(rawSvc.rawId || rawSvc.service || sId.replace('wos-', ''));
+      const prov = rawSvc.provider || (String(rawSvc.id || rawSvc.service || '').startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+      const sId = String(rawSvc.id || (prov === 'worldofsmm' ? `wos-${rawSvc.service || rawSvc.rawId}` : `sf-${rawSvc.service || rawSvc.rawId}`));
+      const rId = String(rawSvc.rawId || rawSvc.service || sId.replace('wos-', '').replace('sf-', ''));
 
       this.catalogCustomizations.disabledServiceIds.delete(sId);
       this.catalogCustomizations.disabledServiceIds.delete(rId);
+
+      const rawRateVal = parseFloat(rawSvc.rate || rawSvc.cost || 0.1);
+      const costUsd = prov === 'socialfans' ? (rawRateVal / inrRate) : rawRateVal;
 
       const formattedSvc = {
         id: sId,
@@ -895,7 +907,7 @@ class SmmStateStore {
         name: rawSvc.name,
         category: rawSvc.category || 'General Services',
         platform: rawSvc.platform || this._detectPlatform(rawSvc.name, rawSvc.category),
-        cost: parseFloat(rawSvc.rate || rawSvc.cost || 0.1),
+        cost: costUsd,
         min: parseInt(rawSvc.min || 10, 10),
         max: parseInt(rawSvc.max || 1000000, 10),
         refill: !!rawSvc.refill,
@@ -925,8 +937,11 @@ class SmmStateStore {
       this.catalogCustomizations.disabledServiceIds.add(strId);
       if (strId.startsWith('wos-')) {
         this.catalogCustomizations.disabledServiceIds.add(strId.replace('wos-', ''));
+      } else if (strId.startsWith('sf-')) {
+        this.catalogCustomizations.disabledServiceIds.add(strId.replace('sf-', ''));
       } else {
         this.catalogCustomizations.disabledServiceIds.add(`wos-${strId}`);
+        this.catalogCustomizations.disabledServiceIds.add(`sf-${strId}`);
       }
       this.catalogCustomizations.addedServices = this.catalogCustomizations.addedServices.filter(
         s => String(s.id) !== strId && String(s.rawId) !== strId
@@ -946,11 +961,19 @@ class SmmStateStore {
     this.showToast('Profile avatar updated successfully! 🌟', 'success');
   }
 
-  // Dynamic profit calculation (supports per-service cloud overrides & global margin with minimum 25% safeguard)
+  // Dynamic profit calculation (supports per-service cloud overrides & global margin with strict NO-LOSS safeguard)
   getSellingPrice(wholesaleCostUsd, serviceId = null, rawId = null) {
     const sId = serviceId ? String(serviceId).trim() : null;
     const rId = rawId ? String(rawId).trim() : (sId ? sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '') : null);
     const overrides = this.data.serviceOverrides || {};
+    const inrRate = this.data.exchangeRate || 95.385;
+
+    // 1. Authoritative base cost resolution (overrides -> liveRatesCache -> passed wholesaleCostUsd)
+    let baseCost = Number(wholesaleCostUsd) || 0.10;
+    const liveInfo = this.getLiveRateInfo(sId, rId);
+    if (liveInfo && liveInfo.rate !== undefined && !isNaN(Number(liveInfo.rate)) && Number(liveInfo.rate) > 0) {
+      baseCost = Number(liveInfo.rate);
+    }
 
     // Check if there is an authoritative cloud override configured by Admin
     const override = (sId && overrides[sId]) || 
@@ -959,32 +982,34 @@ class SmmStateStore {
                      (sId && overrides[`sf-${sId}`]) ||
                      (rId && overrides[`wos-${rId}`]) ||
                      (rId && overrides[`sf-${rId}`]);
-    const inrRate = this.data.exchangeRate || 95.385;
 
     if (override) {
+      if (override.cost !== undefined && override.cost !== null && !isNaN(Number(override.cost)) && Number(override.cost) > 0) {
+        baseCost = Number(override.cost);
+      }
       // 1. Explicit selling price in INR (e.g. ₹0.25/1K)
       const explicitInr = override.customSellingPriceInr !== undefined && override.customSellingPriceInr !== null
         ? override.customSellingPriceInr
         : override.sellingPriceInr;
       if (explicitInr !== undefined && explicitInr !== null && !isNaN(Number(explicitInr))) {
-        return Number(explicitInr) / inrRate; // USD equivalent so formatMoney outputs exact INR
+        const explicitUsd = Number(explicitInr) / inrRate;
+        // Hard No-Loss Safeguard: Explicit price cannot be less than provider cost
+        return Math.max(baseCost, explicitUsd);
       }
       // 2. Custom profit markup for this service
       const customMarkup = override.customMarkupPercent !== undefined && override.customMarkupPercent !== null
         ? override.customMarkupPercent
         : override.markup;
       if (customMarkup !== undefined && customMarkup !== null && !isNaN(Number(customMarkup))) {
-        const customCost = (override.cost !== undefined && !isNaN(Number(override.cost))) ? Number(override.cost) : Number(wholesaleCostUsd || 0.10);
-        return customCost * (1 + Number(customMarkup) / 100);
-      }
-      // 3. Custom wholesale cost override
-      if (override.cost !== undefined && override.cost !== null && !isNaN(Number(override.cost))) {
-        wholesaleCostUsd = Number(override.cost);
+        const customPrice = baseCost * (1 + Number(customMarkup) / 100);
+        return Math.max(baseCost, customPrice);
       }
     }
 
     const markup = Math.max(25, Number(this.data.adminStats.globalMarkupPercent) || 50);
-    return (Number(wholesaleCostUsd) || 0.10) * (1 + markup / 100);
+    const standardPrice = baseCost * (1 + markup / 100);
+    // Hard No-Loss Safeguard: Selling price must NEVER be less than provider wholesale cost
+    return Math.max(baseCost, standardPrice);
   }
 
   // Generate unique LikeX Order ID (e.g. LX58392)
