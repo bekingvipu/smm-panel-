@@ -430,6 +430,17 @@ const CustomerApp = {
                 <span class="badge badge-success" style="font-size: 10px;">HOT</span>
               </li>
 
+              <li class="drawer-menu-item" style="background: linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(5, 150, 105, 0.12)); border: 1px solid rgba(16, 185, 129, 0.25); cursor: pointer;" onclick="CustomerApp.closeSideDrawer(); window.store.setCustomerTab('earn');">
+                <div class="drawer-item-left">
+                  <span class="drawer-item-icon">🎁</span>
+                  <div>
+                    <div style="color: #10B981; font-weight: 800;">Refer & Earn (Invite Friends)</div>
+                    <div style="font-size: 11.5px; color: var(--text-secondary);">Get ₹5 + ₹5 bonus on first ₹100 topup</div>
+                  </div>
+                </div>
+                <span class="badge badge-success" style="font-size: 10px;">₹5 FREE</span>
+              </li>
+
               <li class="drawer-menu-item" onclick="CustomerApp.closeSideDrawer(); CustomerApp.openApiDocsModal();">
                 <div class="drawer-item-left">
                   <span class="drawer-item-icon">🔌</span>
@@ -2426,6 +2437,7 @@ const CustomerApp = {
       const display = document.getElementById('display-deposit-amount');
       if (display) display.textContent = Number(val).toLocaleString('en-IN');
       this.updatePresetPills(val);
+      this.updateDepositBonusIndicator(val);
     }
   },
 
@@ -2434,6 +2446,32 @@ const CustomerApp = {
     const display = document.getElementById('display-deposit-amount');
     if (display) display.textContent = val > 0 ? val.toLocaleString('en-IN') : '0';
     this.updatePresetPills(val);
+    this.updateDepositBonusIndicator(val);
+  },
+
+  updateDepositBonusIndicator(val) {
+    const num = Number(val || 0);
+    const indicator = document.getElementById('deposit-bonus-live-indicator');
+    if (indicator) {
+      if (num >= 500) {
+        const bonus = Math.round(num * 0.05);
+        const total = num + bonus;
+        indicator.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.12))';
+        indicator.style.borderColor = '#10B981';
+        indicator.style.color = '#047857';
+        indicator.innerHTML = `🔥 <strong>5% EXTRA FREE BONUS ACTIVE!</strong><br/>You Pay: <strong>₹${num.toLocaleString('en-IN')}</strong> + Get <span style="color: #059669; font-weight: 900;">₹${bonus.toLocaleString('en-IN')} EXTRA FREE</span> = <strong>₹${total.toLocaleString('en-IN')} Total Wallet Credit!</strong>`;
+      } else if (num === 100) {
+        indicator.style.background = 'rgba(79, 70, 229, 0.12)';
+        indicator.style.borderColor = '#4F46E5';
+        indicator.style.color = '#4338CA';
+        indicator.innerHTML = `🎁 <strong>First Top-Up Special:</strong> Top-up exactly ₹100 to qualify for <strong>₹5 + ₹5 Referral Bonus</strong>!`;
+      } else {
+        indicator.style.background = 'rgba(245, 158, 11, 0.12)';
+        indicator.style.borderColor = '#F59E0B';
+        indicator.style.color = '#B45309';
+        indicator.innerHTML = `💡 <strong>Bonus Tip:</strong> Deposit ₹500 or more to get 5% Extra Free Bonus (e.g. ₹500 + ₹25 Free = ₹525 Total Credit!)`;
+      }
+    }
   },
 
   updatePresetPills(val) {
@@ -3687,18 +3725,24 @@ const CustomerApp = {
               <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Swipe for more →</span>
             </div>
 
-            <!-- Horizontal Scrollable Preset Slider -->
+            <!-- Horizontal Scrollable Preset Slider (with Extra Free Bonus Badges) -->
             <div class="deposit-presets-slider" style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; margin-bottom: 12px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+              <button type="button" class="btn btn-sm preset-pill" data-val="100" onclick="CustomerApp.setDepositAmount(100)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹100</button>
               <button type="button" class="btn btn-sm preset-pill active" data-val="250" onclick="CustomerApp.setDepositAmount(250)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--primary); color: #ffffff; border: 1px solid var(--primary);">₹250</button>
-              <button type="button" class="btn btn-sm preset-pill" data-val="500" onclick="CustomerApp.setDepositAmount(500)" style="flex-shrink: 0; min-width: 68px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹500</button>
-              <button type="button" class="btn btn-sm preset-pill" data-val="1000" onclick="CustomerApp.setDepositAmount(1000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹1,000</button>
-              <button type="button" class="btn btn-sm preset-pill" data-val="2500" onclick="CustomerApp.setDepositAmount(2500)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹2,500</button>
-              <button type="button" class="btn btn-sm preset-pill" data-val="5000" onclick="CustomerApp.setDepositAmount(5000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹5,000</button>
-              <button type="button" class="btn btn-sm preset-pill" data-val="10000" onclick="CustomerApp.setDepositAmount(10000)" style="flex-shrink: 0; min-width: 76px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);">₹10,000</button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="500" onclick="CustomerApp.setDepositAmount(500)" style="flex-shrink: 0; min-width: 100px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);" title="Get ₹25 Extra Free Balance">₹500 <span style="font-size: 10.5px; color: #10B981; font-weight: 800;">(+₹25 Free)</span></button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="1000" onclick="CustomerApp.setDepositAmount(1000)" style="flex-shrink: 0; min-width: 110px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);" title="Get ₹50 Extra Free Balance">₹1,000 <span style="font-size: 10.5px; color: #10B981; font-weight: 800;">(+₹50 Free)</span></button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="2500" onclick="CustomerApp.setDepositAmount(2500)" style="flex-shrink: 0; min-width: 115px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);" title="Get ₹125 Extra Free Balance">₹2,500 <span style="font-size: 10.5px; color: #10B981; font-weight: 800;">(+₹125 Free)</span></button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="5000" onclick="CustomerApp.setDepositAmount(5000)" style="flex-shrink: 0; min-width: 115px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);" title="Get ₹250 Extra Free Balance">₹5,000 <span style="font-size: 10.5px; color: #10B981; font-weight: 800;">(+₹250 Free)</span></button>
+              <button type="button" class="btn btn-sm preset-pill" data-val="10000" onclick="CustomerApp.setDepositAmount(10000)" style="flex-shrink: 0; min-width: 125px; border-radius: 10px; font-weight: 700; padding: 8px 12px; background: var(--bg-subtle); color: var(--text-main); border: 1px solid var(--border-color);" title="Get ₹500 Extra Free Balance">₹10,000 <span style="font-size: 10.5px; color: #10B981; font-weight: 800;">(+₹500 Free)</span></button>
             </div>
 
-            <div class="form-group" style="margin-bottom: 16px;">
-              <input type="number" class="form-input" id="add-funds-amount-input" value="250" min="1" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (e.g. 250)" oninput="CustomerApp.onDepositAmountInput(event)" />
+            <div class="form-group" style="margin-bottom: 8px;">
+              <input type="number" class="form-input" id="add-funds-amount-input" value="250" min="1" max="100000" style="font-size: 18px; font-weight: 800; min-height: 50px; border-radius: 12px; font-family: var(--font-mono);" placeholder="Enter amount in ₹ (e.g. 500)" oninput="CustomerApp.onDepositAmountInput(event)" />
+            </div>
+
+            <!-- Live Dynamic 5% Bonus & Total Credit Indicator Box -->
+            <div id="deposit-bonus-live-indicator" style="margin-bottom: 16px; background: rgba(245, 158, 11, 0.12); border: 1px dashed #F59E0B; border-radius: 12px; padding: 10px 14px; font-size: 13px; font-weight: 700; color: #B45309; text-align: left; line-height: 1.5;">
+              💡 <strong>Bonus Tip:</strong> Deposit ₹500 or more to get 5% Extra Free Bonus (e.g. ₹500 + ₹25 Free = ₹525 Total Credit!)
             </div>
 
             <!-- Instant Dynamic QR Action Button (High Converting) -->
