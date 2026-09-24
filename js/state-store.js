@@ -3782,6 +3782,53 @@ class SmmStateStore {
       });
     }
 
+    // 5% Deposit Bonus for top-ups of ₹500 or more
+    const inrAmt = Math.round(Number(amountInInr || 0));
+    if (inrAmt >= 500) {
+      const bonusInr = inrAmt * 0.05;
+      const bonusUsd = Number((bonusInr / 95.385).toFixed(4));
+      const bonusTxnId = `BONUS-DEP-${orderId}`;
+      const hasBonus = this.data.transactions.some(t => t && String(t.id) === bonusTxnId);
+      if (!hasBonus) {
+        finalBal = Number((finalBal + bonusUsd).toFixed(4));
+        this.data.customer.balance = finalBal;
+        this.data.transactions.unshift({
+          id: bonusTxnId,
+          type: 'Deposit Bonus',
+          description: `5% Deposit Bonus on ₹${inrAmt} Top-up [Order: ${orderId}]`,
+          amount: bonusUsd,
+          balanceAfter: finalBal,
+          status: 'Success',
+          createdAt: now + 1,
+          date: formattedDate
+        });
+      }
+    }
+
+    // Referral Bonus: ₹5 on first successful top-up of EXACTLY ₹100
+    if (inrAmt === 100) {
+      const depCount = this.data.transactions.filter(t => t && t.type === 'Deposit' && t.status === 'Success').length;
+      if (depCount <= 1) {
+        const storedRef = localStorage.getItem('likex_referrer');
+        const hasRefBonus = this.data.transactions.some(t => t && (t.type === 'Referral Bonus' || String(t.id).startsWith('REF-BONUS')));
+        if (storedRef && !hasRefBonus) {
+          const refBonusUsd = Number((5 / 95.385).toFixed(4));
+          finalBal = Number((finalBal + refBonusUsd).toFixed(4));
+          this.data.customer.balance = finalBal;
+          this.data.transactions.unshift({
+            id: `REF-BONUS-CUST-${orderId}`,
+            type: 'Referral Bonus',
+            description: `Welcome Referral Bonus: ₹5 reward for first ₹100 top-up`,
+            amount: refBonusUsd,
+            balanceAfter: finalBal,
+            status: 'Success',
+            createdAt: now + 2,
+            date: formattedDate
+          });
+        }
+      }
+    }
+
     this.saveUserData();
     this.notify();
     this.updateCustomerHeader();

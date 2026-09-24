@@ -277,6 +277,24 @@ window.SMM_MOCK = {
       wholesaleCost: 3.086337,
       markupPercent: 50
     },
+    {
+      id: 'wos-7484',
+      rawId: '7484',
+      platform: 'instagram',
+      subcategory: 'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      customerName: 'Instagram Followers [R365][Cancel Enable] [Old Real Accounts] HQ Service [Premium Quality]',
+      pricePer1k: 3.825,
+      min: 50,
+      max: 100000,
+      deliverySpeed: '⚡ 100K/Day',
+      startTime: '0 - 15 Mins',
+      refillSupported: true,
+      refillPeriod: '365 Days',
+      description: 'High quality old real accounts Instagram followers with 365 days refill guarantee via WorldOfSMM (7484).',
+      provider: 'worldofsmm',
+      wholesaleCost: 2.55,
+      markupPercent: 50
+    },
 
     // -------------------------------------------------------------
     // INSTAGRAM - LOW-DROP FOLLOWERS (NO REFILL)
@@ -481,24 +499,6 @@ window.SMM_MOCK = {
     // -------------------------------------------------------------
     // INSTAGRAM - COMMENT / CUSTOM COMMENT (NO DROP)
     // -------------------------------------------------------------
-    {
-      id: 'wos-6087',
-      rawId: '6087',
-      platform: 'instagram',
-      subcategory: 'Instagram 👑 Comment / Custom Comment — No Drop',
-      customerName: 'Instagram Custom Comments [Non Drop] 10k/day [Cheapest] Q1',
-      pricePer1k: 0.72,
-      min: 10,
-      max: 10000,
-      deliverySpeed: '⚡ 10K/Day',
-      startTime: '0 - 1 Hour',
-      refillSupported: false,
-      refillPeriod: 'None',
-      description: 'Custom comments with user-defined comment text via WorldOfSMM (6087).',
-      provider: 'worldofsmm',
-      wholesaleCost: 0.48,
-      markupPercent: 50
-    },
     {
       id: 'wos-6085',
       rawId: '6085',

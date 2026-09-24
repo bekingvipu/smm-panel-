@@ -21,9 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Synchronize active tab from URL parameter if present
+    // Synchronize active tab & capture referral code from URL parameter
     try {
       const urlParams = new URLSearchParams(window.location.search);
+      const refParam = urlParams.get('ref') || urlParams.get('referrer');
+      if (refParam) {
+        localStorage.setItem('likex_referrer', refParam.trim());
+      }
       const tabParam = urlParams.get('tab');
       if (tabParam) {
         if (store.persona === 'customer' && store.customerTab !== tabParam) {

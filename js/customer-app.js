@@ -252,6 +252,7 @@ const CustomerApp = {
 
     let contentHtml = '';
     if (tab === 'new_order') contentHtml = this.renderNewOrderTab(store);
+    else if (tab === 'agency' || tab === 'creator_agency') contentHtml = this.renderAgencyTab(store);
     else if (tab === 'home' || tab === 'dashboard') contentHtml = this.renderHomeTab(store);
     else if (tab === 'earn' || tab === 'how_to_earn') contentHtml = this.renderEarnTab(store);
     else if (tab === 'orders') contentHtml = this.renderOrdersTab(store);
@@ -291,6 +292,10 @@ const CustomerApp = {
           <a class="desktop-nav-link ${tab === 'new_order' ? 'active' : ''}" onclick="store.setCustomerTab('new_order')">
             <span>🛒</span>
             <span>Services & Order</span>
+          </a>
+          <a class="desktop-nav-link ${tab === 'agency' ? 'active' : ''}" onclick="store.setCustomerTab('agency')">
+            <span>👑</span>
+            <span>Creator & Agency</span>
           </a>
           <a class="desktop-nav-link ${tab === 'earn' ? 'active' : ''}" onclick="store.setCustomerTab('earn')">
             <span>💰</span>
@@ -403,6 +408,17 @@ const CustomerApp = {
           <div class="drawer-section">
             <div class="drawer-section-title">Grow & Earn</div>
             <ul class="drawer-menu-list">
+              <li class="drawer-menu-item" style="background: linear-gradient(135deg, rgba(79, 70, 229, 0.12), rgba(147, 51, 234, 0.12)); border: 1px solid rgba(79, 70, 229, 0.25); cursor: pointer;" onclick="CustomerApp.closeSideDrawer(); window.store.setCustomerTab('agency');">
+                <div class="drawer-item-left">
+                  <span class="drawer-item-icon">👑</span>
+                  <div>
+                    <div style="color: var(--primary); font-weight: 800;">Creator & Agency Program</div>
+                    <div style="font-size: 11.5px; color: var(--text-secondary);">Bulk orders & VIP manual handling</div>
+                  </div>
+                </div>
+                <span class="badge badge-primary" style="font-size: 10px;">VIP</span>
+              </li>
+
               <li class="drawer-menu-item" style="background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(168, 85, 247, 0.12)); border: 1px solid rgba(99, 102, 241, 0.25); cursor: pointer;" onclick="CustomerApp.closeSideDrawer(); window.store.setCustomerTab('earn');">
                 <div class="drawer-item-left">
                   <span class="drawer-item-icon">💰</span>
@@ -1208,8 +1224,8 @@ const CustomerApp = {
         return (parseFloat(a.cost) || 0) - (parseFloat(b.cost) || 0);
       });
     } else if ((this.currentCategory || '').includes('Comment / Custom Comment — No Drop') && activePackages.length > 0) {
-      // Specified Order: 6087 (Custom Comments), 6085 (Random Comments), 6433 (Indian Mix)
-      const order = ['6087', '6085', '6433'];
+      // Specified Order: 6085 (Random Comments), 6433 (Indian Mix)
+      const order = ['6085', '6433'];
       activePackages.sort((a, b) => {
         const idxA = order.indexOf(String(a.rawId || a.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
         const idxB = order.indexOf(String(b.rawId || b.id || '').replace(/^wos-/, '').replace(/^sf-/, ''));
@@ -3623,6 +3639,20 @@ const CustomerApp = {
           </p>
         </div>
 
+        <!-- Promotional Deposit Bonus Banner (5% Bonus on ₹500+) -->
+        <div style="background: linear-gradient(135deg, rgba(245, 158, 11, 0.14), rgba(217, 119, 6, 0.12)); border: 1.5px solid rgba(245, 158, 11, 0.4); border-radius: 16px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 38px; height: 38px; border-radius: 12px; background: #F59E0B; color: white; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; flex-shrink: 0; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
+              🎁
+            </div>
+            <div>
+              <div style="font-weight: 800; font-size: 14.5px; color: var(--text-main);">5% Instant Deposit Bonus Active!</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 1px;">Get 5% extra promotional bonus credited automatically on every top-up of ₹500 or more.</div>
+            </div>
+          </div>
+          <span class="badge badge-warning" style="font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px;">5% BONUS</span>
+        </div>
+
         <!-- Paytm Dynamic (All UPI Apps) Deposit Box -->
         <div class="paytm-qr-box">
           <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
@@ -4272,6 +4302,164 @@ const CustomerApp = {
     }
   },
 
+  renderAgencyTab(store) {
+    const isLogged = store.data && store.data.isLoggedIn;
+    const custId = isLogged ? store.getCustomerId(store.data.customer) : '';
+    return `
+      <div style="display: flex; flex-direction: column; gap: 20px; max-width: 920px; margin: 0 auto; width: 100%; padding-bottom: 24px;">
+        
+        <!-- Creator & Agency Hero Banner -->
+        <div class="earn-hero-banner" style="text-align: center; background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(147, 51, 234, 0.12)); border: 1px solid rgba(79, 70, 229, 0.3); border-radius: 20px; padding: 24px 18px;">
+          <div class="earn-hero-badge" style="margin: 0 auto 12px; background: rgba(79, 70, 229, 0.2); border-color: rgba(79, 70, 229, 0.4); color: var(--primary);">
+            <span class="earn-pulse-dot"></span>
+            <span>👑 WHOLESALE CREATOR & AGENCY PROGRAM</span>
+          </div>
+          <h1 class="earn-hero-title" style="text-align: center; font-size: clamp(22px, 5vw, 30px); font-weight: 900; color: var(--text-main); margin-bottom: 10px;">
+            Scale Your Agency & Content with Direct Wholesale Access
+          </h1>
+          <p class="earn-hero-sub" style="text-align: center; margin: 0 auto; max-width: 650px; font-size: 14px; color: var(--text-secondary); line-height: 1.6;">
+            Dedicated support, custom bulk order handling, and maximum margin potential for high-volume creators, agency owners, and digital marketers.
+          </p>
+
+          <div class="earn-hero-stats-row" style="margin-top: 18px;">
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">100%</div>
+              <div class="earn-stat-lbl">Manual Bulk VIP Handling</div>
+            </div>
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">Direct</div>
+              <div class="earn-stat-lbl">Wholesale Pricing</div>
+            </div>
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">24/7</div>
+              <div class="earn-stat-lbl">WhatsApp & TG Desk</div>
+            </div>
+            <div class="earn-stat-box">
+              <div class="earn-stat-val">Custom</div>
+              <div class="earn-stat-lbl">Priority Speed & Queue</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bulk Orders Notice & Direct Contact Options -->
+        <div class="card" style="padding: 22px 18px; border-radius: 20px; border: 1.5px solid rgba(37, 211, 102, 0.3); background: var(--bg-surface); box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <div style="width: 44px; height: 44px; border-radius: 14px; background: rgba(37, 211, 102, 0.15); color: #25D366; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0;">
+              📦
+            </div>
+            <div>
+              <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">Manual Bulk Order Processing</h3>
+              <p style="font-size: 12.5px; color: var(--text-secondary); margin-top: 2px;">
+                High-volume orders (50K+ Followers, 500K+ Views, or Custom Campaigns) are handled manually by our senior ops team.
+              </p>
+            </div>
+          </div>
+
+          <div style="background: var(--bg-subtle); border: 1px dashed var(--border-color); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.6; color: var(--text-main);">
+            <strong>📌 Why manual bulk handling?</strong><br/>
+            Custom drip-feed scheduling, targeted speed allocation, and account health protection are provided for bulk orders. Contact our VIP team directly to get custom negotiated rates and priority queue routing.
+          </div>
+
+          <!-- Contact Buttons Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
+            <a href="https://wa.me/919837371137?text=Hi%20LikeX%20Team%2C%20I%20am%20a%20Creator%2FAgency%20interested%20in%20Bulk%20Orders" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25D366; color: white; font-weight: 800; border-radius: 14px; height: 50px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('whatsapp');">
+              <span>💬 Contact Bulk Support on WhatsApp</span>
+            </a>
+            <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" class="btn" style="background: #0088cc; color: white; font-weight: 800; border-radius: 14px; height: 50px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0, 136, 204, 0.35);" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('telegram');">
+              <span>✈️ Contact VIP Desk on Telegram</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Genuine Reseller Profit & Savings Breakdown Card -->
+        <div class="card" style="padding: 22px 18px; border-radius: 20px; background: var(--bg-surface); border: 1.5px solid var(--border-color);">
+          <div style="text-align: center; margin-bottom: 16px;">
+            <span style="font-size: 11.5px; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 0.8px; background: rgba(99, 102, 241, 0.1); padding: 4px 12px; border-radius: 999px;">
+              📊 Genuine Price & Reseller Profit Breakdown
+            </span>
+            <h3 style="font-size: 19px; font-weight: 900; color: var(--text-main); margin-top: 8px;">
+              Genuine Wholesale Rates vs. Standard Market Charge
+            </h3>
+            <p style="font-size: 12.5px; color: var(--text-secondary); max-width: 540px; margin: 4px auto 0;">
+              Calculated transparently using exact LikeX server rates versus average digital marketing agency client quotes in India.
+            </p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            
+            <!-- Comparison Row 1 -->
+            <div style="background: var(--bg-subtle); border-radius: 16px; padding: 14px 16px; border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <span style="font-weight: 800; font-size: 14.5px; color: var(--text-main);">📸 10,000 High Quality Instagram Followers</span>
+                <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">~500% MARGIN</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                <div style="background: var(--bg-surface); padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: var(--text-muted);">LikeX Wholesale</div>
+                  <div style="font-size: 15px; font-weight: 900; color: #10B981;">₹250</div>
+                </div>
+                <div style="background: var(--bg-surface); padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: var(--text-muted);">Market Agency Rate</div>
+                  <div style="font-size: 15px; font-weight: 900; color: var(--text-main);">₹1,500</div>
+                </div>
+                <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10B981; padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: #047857; font-weight: 700;">Your Net Profit</div>
+                  <div style="font-size: 15px; font-weight: 900; color: #047857;">+ ₹1,250</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comparison Row 2 -->
+            <div style="background: var(--bg-subtle); border-radius: 16px; padding: 14px 16px; border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <span style="font-weight: 800; font-size: 14.5px; color: var(--text-main);">▶️ 50,000 High Retention YouTube / Reel Views</span>
+                <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">~400% MARGIN</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                <div style="background: var(--bg-surface); padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: var(--text-muted);">LikeX Wholesale</div>
+                  <div style="font-size: 15px; font-weight: 900; color: #10B981;">₹120</div>
+                </div>
+                <div style="background: var(--bg-surface); padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: var(--text-muted);">Market Agency Rate</div>
+                  <div style="font-size: 15px; font-weight: 900; color: var(--text-main);">₹600</div>
+                </div>
+                <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10B981; padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: #047857; font-weight: 700;">Your Net Profit</div>
+                  <div style="font-size: 15px; font-weight: 900; color: #047857;">+ ₹480</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Comparison Row 3 -->
+            <div style="background: var(--bg-subtle); border-radius: 16px; padding: 14px 16px; border: 1px solid var(--border-color);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                <span style="font-weight: 800; font-size: 14.5px; color: var(--text-main);">❤️ 1,000 Real Likes / Engagement</span>
+                <span class="badge badge-success" style="font-size: 11px; font-weight: 800;">~700% MARGIN</span>
+              </div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center;">
+                <div style="background: var(--bg-surface); padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: var(--text-muted);">LikeX Wholesale</div>
+                  <div style="font-size: 15px; font-weight: 900; color: #10B981;">₹15</div>
+                </div>
+                <div style="background: var(--bg-surface); padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: var(--text-muted);">Market Agency Rate</div>
+                  <div style="font-size: 15px; font-weight: 900; color: var(--text-main);">₹120</div>
+                </div>
+                <div style="background: rgba(16, 185, 129, 0.12); border: 1px solid #10B981; padding: 8px 4px; border-radius: 10px;">
+                  <div style="font-size: 10.5px; color: #047857; font-weight: 700;">Your Net Profit</div>
+                  <div style="font-size: 15px; font-weight: 900; color: #047857;">+ ₹105</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    `;
+  },
+
   renderEarnTab(store) {
     const earnConfig = (store.data && store.data.earnTutorial) || {
       enabled: true,
@@ -4317,6 +4505,52 @@ const CustomerApp = {
             <div class="earn-stat-box">
               <div class="earn-stat-val">₹30k–₹1L+</div>
               <div class="earn-stat-lbl">Monthly Potential</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 👥 Official Referral Program Card (₹5 Referrer + ₹5 Customer Bonus) -->
+        <div class="card" style="padding: 22px 18px; border-radius: 20px; border: 1.5px solid rgba(99, 102, 241, 0.3); background: var(--bg-surface); box-shadow: var(--shadow-sm);">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div style="width: 42px; height: 42px; border-radius: 12px; background: linear-gradient(135deg, #4F46E5, #7C3AED); color: white; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3); flex-shrink: 0;">
+                👥
+              </div>
+              <div>
+                <h3 style="font-size: 18px; font-weight: 900; color: var(--text-main); margin: 0;">Referral Program — Get ₹5 + ₹5 Cash Bonus</h3>
+                <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Earn promotional wallet bonus for every new customer you refer to LikeX!</p>
+              </div>
+            </div>
+            <span class="badge badge-primary" style="font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 999px;">₹5 + ₹5 REWARD</span>
+          </div>
+
+          <div style="background: var(--bg-subtle); border-radius: 14px; padding: 14px 16px; border: 1px solid var(--border-color); margin-bottom: 14px;">
+            <div style="font-size: 13.5px; line-height: 1.6; color: var(--text-main);">
+              <strong>🎁 How Referral Bonus Works:</strong><br/>
+              • Share your personal Referral Link with friends or clients.<br/>
+              • When your referred customer completes their <strong>first successful top-up of EXACTLY ₹100</strong>, both <strong>you (Referrer)</strong> and <strong>your friend (New Customer)</strong> will receive a <strong>₹5 promotional bonus</strong> in your wallets!<br/>
+              • <span style="color: #EF4444; font-weight: 700;">Important Rule:</span> Top-ups <strong>above ₹100 or below ₹100</strong> will <strong>NOT</strong> receive referral bonus. Duplicate or self-referrals are strictly blocked.
+            </div>
+          </div>
+
+          <!-- Referral Link Generator Box -->
+          <div>
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 6px; display: block;">Your Unique Referral Link:</label>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <input 
+                type="text" 
+                readonly 
+                value="${store.data.isLoggedIn ? (window.location.origin + '/?ref=' + store.getCustomerId(store.data.customer)) : 'Please sign in to get your referral link'}" 
+                style="flex: 1; min-width: 220px; height: 44px; border-radius: 12px; border: 1px solid var(--border-color); padding: 0 14px; background: var(--bg-subtle); color: var(--text-main); font-weight: 700; font-size: 13px;"
+              />
+              <button 
+                type="button" 
+                class="btn btn-primary" 
+                style="height: 44px; border-radius: 12px; font-weight: 800; padding: 0 18px;"
+                onclick="if(!window.store.data.isLoggedIn){ CustomerApp.openAuthModal('login'); return; } navigator.clipboard.writeText(window.location.origin + '/?ref=' + store.getCustomerId(store.data.customer)); window.store.showToast('Copied Referral Link to Clipboard! 📋', 'success');"
+              >
+                📋 Copy Referral Link
+              </button>
             </div>
           </div>
         </div>
