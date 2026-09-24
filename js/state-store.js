@@ -2345,7 +2345,7 @@ class SmmStateStore {
 
     const savedOrders = localStorage.getItem(ordersKey);
     const parsedOrders = savedOrders ? JSON.parse(savedOrders) : [];
-    this.data.orders = parsedOrders.map(o => {
+    const mappedOrders = parsedOrders.map(o => {
       if (o.providerOrderId) {
         o.id = String(o.providerOrderId);
       } else if (String(o.id).length > 5) {
@@ -2356,6 +2356,11 @@ class SmmStateStore {
       }
       return o;
     });
+
+    // Clean and filter saved orders to guarantee NO other customer's orders are included
+    const cleanOrders = mappedOrders.filter(o => this.isOrderForCustomer(o, cleanEmail, this.data.customer.customerId));
+    this.data.orders = cleanOrders;
+    localStorage.setItem(ordersKey, JSON.stringify(cleanOrders));
 
     const savedTxns = localStorage.getItem(txnsKey);
     const rawTxns = savedTxns ? JSON.parse(savedTxns) : [];
@@ -2370,6 +2375,96 @@ class SmmStateStore {
 
     // Live Authoritative Sync from Supabase Cloud
     this.syncUserDataFromCloud(cleanEmail);
+  }
+
+  // Multi-factor order ownership verification
+  isOrderForCustomer(order, targetEmail, targetCustomerId = null, targetUserId = null) {
+    if (!order) return false;
+
+    const cleanEmail = (targetEmail || this.data?.customer?.email || '').trim().toLowerCase();
+    const cleanCustId = targetCustomerId || this.data?.customer?.customerId || null;
+    const cleanUserId = targetUserId || this.data?.customer?.id || null;
+
+    if (!cleanEmail && !cleanCustId && !cleanUserId) return false;
+
+    const oEmail = (order.userEmail || order.customerEmail || order.serviceSnapshot?.email || order.serviceSnapshot?.customerEmail || '').trim().toLowerCase();
+    const oCustId = String(order.customerId || order.customerCode || order.serviceSnapshot?.customerId || order.serviceSnapshot?.customerCode || '').trim();
+    const oUserId = order.customerUserId || order.user_id || order.serviceSnapshot?.customerUserId || order.serviceSnapshot?.user_id || null;
+    const oUserIdStr = oUserId !== null && oUserId !== undefined ? String(oUserId).trim() : null;
+
+    // 1. Explicit Mismatch Check: If order explicitly belongs to a DIFFERENT email/customerId/userId -> False
+    if (oEmail && cleanEmail && oEmail !== cleanEmail) return false;
+    if (oCustId && cleanCustId && oCustId !== cleanCustId) return false;
+    if (oUserIdStr && cleanUserId && oUserIdStr !== String(cleanUserId)) return false;
+
+    // 2. Explicit Match Check: Matches email, customerId, or userId -> True
+    if (oEmail && cleanEmail && oEmail === cleanEmail) return true;
+    if (oCustId && cleanCustId && oCustId === cleanCustId) return true;
+    if (oUserIdStr && cleanUserId && oUserIdStr === String(cleanUserId)) return true;
+
+    return false;
+  }
+
+  refreshCustomerOrders(email = null, customerId = null, userId = null) {
+    const targetEmail = (email || this.data.customer?.email || '').trim().toLowerCase();
+    if (!targetEmail) return [];
+
+    const targetCustId = customerId || this.data.customer?.customerId;
+    const targetUserId = userId || this.data.customer?.id;
+
+    // Filter current local orders strictly for this customer
+    const currentOrders = (this.data.orders || []).filter(o => 
+      this.isOrderForCustomer(o, targetEmail, targetCustId, targetUserId)
+    );
+
+    // Merge matching cloud orders
+    const candidateSources = [
+      ...(this.data.allAdminSupabaseOrders || []),
+      ...(() => {
+        try { return JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]'); } catch (e) { return []; }
+      })()
+    ];
+
+    candidateSources.forEach(co => {
+      if (this.isOrderForCustomer(co, targetEmail, targetCustId, targetUserId)) {
+        const matchesIdx = currentOrders.findIndex(existing => {
+          const eLikeX = String(existing.likeXOrderId || existing.id || '').trim();
+          const eProv = existing.providerOrderId ? String(existing.providerOrderId).trim() : null;
+          const cLikeX = String(co.likeXOrderId || co.id || '').trim();
+          const cProv = co.providerOrderId ? String(co.providerOrderId).trim() : null;
+
+          if (cLikeX && eLikeX && (eLikeX === cLikeX || eLikeX.replace(/^LX/i, '') === cLikeX.replace(/^LX/i, ''))) return true;
+          if (cProv && eProv && eProv === cProv) return true;
+          return false;
+        });
+
+        if (matchesIdx === -1) {
+          currentOrders.push(co);
+        } else {
+          currentOrders[matchesIdx] = {
+            ...currentOrders[matchesIdx],
+            ...co,
+            status: (co.status && co.status !== 'Processing') ? co.status : (currentOrders[matchesIdx].status || co.status || 'Processing')
+          };
+        }
+      }
+    });
+
+    currentOrders.sort((a, b) => (Number(b.createdAt) || 0) - (Number(a.createdAt) || 0));
+    this.data.orders = currentOrders;
+    this.data.customer.ordersCount = currentOrders.length;
+    this.data.customer.spent = currentOrders.reduce((sum, o) => sum + (Number(o.amount) || 0), 0);
+    this.saveUserData();
+    return currentOrders;
+  }
+
+  getCustomerOrders() {
+    if (!this.data.isLoggedIn || !this.data.customer?.email) return [];
+    return this.refreshCustomerOrders(
+      this.data.customer.email,
+      this.data.customer.customerId,
+      this.data.customer.id
+    );
   }
 
   // Reusable authoritative live sync from Supabase
@@ -3189,7 +3284,7 @@ class SmmStateStore {
 
   // Live Status Synchronization from Upstream Provider for all active orders
   async syncOrdersStatus(silent = false) {
-    const allOrders = (this.getAllAdminOrders ? this.getAllAdminOrders() : this.data.orders) || [];
+    const allOrders = (this.persona === 'admin' && this.getAllAdminOrders ? this.getAllAdminOrders() : (this.getCustomerOrders ? this.getCustomerOrders() : (this.data.orders || []))) || [];
     if (allOrders.length === 0) return 0;
 
     let updatedCount = 0;
@@ -4277,10 +4372,11 @@ class SmmStateStore {
     const idx = (this.data.orders || []).findIndex(matchesOrder);
     if (idx >= 0) {
       this.data.orders[idx] = { ...this.data.orders[idx], ...updatedOrder };
-    } else {
+      this.saveUserData();
+    } else if (this.isOrderForCustomer(updatedOrder, this.data.customer?.email, this.data.customer?.customerId, this.data.customer?.id)) {
       this.data.orders.unshift(updatedOrder);
+      this.saveUserData();
     }
-    this.saveUserData();
 
     // 2. Update in master global orders
     try {

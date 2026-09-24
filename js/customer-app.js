@@ -3383,7 +3383,7 @@ const CustomerApp = {
       `;
     }
 
-    const allOrders = store.data.orders;
+    const allOrders = store.getCustomerOrders ? store.getCustomerOrders() : (store.data.orders || []);
     const filter = this.ordersFilter || 'all';
     const query = (this.ordersSearch || '').trim().toLowerCase();
 
@@ -3612,7 +3612,8 @@ const CustomerApp = {
   },
 
   promptRefill(orderId) {
-    const order = window.store.data.orders.find(o => String(o.id) === String(orderId));
+    const userOrders = window.store.getCustomerOrders ? window.store.getCustomerOrders() : (window.store.data.orders || []);
+    const order = userOrders.find(o => String(o.id) === String(orderId));
     if (!order) return;
 
     if (confirm(`Request automatic refill for Order #${order.id} (${order.serviceName})?\n\nCurrent count: ${order.currentCount || 0} / Target: ${(order.startCount || 0) + order.quantity}`)) {
@@ -3904,7 +3905,7 @@ const CustomerApp = {
   // 5. 24/7 WHATSAPP, TELEGRAM & EMAIL LIVE SUPPORT DESK (COMPACT & MODERN)
   renderSupportTab(store) {
     const userEmail = store.data.isLoggedIn ? store.data.customer.email : '';
-    const recentOrders = store.data.orders || [];
+    const recentOrders = store.getCustomerOrders ? store.getCustomerOrders() : (store.data.orders || []);
 
     return `
       <div style="display: flex; flex-direction: column; gap: 12px; max-width: 680px; margin: 0 auto; width: 100%; padding-bottom: 16px; box-sizing: border-box;">
@@ -5404,7 +5405,7 @@ const CustomerApp = {
   openNotifications() {
     const modal = document.getElementById('generic-modal-backdrop');
     const sheet = document.getElementById('generic-modal-sheet');
-    const orders = window.store.data.orders || [];
+    const orders = (window.store.getCustomerOrders ? window.store.getCustomerOrders() : window.store.data.orders) || [];
 
     sheet.innerHTML = `
       <div class="modal-header">
