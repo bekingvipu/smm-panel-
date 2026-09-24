@@ -2561,10 +2561,6 @@ const CustomerApp = {
   },
 
   openDynamicPaymentModal({ order_id, amount, payment_url }) {
-    const modal = document.getElementById('generic-modal-backdrop');
-    const sheet = document.getElementById('generic-modal-sheet');
-    const store = window.store;
-
     let countdownSeconds = 300; // 5 minutes timer
     if (this._depositPollInterval) {
       clearInterval(this._depositPollInterval);
@@ -2576,71 +2572,61 @@ const CustomerApp = {
     }
     this._isVerifyingStatus = false;
 
-    sheet.innerHTML = `
-      <div style="max-width: 520px; width: 100%; margin: 0 auto; text-align: center;">
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #002244 0%, #001220 100%); color: white; padding: 18px 20px; border-radius: 16px 16px 0 0; text-align: left; position: relative;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-              <div style="font-size: 13px; font-weight: 700; color: rgba(255,255,255,0.75); display: flex; align-items: center; gap: 6px;">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Payment to LikeX
-              </div>
-              <div style="font-size: 26px; font-weight: 900; letter-spacing: -0.02em; color: #ffffff; margin-top: 4px;">
-                <span style="font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.7);">INR</span> ₹${Number(amount).toFixed(2)}
-              </div>
-              <div style="font-size: 11.5px; font-family: var(--font-mono); color: rgba(255,255,255,0.65); margin-top: 2px;">
-                Order ID: ${order_id}
-              </div>
+    // Remove any existing fullscreen payment overlay
+    const existing = document.getElementById('fullscreen-payment-overlay');
+    if (existing) existing.remove();
+
+    const overlay = document.createElement('div');
+    overlay.id = 'fullscreen-payment-overlay';
+    overlay.style.cssText = 'position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999999; background: #0f172a; display: flex; flex-direction: column; overflow: hidden;';
+
+    overlay.innerHTML = `
+      <!-- Top Header Bar -->
+      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 60px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close & Cancel">&times;</button>
+          <div>
+            <div style="font-size: 13px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> LikeX Payment Gateway
             </div>
-            <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center;">&times;</button>
-          </div>
-        </div>
-
-        <!-- Payment Body -->
-        <div style="background: var(--bg-card); padding: 16px; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 16px 16px;">
-          <!-- Embedded Gateway Iframe -->
-          <div style="position: relative; width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); background: #ffffff; height: 420px; box-shadow: 0 4px 16px rgba(0,0,0,0.04);">
-            <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none;" title="Paytm Dynamic QR" allow="clipboard-write"></iframe>
-          </div>
-
-          <!-- Quick Action Buttons -->
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px;">
-            <a href="${payment_url}" target="_blank" class="btn btn-secondary" style="text-decoration: none; font-size: 12.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px;">
-              <span>Open in App ↗</span>
-            </a>
-            <button class="btn btn-primary btn-refraction" id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="font-size: 12.5px; font-weight: 800; padding: 10px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span>Verify Payment</span>
-            </button>
-          </div>
-
-          <!-- Instructions Card (YOSMM Style) -->
-          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 12px; padding: 12px 14px; margin-top: 12px; text-align: left; font-size: 11.5px; color: #92400e; line-height: 1.6;">
-            <div style="font-weight: 800; margin-bottom: 3px; color: #b45309; display: flex; align-items: center; gap: 5px;">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-              <span>Payment Steps:</span>
-            </div>
-            <div>1. Scan the QR code with any UPI app (Paytm, PhonePe, GPay, BHIM)</div>
-            <div>2. Complete the payment of <strong>₹${Number(amount).toFixed(2)}</strong></div>
-            <div>3. Auto-detected within <strong>30 seconds</strong>, or tap Verify Payment anytime.</div>
-            <div style="font-weight: 700; color: #b91c1c; margin-top: 3px;">Important: Do not close this window until payment is verified.</div>
-          </div>
-
-          <!-- Live Countdown & Status Pulse -->
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 12px; padding: 8px 12px; background: var(--bg-subtle); border-radius: 10px; font-size: 12px;">
-            <div style="display: flex; align-items: center; gap: 8px;">
-              <span class="pulse-indicator" style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
-              <span style="font-weight: 700; color: var(--text-secondary);" id="deposit-status-text">Listening for payment confirmation...</span>
-            </div>
-            <div style="font-family: var(--font-mono); font-weight: 900; color: var(--primary); font-size: 14px;" id="deposit-countdown-timer">
-              05:00
+            <div style="font-size: 11px; color: rgba(255,255,255,0.6); font-family: var(--font-mono);">
+              Order: ${order_id}
             </div>
           </div>
         </div>
+
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="text-align: right;">
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); font-weight: 700;">Amount</div>
+            <div style="font-size: 20px; font-weight: 900; color: #10b981; line-height: 1;">₹${Number(amount).toFixed(2)}</div>
+          </div>
+          <button id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="background: #2563eb; color: white; border: none; padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Verify Payment</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Status Banner Bar -->
+      <div style="background: #1e293b; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 12px;">
+        <div style="display: flex; align-items: center; gap: 8px; color: #94a3b8;">
+          <span class="pulse-indicator" style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
+          <span style="font-weight: 600;" id="deposit-status-text">Listening for payment confirmation...</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 6px; color: #f59e0b; font-weight: 700;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style="font-family: var(--font-mono);" id="deposit-countdown-timer">05:00</span>
+        </div>
+      </div>
+
+      <!-- Main Fullscreen Iframe -->
+      <div style="flex: 1; position: relative; width: 100%; height: 100%; background: #ffffff;">
+        <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none;" title="Paytm Dynamic QR" allow="clipboard-write"></iframe>
       </div>
     `;
 
-    modal.classList.add('active');
+    document.body.appendChild(overlay);
+    document.body.style.overflow = 'hidden';
 
     // Start 5-minute countdown timer
     this._depositTimerInterval = setInterval(() => {
@@ -2686,16 +2672,7 @@ const CustomerApp = {
         // Payment Confirmed — Lock immediately to prevent duplicate executions
         CustomerApp._confirmedOrders.add(orderId);
 
-        if (this._depositPollInterval) {
-          clearInterval(this._depositPollInterval);
-          this._depositPollInterval = null;
-        }
-        if (this._depositTimerInterval) {
-          clearInterval(this._depositTimerInterval);
-          this._depositTimerInterval = null;
-        }
-
-        CustomerApp.closeModal();
+        CustomerApp.closeDynamicPaymentModal();
 
         // Calculate USD credit using exact storefront conversion
         const usdAmount = Number((amount / (window.store.data.exchangeRate || 95.385)).toFixed(4));
@@ -2761,6 +2738,11 @@ const CustomerApp = {
       this._depositTimerInterval = null;
     }
     this._isVerifyingStatus = false;
+    const overlay = document.getElementById('fullscreen-payment-overlay');
+    if (overlay) {
+      overlay.remove();
+    }
+    document.body.style.overflow = '';
     CustomerApp.closeModal();
   },
 
