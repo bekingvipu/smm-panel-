@@ -490,18 +490,20 @@ export default async function handler(req, res) {
         created_at: new Date().toISOString()
       };
 
-      fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
-        method: 'POST',
-        headers: {
-          apikey: SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates'
-        },
-        body: JSON.stringify(orderDbPayload)
-      }).catch(insertErr => {
+      try {
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+          method: 'POST',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify(orderDbPayload)
+        });
+      } catch (insertErr) {
         console.warn('[LikeX Backend] Supabase order insertion notice:', insertErr.message);
-      });
+      }
 
       // Return response delivery to customer with provider order ID and status
       return res.status(200).json({
