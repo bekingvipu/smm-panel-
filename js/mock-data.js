@@ -166,21 +166,21 @@ window.SMM_MOCK = {
     // INSTAGRAM - LIKEX SPECIAL
     // -------------------------------------------------------------
     {
-      id: 'wos-3100',
-      rawId: '3100',
+      id: 'sf-4997-likex',
+      rawId: '4997',
       platform: 'instagram',
       subcategory: 'LikeX Special',
-      customerName: 'Instagram Reel/Post Likes [HQ Accs] [Instant-Start] [Cancel Enable] [200k/day] 🚀',
-      pricePer1k: 0.057,
+      customerName: '👑❣️Instagram Likes [High Quality & Non-drop ] - 50k/day',
+      pricePer1k: 0.111153,
       min: 10,
-      max: 3000000,
-      deliverySpeed: '⚡ 200K/Day [Instant Start]',
+      max: 10000000,
+      deliverySpeed: '⚡ 50K/Day',
       startTime: 'Instant',
       refillSupported: false,
       refillPeriod: 'None',
-      description: 'Top quality Instagram likes for reels & posts via WorldOfSMM (3100). Cancel enabled.',
-      provider: 'worldofsmm',
-      wholesaleCost: 0.038,
+      description: 'High quality non-drop Instagram likes via SocialFans (4997).',
+      provider: 'socialfans',
+      wholesaleCost: 0.074102,
       markupPercent: 50
     },
 

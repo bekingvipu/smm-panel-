@@ -1165,10 +1165,10 @@ const CustomerApp = {
     const isLikeXSpecial = (this.currentCategory || '').toLowerCase().includes('likex special');
 
     if (isLikeXSpecial && activePackages.length > 0) {
-      // Flagship Order: Likes (3100)
+      // Flagship Order: Likes (4997)
       const getSpecialRank = (s) => {
         const id = String(s.rawId || s.id || '');
-        if (id.includes('3100') || (s.name || '').toLowerCase().includes('like')) return 1;
+        if (id.includes('4997') || (s.name || '').toLowerCase().includes('like')) return 1;
         return 2;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
