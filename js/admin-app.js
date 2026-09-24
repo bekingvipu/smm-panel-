@@ -3789,29 +3789,29 @@ const AdminApp = {
   getOrderServiceId(order) {
     if (!order) return 'N/A';
     if (order.serviceSnapshot?.rawServiceId && String(order.serviceSnapshot.rawServiceId) !== 'N/A') {
-      return String(order.serviceSnapshot.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      return String(order.serviceSnapshot.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     if (order.serviceSnapshot?.providerServiceId && String(order.serviceSnapshot.providerServiceId) !== 'N/A') {
-      return String(order.serviceSnapshot.providerServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      return String(order.serviceSnapshot.providerServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     if (order.providerServiceId && String(order.providerServiceId) !== 'N/A' && String(order.providerServiceId) !== 'undefined' && String(order.providerServiceId) !== 'null') {
-      return String(order.providerServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      return String(order.providerServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     if (order.rawServiceId && String(order.rawServiceId) !== 'N/A' && String(order.rawServiceId) !== 'undefined' && String(order.rawServiceId) !== 'null' && String(order.rawServiceId).trim() !== '') {
-      return String(order.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      return String(order.rawServiceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     // Check in customerServices catalog
     const custSvc = (window.mockData?.customerServices || []).find(s => String(s.id) === String(order.serviceId));
     if (custSvc && (custSvc.sfId || custSvc.wosId || custSvc.rawId)) {
-      return String(custSvc.sfId || custSvc.wosId || custSvc.rawId).replace(/-likex$/, '');
+      return String(custSvc.sfId || custSvc.wosId || custSvc.rawId);
     }
     // Check in window.JAP_SERVICES
     const matchedSvc = (window.JAP_SERVICES || []).find(s => String(s.id) === String(order.serviceId) || String(s.rawId) === String(order.serviceId));
     if (matchedSvc) {
-      return String(matchedSvc.rawId || matchedSvc.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      return String(matchedSvc.rawId || matchedSvc.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     if (order.serviceId && String(order.serviceId) !== 'null' && String(order.serviceId) !== 'undefined' && String(order.serviceId) !== 'N/A') {
-      return String(order.serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
+      return String(order.serviceId).replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
     }
     return 'N/A';
   },
