@@ -517,7 +517,7 @@ class SmmStateStore {
 
       // Also upsert to site_settings table if available
       for (const [k, v] of Object.entries(partial)) {
-        window.supabaseClient.from('site_settings').upsert({ key: k, value: v, updated_at: new Date().toISOString() }).catch(() => {});
+        window.supabaseClient.from('site_settings').upsert({ key: k, value: v, updated_at: new Date().toISOString() }).then(() => {}, () => {});
       }
     } catch (e) {
       console.warn('[LikeX Cloud Save Error]:', e);
@@ -3487,7 +3487,7 @@ class SmmStateStore {
           status: newOrder.status,
           remains: newOrder.remains,
           created_at: new Date(now).toISOString()
-        }], { onConflict: 'id' }).catch(() => {});
+        }], { onConflict: 'id' }).then(() => {}, () => {});
       } catch (e) {}
     }
 
@@ -4138,7 +4138,7 @@ class SmmStateStore {
             balance_after: this.data.customer.balance,
             status: 'Success'
           })
-          .catch(() => {});
+          .then(() => {}, () => {});
 
         // 5. Also update master registry in users row 999
         const { data: configRows } = await window.supabaseClient
@@ -4155,7 +4155,7 @@ class SmmStateStore {
             .from('users')
             .update({ password_hash: JSON.stringify(parsed) })
             .eq('id', 999)
-            .catch(() => {});
+            .then(() => {}, () => {});
         }
       } catch (err) {
         console.warn('[LikeX Anti-Fraud] Supabase UTR registration warning:', err);
@@ -4333,7 +4333,7 @@ class SmmStateStore {
                 provider_order_id: String(liveData.order),
                 status: 'In Progress',
                 refill_status: null
-              }], { onConflict: 'id' }).catch(() => {});
+              }], { onConflict: 'id' }).then(() => {}, () => {});
             } catch (e) {}
           }
 

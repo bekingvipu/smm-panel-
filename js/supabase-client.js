@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             password_hash: 'auth_user_session',
             role: 'customer'
           }, { onConflict: 'email' })
-          .catch(() => {});
+          .then(() => {}, () => {});
       }
     }
 
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', async () => {
               password_hash: 'auth_user_session',
               role: 'customer'
             }, { onConflict: 'email' })
-            .catch(() => {});
+            .then(() => {}, () => {});
         }
       } else if (event === 'SIGNED_OUT' && window.store) {
         if (window.store.data.isLoggedIn) {
