@@ -3218,45 +3218,38 @@ const AdminApp = {
       setTimeout(() => this.fetchProviderServices('socialfans'), 10);
     }
 
-    const catalog = window.JAP_SERVICES || [];
+    const wosMap = new Map();
+    const sfMap = new Map();
 
-    // 1. WorldOfSMM list
-    let wosRaw = this.providerServicesCache['worldofsmm'] || [];
-    if (wosRaw.length === 0) {
-      wosRaw = catalog.filter(s => s.provider === 'worldofsmm' || String(s.id).startsWith('wos-'));
-    }
-    const wosNormalized = wosRaw.map(s => {
-      const sId = String(s.service || s.id || s.serviceId || '');
-      const rawId = String(s.rawId || s.service || sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, ''));
-      const costUsd = parseFloat(s.rate || s.cost || 0.1);
-      return {
+    // 1. Ingest baseline raw static catalogs (guarantees all 2,000+ IDs like 2982, 4997, 7292 exist)
+    const wosStatic = window.WOS_SERVICES_RAW || [];
+    wosStatic.forEach(s => {
+      const rawId = String(s.service || s.id || s.rawId || '').replace(/^wos-/, '');
+      if (!rawId) return;
+      wosMap.set(rawId, {
         ...s,
         id: `wos-${rawId}`,
         rawId: rawId,
         provider: 'worldofsmm',
         providerName: 'WorldOfSMM',
-        cost: costUsd,
-        rate: costUsd,
+        cost: parseFloat(s.rate || s.cost || 0.1),
+        rate: parseFloat(s.rate || s.cost || 0.1),
         name: s.name || `Service #${rawId}`,
         category: s.category || 'General Services',
         min: parseInt(s.min || 10, 10),
         max: parseInt(s.max || 1000000, 10),
         refill: Boolean(s.refill),
         cancel: Boolean(s.cancel)
-      };
+      });
     });
 
-    // 2. SocialFans list
-    let sfRaw = this.providerServicesCache['socialfans'] || [];
-    if (sfRaw.length === 0) {
-      sfRaw = catalog.filter(s => s.provider === 'socialfans' || String(s.id).startsWith('sf-'));
-    }
-    const sfNormalized = sfRaw.map(s => {
-      const sId = String(s.service || s.id || s.serviceId || '');
-      const rawId = String(s.rawId || s.service || sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, ''));
+    const sfStatic = window.SF_SERVICES_RAW || [];
+    sfStatic.forEach(s => {
+      const rawId = String(s.service || s.id || s.rawId || '').replace(/^sf-/, '');
+      if (!rawId) return;
       const rawRateVal = parseFloat(s.rate || s.cost || 0);
       const costUsd = rawRateVal > 0 ? (rawRateVal / inrRate) : 0.05;
-      return {
+      sfMap.set(rawId, {
         ...s,
         id: `sf-${rawId}`,
         rawId: rawId,
@@ -3270,12 +3263,117 @@ const AdminApp = {
         max: parseInt(s.max || 1000000, 10),
         refill: Boolean(s.refill),
         cancel: Boolean(s.cancel)
-      };
+      });
     });
 
-    if (prov === 'worldofsmm') return wosNormalized;
-    if (prov === 'socialfans') return sfNormalized;
-    return [...wosNormalized, ...sfNormalized];
+    // 2. Ingest curated JAP_SERVICES & addedServices
+    const catalog = window.JAP_SERVICES || [];
+    catalog.forEach(s => {
+      const sId = String(s.id || s.service || '');
+      const rawId = String(s.rawId || s.service || sId.replace(/^wos-/, '').replace(/^sf-/, ''));
+      if (!rawId) return;
+      const isSf = s.provider === 'socialfans' || sId.startsWith('sf-');
+      const targetMap = isSf ? sfMap : wosMap;
+      if (!targetMap.has(rawId)) {
+        targetMap.set(rawId, {
+          ...s,
+          id: isSf ? `sf-${rawId}` : `wos-${rawId}`,
+          rawId: rawId,
+          provider: isSf ? 'socialfans' : 'worldofsmm',
+          providerName: isSf ? 'SocialFans' : 'WorldOfSMM',
+          cost: parseFloat(s.cost || s.rate || 0.1),
+          rate: parseFloat(s.cost || s.rate || 0.1),
+          name: s.name || `Service #${rawId}`,
+          category: s.category || 'General Services',
+          min: parseInt(s.min || 10, 10),
+          max: parseInt(s.max || 1000000, 10),
+          refill: Boolean(s.refill),
+          cancel: Boolean(s.cancel)
+        });
+      }
+    });
+
+    const addedServices = (store.catalogCustomizations && store.catalogCustomizations.addedServices) || [];
+    addedServices.forEach(s => {
+      const sId = String(s.id || s.service || '');
+      const rawId = String(s.rawId || s.service || sId.replace(/^wos-/, '').replace(/^sf-/, ''));
+      if (!rawId) return;
+      const isSf = s.provider === 'socialfans' || sId.startsWith('sf-');
+      const targetMap = isSf ? sfMap : wosMap;
+      if (!targetMap.has(rawId)) {
+        targetMap.set(rawId, {
+          ...s,
+          id: isSf ? `sf-${rawId}` : `wos-${rawId}`,
+          rawId: rawId,
+          provider: isSf ? 'socialfans' : 'worldofsmm',
+          providerName: isSf ? 'SocialFans' : 'WorldOfSMM',
+          cost: parseFloat(s.cost || s.rate || 0.1),
+          rate: parseFloat(s.cost || s.rate || 0.1),
+          name: s.name || `Service #${rawId}`,
+          category: s.category || 'General Services',
+          min: parseInt(s.min || 10, 10),
+          max: parseInt(s.max || 1000000, 10),
+          refill: Boolean(s.refill),
+          cancel: Boolean(s.cancel)
+        });
+      }
+    });
+
+    // 3. Overlay live API cache (fresh rates and any newly added upstream services)
+    const wosLive = this.providerServicesCache['worldofsmm'] || [];
+    wosLive.forEach(s => {
+      const rawId = String(s.service || s.id || s.rawId || '').replace(/^wos-/, '');
+      if (!rawId) return;
+      const existing = wosMap.get(rawId) || {};
+      wosMap.set(rawId, {
+        ...existing,
+        ...s,
+        id: `wos-${rawId}`,
+        rawId: rawId,
+        provider: 'worldofsmm',
+        providerName: 'WorldOfSMM',
+        cost: parseFloat(s.rate || s.cost || existing.cost || 0.1),
+        rate: parseFloat(s.rate || s.cost || existing.cost || 0.1),
+        name: s.name || existing.name || `Service #${rawId}`,
+        category: s.category || existing.category || 'General Services',
+        min: parseInt(s.min || existing.min || 10, 10),
+        max: parseInt(s.max || existing.max || 1000000, 10),
+        refill: s.refill !== undefined ? Boolean(s.refill) : Boolean(existing.refill),
+        cancel: s.cancel !== undefined ? Boolean(s.cancel) : Boolean(existing.cancel)
+      });
+    });
+
+    const sfLive = this.providerServicesCache['socialfans'] || [];
+    sfLive.forEach(s => {
+      const rawId = String(s.service || s.id || s.rawId || '').replace(/^sf-/, '');
+      if (!rawId) return;
+      const existing = sfMap.get(rawId) || {};
+      const rawRateVal = parseFloat(s.rate || s.cost || 0);
+      const costUsd = rawRateVal > 0 ? (rawRateVal / inrRate) : (existing.cost || 0.05);
+      sfMap.set(rawId, {
+        ...existing,
+        ...s,
+        id: `sf-${rawId}`,
+        rawId: rawId,
+        provider: 'socialfans',
+        providerName: 'SocialFans',
+        cost: costUsd,
+        rate: costUsd,
+        name: s.name || existing.name || `Service #${rawId}`,
+        category: s.category || existing.category || 'General Services',
+        min: parseInt(s.min || existing.min || 10, 10),
+        max: parseInt(s.max || existing.max || 1000000, 10),
+        refill: s.refill !== undefined ? Boolean(s.refill) : Boolean(existing.refill),
+        cancel: s.cancel !== undefined ? Boolean(s.cancel) : Boolean(existing.cancel)
+      });
+    });
+
+    const wosList = Array.from(wosMap.values());
+    const sfList = Array.from(sfMap.values());
+
+    if (prov === 'worldofsmm') return wosList;
+    if (prov === 'socialfans') return sfList;
+    return [...wosList, ...sfList];
   },
 
   handleSelectProvider(prov) {
