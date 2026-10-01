@@ -3160,7 +3160,7 @@ const AdminApp = {
   },
 
   // --- PROVIDER SERVICES MANAGER & BATCH ACTIONS ---
-  selectedProvider: 'worldofsmm',
+  selectedProvider: 'all',
   selectedCategory: 'all',
   serviceSearchQuery: '',
   statusFilter: 'all',
@@ -3170,6 +3170,14 @@ const AdminApp = {
   _currentRenderedServices: [],
 
   async fetchProviderServices(provider = 'worldofsmm', force = false) {
+    if (provider === 'all') {
+      await Promise.all([
+        this.fetchProviderServices('worldofsmm', force),
+        this.fetchProviderServices('socialfans', force)
+      ]);
+      return;
+    }
+
     if (!force && this.providerServicesCache[provider] && this.providerServicesCache[provider].length > 0) {
       return this.providerServicesCache[provider];
     }
@@ -3198,11 +3206,86 @@ const AdminApp = {
     }
   },
 
+  getNormalizedProviderServices(prov = 'all') {
+    const store = window.store || {};
+    const inrRate = (store.data && store.data.exchangeRate) || 95.385;
+
+    // Trigger background pre-fetch if caches are empty
+    if (!this.providerServicesCache['worldofsmm'] && !this.isLoadingProviderServices) {
+      setTimeout(() => this.fetchProviderServices('worldofsmm'), 10);
+    }
+    if (!this.providerServicesCache['socialfans'] && !this.isLoadingProviderServices) {
+      setTimeout(() => this.fetchProviderServices('socialfans'), 10);
+    }
+
+    const catalog = window.JAP_SERVICES || [];
+
+    // 1. WorldOfSMM list
+    let wosRaw = this.providerServicesCache['worldofsmm'] || [];
+    if (wosRaw.length === 0) {
+      wosRaw = catalog.filter(s => s.provider === 'worldofsmm' || String(s.id).startsWith('wos-'));
+    }
+    const wosNormalized = wosRaw.map(s => {
+      const sId = String(s.service || s.id || s.serviceId || '');
+      const rawId = String(s.rawId || s.service || sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, ''));
+      const costUsd = parseFloat(s.rate || s.cost || 0.1);
+      return {
+        ...s,
+        id: `wos-${rawId}`,
+        rawId: rawId,
+        provider: 'worldofsmm',
+        providerName: 'WorldOfSMM',
+        cost: costUsd,
+        rate: costUsd,
+        name: s.name || `Service #${rawId}`,
+        category: s.category || 'General Services',
+        min: parseInt(s.min || 10, 10),
+        max: parseInt(s.max || 1000000, 10),
+        refill: Boolean(s.refill),
+        cancel: Boolean(s.cancel)
+      };
+    });
+
+    // 2. SocialFans list
+    let sfRaw = this.providerServicesCache['socialfans'] || [];
+    if (sfRaw.length === 0) {
+      sfRaw = catalog.filter(s => s.provider === 'socialfans' || String(s.id).startsWith('sf-'));
+    }
+    const sfNormalized = sfRaw.map(s => {
+      const sId = String(s.service || s.id || s.serviceId || '');
+      const rawId = String(s.rawId || s.service || sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, ''));
+      const rawRateVal = parseFloat(s.rate || s.cost || 0);
+      const costUsd = rawRateVal > 0 ? (rawRateVal / inrRate) : 0.05;
+      return {
+        ...s,
+        id: `sf-${rawId}`,
+        rawId: rawId,
+        provider: 'socialfans',
+        providerName: 'SocialFans',
+        cost: costUsd,
+        rate: costUsd,
+        name: s.name || `Service #${rawId}`,
+        category: s.category || 'General Services',
+        min: parseInt(s.min || 10, 10),
+        max: parseInt(s.max || 1000000, 10),
+        refill: Boolean(s.refill),
+        cancel: Boolean(s.cancel)
+      };
+    });
+
+    if (prov === 'worldofsmm') return wosNormalized;
+    if (prov === 'socialfans') return sfNormalized;
+    return [...wosNormalized, ...sfNormalized];
+  },
+
   handleSelectProvider(prov) {
     this.selectedProvider = prov;
     this.selectedCategory = 'all';
     this.selectedServiceIds.clear();
-    if (!this.providerServicesCache[prov]) {
+    if (prov === 'all') {
+      if (!this.providerServicesCache['worldofsmm']) this.fetchProviderServices('worldofsmm');
+      if (!this.providerServicesCache['socialfans']) this.fetchProviderServices('socialfans');
+    } else if (!this.providerServicesCache[prov]) {
       this.fetchProviderServices(prov);
     }
     this.render(document.getElementById('screen-container'));
@@ -3244,25 +3327,8 @@ const AdminApp = {
     const tbody = document.getElementById('admin-services-table-tbody');
     if (!tbody) return;
     const store = window.store;
-    const prov = this.currentProviderTab;
-    const isWos = prov === 'worldofsmm' || prov === 'wos';
-    const rawServices = isWos ? (window.WOS_SERVICES || []) : (window.SF_SERVICES || []);
-    const normalized = rawServices.map(s => {
-      const sId = String(s.service || s.id || s.serviceId || '');
-      const rawId = s.rawId ? String(s.rawId) : sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '');
-      const costVal = Number(s.rate || s.cost || 0);
-      return {
-        id: s.id ? String(s.id) : (isWos ? `wos-${rawId}` : `sf-${rawId}`),
-        rawId: rawId,
-        name: s.name || `Service #${rawId}`,
-        category: s.category || 'General Services',
-        cost: costVal,
-        min: Number(s.min || 10),
-        max: Number(s.max || 100000),
-        refill: Boolean(s.refill),
-        provider: isWos ? 'worldofsmm' : 'socialfans'
-      };
-    });
+    const prov = this.selectedProvider || 'all';
+    const normalized = this.getNormalizedProviderServices(prov);
 
     const selectedCat = this.selectedCategory || 'all';
     const statusF = this.statusFilter || 'all';
@@ -3275,17 +3341,27 @@ const AdminApp = {
       if (statusF === 'inactive' && store.isServiceActiveInCatalog(s.id, s.rawId)) return false;
 
       if (cleanQuery) {
-        const cleanId = String(s.rawId || s.id).toLowerCase();
-        const fullId = String(s.id).toLowerCase();
+        const cleanId = String(s.rawId || '').toLowerCase();
+        const fullId = String(s.id || '').toLowerCase();
         const name = (s.name || '').toLowerCase();
         const cat = (s.category || '').toLowerCase();
-        return cleanId.includes(cleanQuery) || fullId.includes(cleanQuery) || name.includes(cleanQuery) || cat.includes(cleanQuery);
+        const provName = (s.providerName || s.provider || '').toLowerCase();
+        const mappedCat = (store.getServiceMappedCategory(s.id, s.rawId) || '').toLowerCase();
+
+        return cleanId === cleanQuery ||
+               fullId === cleanQuery ||
+               cleanId.includes(cleanQuery) ||
+               fullId.includes(cleanQuery) ||
+               name.includes(cleanQuery) ||
+               cat.includes(cleanQuery) ||
+               provName.includes(cleanQuery) ||
+               mappedCat.includes(cleanQuery);
       }
       return true;
     });
 
     this._currentRenderedServices = filtered;
-    tbody.innerHTML = this.renderAdminServicesRows(filtered, store, isWos, prov);
+    tbody.innerHTML = this.renderAdminServicesRows(filtered, store);
 
     const countEl = document.getElementById('admin-services-count-text');
     if (countEl) {
@@ -3293,24 +3369,28 @@ const AdminApp = {
     }
   },
 
-  renderAdminServicesRows(filtered, store, isWos, prov) {
+  renderAdminServicesRows(filtered, store) {
     if (filtered.length === 0) {
       return `
         <tr>
           <td colspan="8" style="text-align: center; padding: 40px; color: var(--text-muted);">
-            No services match the selected category or search query.
+            <div style="font-size: 24px; margin-bottom: 8px;">🔍</div>
+            <strong style="font-size: 14px; color: var(--text-main);">No services match your search or filter.</strong>
+            <p style="font-size: 12px; margin-top: 4px;">Try searching by service ID (e.g. 4997, 2982, 7292) or switch provider tab to "All Providers".</p>
           </td>
         </tr>
       `;
     }
 
-    return filtered.slice(0, 100).map(s => {
+    return filtered.slice(0, 120).map(s => {
       const sKey = String(s.rawId || s.id);
       const isSelected = this.selectedServiceIds.has(sKey);
       const isActive = store.isServiceActiveInCatalog(s.id, s.rawId);
+      const mappedCat = store.getServiceMappedCategory(s.id, s.rawId);
       const wholesaleInr = store.formatMoney(s.cost);
       const sellingPriceUsd = store.getSellingPrice(s.cost, s.id, s.rawId);
       const sellingPriceInr = store.formatMoney(sellingPriceUsd);
+      const isWos = s.provider === 'worldofsmm';
 
       return `
         <tr style="${isSelected ? 'background: rgba(99, 102, 241, 0.08);' : ''}">
@@ -3322,26 +3402,37 @@ const AdminApp = {
             />
           </td>
           <td>
-            <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 700;">
+            <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 800; font-size: 13px; color: var(--primary);">
               #${sKey}
             </span>
-            <div style="font-size: 10.5px; color: var(--text-muted); margin-top: 2px;">${isWos ? 'WorldOfSMM' : (prov === 'socialfans' ? 'SocialFans' : prov)}</div>
+            <div style="margin-top: 4px;">
+              <span class="badge" style="font-size: 10px; padding: 2px 6px; ${isWos ? 'background: rgba(99, 102, 241, 0.12); color: #4F46E5;' : 'background: rgba(249, 115, 22, 0.12); color: #EA580C;'}">
+                ${isWos ? '🇮🇳 WorldOfSMM' : '🔥 SocialFans'}
+              </span>
+            </div>
           </td>
           <td>
             <div style="font-weight: 700; font-size: 13.5px; color: var(--text-main); line-height: 1.3;">
               ${s.name}
             </div>
-            <div style="font-size: 11.5px; color: var(--text-secondary); margin-top: 3px;">
-              📂 <em>${s.category}</em>
+            <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+              <span style="font-size: 11.5px; color: var(--text-secondary);">
+                📂 Provider: <em>${s.category}</em>
+              </span>
+              ${isActive && mappedCat ? `
+                <span class="badge" style="font-size: 11px; padding: 2px 8px; background: rgba(16, 185, 129, 0.12); color: #059669; font-weight: 700;">
+                  ⭐ LikeX: ${mappedCat}
+                </span>
+              ` : ''}
             </div>
           </td>
           <td>
             <div style="font-weight: 700; font-size: 13px; color: var(--text-muted);">$${s.cost.toFixed(4)}</div>
-            <div style="font-size: 11px; color: var(--text-secondary);">${wholesaleInr} / 1K</div>
+            <div style="font-size: 11px; color: var(--text-secondary); font-weight: 600;">${wholesaleInr} / 1K</div>
           </td>
           <td>
             <div style="font-weight: 800; font-size: 14px; color: var(--primary);">${sellingPriceInr} / 1K</div>
-            <div style="font-size: 11px; color: #10B981; font-weight: 600;">+$${(sellingPriceUsd - s.cost).toFixed(4)} profit</div>
+            <div style="font-size: 11px; color: #10B981; font-weight: 600;">+$${(sellingPriceUsd - s.cost).toFixed(4)} margin</div>
           </td>
           <td>
             <div style="font-size: 12px; font-weight: 600;">${Number(s.min).toLocaleString()} - ${Number(s.max).toLocaleString()}</div>
@@ -3349,23 +3440,43 @@ const AdminApp = {
           </td>
           <td>
             ${isActive ? `
-              <span class="badge-active-likex">
+              <span class="badge-active-likex" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: rgba(16, 185, 129, 0.12); color: #059669; border-radius: 20px; font-size: 11.5px; font-weight: 700;">
                 <span>●</span> Active in LikeX
               </span>
             ` : `
-              <span class="badge-inactive-likex">
+              <span class="badge-inactive-likex" style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; background: var(--bg-subtle); color: var(--text-muted); border-radius: 20px; font-size: 11.5px; font-weight: 600;">
                 <span>○</span> Not in Catalog
               </span>
             `}
           </td>
           <td style="text-align: right;">
-            <button 
-              class="btn btn-sm ${isActive ? 'btn-outline' : 'btn-primary'}" 
-              style="${isActive ? 'color: #EF4444; border-color: #EF4444; font-size: 12px; padding: 5px 12px;' : 'font-size: 12px; padding: 5px 12px;'}"
-              onclick="AdminApp.handleToggleSingleServiceById('${sKey}')"
-            >
-              ${isActive ? '🗑️ Remove' : '➕ Add to LikeX'}
-            </button>
+            <div style="display: inline-flex; gap: 6px; align-items: center; justify-content: flex-end;">
+              ${isActive ? `
+                <button 
+                  class="btn btn-sm btn-secondary" 
+                  style="font-size: 12px; padding: 5px 10px; white-space: nowrap;"
+                  onclick="AdminApp.openEditServiceCategoryModal('${s.id}', '${sKey}')"
+                  title="Move or change LikeX Category"
+                >
+                  ✏️ Move Category
+                </button>
+                <button 
+                  class="btn btn-sm btn-outline" 
+                  style="color: #EF4444; border-color: #EF4444; font-size: 12px; padding: 5px 10px; white-space: nowrap;"
+                  onclick="AdminApp.handleRemoveSingleService('${s.id}', '${sKey}')"
+                >
+                  🗑️ Remove
+                </button>
+              ` : `
+                <button 
+                  class="btn btn-sm btn-primary" 
+                  style="font-size: 12px; padding: 5px 12px; white-space: nowrap; font-weight: 700;"
+                  onclick="AdminApp.openAddServiceToCategoryModal('${sKey}')"
+                >
+                  ➕ Add to LikeX
+                </button>
+              `}
+            </div>
           </td>
         </tr>
       `;
@@ -3393,16 +3504,294 @@ const AdminApp = {
     this.render(document.getElementById('screen-container'));
   },
 
-  handleAddSelectedToCatalog() {
+  openAddServiceToCategoryModal(serviceId) {
+    const sId = String(serviceId);
+    const serviceObj = (this._currentRenderedServices || []).find(s => String(s.rawId || s.id) === sId);
+    if (!serviceObj) return;
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    if (!modal) return;
+
+    const store = window.store;
+    const categories = store.getAllLikeXCategories ? store.getAllLikeXCategories() : [];
+    const wholesaleInr = store.formatMoney(serviceObj.cost);
+    const sellingPriceUsd = store.getSellingPrice(serviceObj.cost, serviceObj.id, serviceObj.rawId);
+    const sellingPriceInr = store.formatMoney(sellingPriceUsd);
+
+    modal.innerHTML = `
+      <div class="generic-modal-box" style="max-width: 540px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>➕ Add Service to LikeX Category</span>
+          </h3>
+          <button class="btn btn-sm btn-secondary" onclick="AdminApp.closeServicePriceModal()" style="border-radius: 50%; width: 32px; height: 32px; padding: 0;">✕</button>
+        </div>
+
+        <div style="background: var(--bg-subtle); padding: 12px 14px; border-radius: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+            <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 800; color: var(--primary);">#${serviceObj.rawId}</span>
+            <span class="badge badge-primary" style="font-size: 11px;">${serviceObj.providerName || serviceObj.provider}</span>
+          </div>
+          <strong style="font-size: 13.5px; color: var(--text-main); display: block; line-height: 1.3;">${serviceObj.name}</strong>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; font-size: 12px; color: var(--text-secondary); border-top: 1px solid var(--border-color); padding-top: 6px;">
+            <span>Wholesale: <strong>${wholesaleInr} / 1K</strong></span>
+            <span>Customer Price: <strong style="color: var(--primary);">${sellingPriceInr} / 1K</strong></span>
+          </div>
+        </div>
+
+        <form onsubmit="AdminApp.submitAddServiceToCategory(event, '${serviceObj.rawId}')" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 13px; margin-bottom: 6px; display: block;">
+              Select Target LikeX Category:
+            </label>
+            <select id="modal-target-category-select" class="form-input" style="height: 42px; font-size: 13.5px;" onchange="AdminApp.handleModalCategorySelectChange(this.value)">
+              <option value="LikeX Special">⭐ LikeX Special (Recommended Top Priority)</option>
+              ${categories.filter(c => c !== 'LikeX Special').map(c => `<option value="${c.replace(/"/g, '&quot;')}">${c}</option>`).join('')}
+              <option value="__NEW_CUSTOM__">➕ + Create New Custom Category...</option>
+            </select>
+          </div>
+
+          <div id="modal-custom-category-input-group" style="display: none;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px; color: var(--primary); margin-bottom: 4px; display: block;">
+              Enter New Custom Category Name:
+            </label>
+            <input 
+              type="text" 
+              id="modal-custom-category-name-input" 
+              class="form-input" 
+              placeholder="e.g. Instagram 👑 VIP Non-Drop Turbo Likes" 
+              style="height: 40px; font-size: 13px;"
+            />
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn btn-secondary" style="flex: 1; height: 42px; border-radius: 10px;" onclick="AdminApp.closeServicePriceModal()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" style="flex: 2; height: 42px; border-radius: 10px; font-weight: 800; background: linear-gradient(135deg, #10B981, #059669); border: none; color: #FFFFFF;">
+              ➕ Confirm & Add to LikeX
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.classList.add('active');
+    if (window.CustomerApp && CustomerApp.openModal) CustomerApp.openModal();
+  },
+
+  handleModalCategorySelectChange(val) {
+    const customGroup = document.getElementById('modal-custom-category-input-group');
+    if (customGroup) {
+      customGroup.style.display = val === '__NEW_CUSTOM__' ? 'block' : 'none';
+      if (val === '__NEW_CUSTOM__') {
+        const input = document.getElementById('modal-custom-category-name-input');
+        if (input) input.focus();
+      }
+    }
+  },
+
+  submitAddServiceToCategory(e, rawId) {
+    e.preventDefault();
+    const serviceObj = (this._currentRenderedServices || []).find(s => String(s.rawId || s.id) === String(rawId));
+    if (!serviceObj) return;
+
+    const select = document.getElementById('modal-target-category-select');
+    let targetCat = select ? select.value : 'LikeX Special';
+
+    if (targetCat === '__NEW_CUSTOM__') {
+      const customInput = document.getElementById('modal-custom-category-name-input');
+      targetCat = customInput ? customInput.value.trim() : '';
+      if (!targetCat) {
+        window.store.showToast('Please enter a valid category name', 'error');
+        return;
+      }
+      window.store.createCustomCategory(targetCat);
+    }
+
+    window.store.addServicesToCatalog([serviceObj], targetCat);
+    this.closeServicePriceModal();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  openEditServiceCategoryModal(serviceId, rawId) {
+    const sId = String(serviceId);
+    const rId = String(rawId || sId).replace(/^wos-/, '').replace(/^sf-/, '');
+    const store = window.store;
+    const currentMapped = store.getServiceMappedCategory(sId, rId) || 'LikeX Special';
+    const categories = store.getAllLikeXCategories ? store.getAllLikeXCategories() : [];
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="generic-modal-box" style="max-width: 520px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 8px;">
+            <span>✏️ Move Service Category</span>
+          </h3>
+          <button class="btn btn-sm btn-secondary" onclick="AdminApp.closeServicePriceModal()" style="border-radius: 50%; width: 32px; height: 32px; padding: 0;">✕</button>
+        </div>
+
+        <div style="background: var(--bg-subtle); padding: 12px 14px; border-radius: 12px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="badge badge-neutral" style="font-family: var(--font-mono); font-weight: 800; color: var(--primary);">#${rId}</span>
+            <span style="font-size: 12px; color: var(--text-secondary);">Currently mapped to: <strong style="color: #059669;">${currentMapped}</strong></span>
+          </div>
+        </div>
+
+        <form onsubmit="AdminApp.submitEditServiceCategory(event, '${sId}', '${rId}')" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 13px; margin-bottom: 6px; display: block;">
+              Select New Target Category:
+            </label>
+            <select id="modal-target-category-select" class="form-input" style="height: 42px; font-size: 13.5px;" onchange="AdminApp.handleModalCategorySelectChange(this.value)">
+              ${categories.map(c => `<option value="${c.replace(/"/g, '&quot;')}" ${c === currentMapped ? 'selected' : ''}>${c}</option>`).join('')}
+              <option value="__NEW_CUSTOM__">➕ + Create New Custom Category...</option>
+            </select>
+          </div>
+
+          <div id="modal-custom-category-input-group" style="display: none;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px; color: var(--primary); margin-bottom: 4px; display: block;">
+              Enter New Custom Category Name:
+            </label>
+            <input 
+              type="text" 
+              id="modal-custom-category-name-input" 
+              class="form-input" 
+              placeholder="e.g. Instagram 👑 VIP Non-Drop Turbo Likes" 
+              style="height: 40px; font-size: 13px;"
+            />
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn btn-secondary" style="flex: 1; height: 42px; border-radius: 10px;" onclick="AdminApp.closeServicePriceModal()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" style="flex: 2; height: 42px; border-radius: 10px; font-weight: 800; background: linear-gradient(135deg, #6366F1, #8B5CF6);">
+              💾 Update Category
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.classList.add('active');
+    if (window.CustomerApp && CustomerApp.openModal) CustomerApp.openModal();
+  },
+
+  submitEditServiceCategory(e, serviceId, rawId) {
+    e.preventDefault();
+    const select = document.getElementById('modal-target-category-select');
+    let targetCat = select ? select.value : '';
+
+    if (targetCat === '__NEW_CUSTOM__') {
+      const customInput = document.getElementById('modal-custom-category-name-input');
+      targetCat = customInput ? customInput.value.trim() : '';
+      if (!targetCat) {
+        window.store.showToast('Please enter a valid category name', 'error');
+        return;
+      }
+      window.store.createCustomCategory(targetCat);
+    }
+
+    window.store.updateServiceCategory(serviceId, rawId, targetCat);
+    this.closeServicePriceModal();
+    this.render(document.getElementById('screen-container'));
+  },
+
+  handleRemoveSingleService(serviceId, rawId) {
+    window.store.removeServicesFromCatalog([serviceId, rawId]);
+    this.render(document.getElementById('screen-container'));
+  },
+
+  openBatchAddModal() {
     if (this.selectedServiceIds.size === 0) return;
+    const store = window.store;
+    const categories = store.getAllLikeXCategories ? store.getAllLikeXCategories() : [];
+    const selectedCount = this.selectedServiceIds.size;
+
+    const modal = document.getElementById('generic-modal-backdrop');
+    if (!modal) return;
+
+    modal.innerHTML = `
+      <div class="generic-modal-box" style="max-width: 520px; width: 95%;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <h3 style="font-size: 18px; font-weight: 800; color: var(--text-main); margin: 0;">
+            <span>➕ Add ${selectedCount} Selected Services</span>
+          </h3>
+          <button class="btn btn-sm btn-secondary" onclick="AdminApp.closeServicePriceModal()" style="border-radius: 50%; width: 32px; height: 32px; padding: 0;">✕</button>
+        </div>
+
+        <form onsubmit="AdminApp.submitBatchAdd(event)" style="display: flex; flex-direction: column; gap: 14px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" style="font-weight: 700; font-size: 13px; margin-bottom: 6px; display: block;">
+              Select Target LikeX Category for all ${selectedCount} services:
+            </label>
+            <select id="modal-target-category-select" class="form-input" style="height: 42px; font-size: 13.5px;" onchange="AdminApp.handleModalCategorySelectChange(this.value)">
+              <option value="LikeX Special">⭐ LikeX Special</option>
+              ${categories.filter(c => c !== 'LikeX Special').map(c => `<option value="${c.replace(/"/g, '&quot;')}">${c}</option>`).join('')}
+              <option value="__NEW_CUSTOM__">➕ + Create New Custom Category...</option>
+            </select>
+          </div>
+
+          <div id="modal-custom-category-input-group" style="display: none;">
+            <label class="form-label" style="font-weight: 700; font-size: 12.5px; color: var(--primary); margin-bottom: 4px; display: block;">
+              Enter New Custom Category Name:
+            </label>
+            <input 
+              type="text" 
+              id="modal-custom-category-name-input" 
+              class="form-input" 
+              placeholder="e.g. Instagram 👑 VIP Non-Drop Turbo Likes" 
+              style="height: 40px; font-size: 13px;"
+            />
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 8px;">
+            <button type="button" class="btn btn-secondary" style="flex: 1; height: 42px; border-radius: 10px;" onclick="AdminApp.closeServicePriceModal()">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-success" style="flex: 2; height: 42px; border-radius: 10px; font-weight: 800; background: #10B981; border: none; color: #FFFFFF;">
+              ➕ Add All ${selectedCount} Services
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.classList.add('active');
+    if (window.CustomerApp && CustomerApp.openModal) CustomerApp.openModal();
+  },
+
+  submitBatchAdd(e) {
+    e.preventDefault();
+    if (this.selectedServiceIds.size === 0) return;
+
+    const select = document.getElementById('modal-target-category-select');
+    let targetCat = select ? select.value : 'LikeX Special';
+
+    if (targetCat === '__NEW_CUSTOM__') {
+      const customInput = document.getElementById('modal-custom-category-name-input');
+      targetCat = customInput ? customInput.value.trim() : '';
+      if (!targetCat) {
+        window.store.showToast('Please enter a valid category name', 'error');
+        return;
+      }
+      window.store.createCustomCategory(targetCat);
+    }
+
     const toAdd = (this._currentRenderedServices || []).filter(s => {
       const id = String(s.id);
       const rawId = String(s.rawId || '');
       return this.selectedServiceIds.has(id) || (rawId && this.selectedServiceIds.has(rawId));
     });
-    if (toAdd.length === 0) return;
-    window.store.addServicesToCatalog(toAdd);
+
+    if (toAdd.length > 0) {
+      window.store.addServicesToCatalog(toAdd, targetCat);
+    }
     this.selectedServiceIds.clear();
+    this.closeServicePriceModal();
     this.render(document.getElementById('screen-container'));
   },
 
@@ -3413,75 +3802,38 @@ const AdminApp = {
     this.render(document.getElementById('screen-container'));
   },
 
-  handleToggleSingleServiceById(serviceId) {
-    const sId = String(serviceId);
-    const serviceObj = (this._currentRenderedServices || []).find(s => String(s.rawId || s.id) === sId);
-    if (!serviceObj) return;
-
-    const isActive = window.store.isServiceActiveInCatalog(serviceObj.id, serviceObj.rawId);
-    if (isActive) {
-      window.store.removeServicesFromCatalog([serviceObj.id, serviceObj.rawId]);
-    } else {
-      window.store.addServicesToCatalog([serviceObj]);
-    }
-    this.render(document.getElementById('screen-container'));
-  },
-
   renderProviderServicesManager(store) {
-    const prov = this.selectedProvider || 'worldofsmm';
-    const isWos = prov === 'worldofsmm';
-
-    if (!this.providerServicesCache[prov] && !this.isLoadingProviderServices) {
-      setTimeout(() => this.fetchProviderServices(prov), 10);
-    }
-
-    let allServices = this.providerServicesCache[prov] || [];
-    if (allServices.length === 0) {
-      const catalog = window.JAP_SERVICES || [];
-      if (prov === 'worldofsmm') {
-        allServices = catalog.filter(s => s.provider === 'worldofsmm' || String(s.id).startsWith('wos-'));
-      } else if (prov === 'socialfans') {
-        allServices = catalog.filter(s => s.provider === 'socialfans' || String(s.id).startsWith('sf-'));
-      } else {
-        allServices = catalog;
-      }
-    }
-
-    const normalized = allServices.map(s => {
-      const sId = String(s.service || s.id);
-      const rawId = String(s.rawId || s.service || sId.replace('wos-', '').replace('sf-', ''));
-      const costUsd = prov === 'socialfans'
-        ? (parseFloat(s.rate || s.cost || 0) / (store.data.exchangeRate || 95.385))
-        : parseFloat(s.rate || s.cost || 0.1);
-      return {
-        ...s,
-        id: prov === 'socialfans' ? (sId.startsWith('sf-') ? sId : `sf-${sId}`) : sId,
-        rawId: rawId,
-        provider: prov,
-        cost: costUsd,
-        rate: costUsd,
-        name: s.name || '',
-        category: s.category || 'General Services',
-        min: s.min || 10,
-        max: s.max || 1000000
-      };
-    });
+    const prov = this.selectedProvider || 'all';
+    const normalized = this.getNormalizedProviderServices(prov);
 
     const rawCategories = [...new Set(normalized.map(s => s.category).filter(Boolean))].sort();
     const selectedCat = this.selectedCategory || 'all';
     const query = (this.serviceSearchQuery || '').trim().toLowerCase();
+    const cleanQuery = query.replace(/^#/, '').trim();
     const statusF = this.statusFilter || 'all';
 
     let filtered = normalized;
     if (selectedCat !== 'all') {
       filtered = filtered.filter(s => s.category === selectedCat);
     }
-    if (query) {
-      filtered = filtered.filter(s => 
-        s.id.toLowerCase().includes(query) || 
-        s.rawId.toLowerCase().includes(query) || 
-        s.name.toLowerCase().includes(query)
-      );
+    if (cleanQuery) {
+      filtered = filtered.filter(s => {
+        const cleanId = String(s.rawId || '').toLowerCase();
+        const fullId = String(s.id || '').toLowerCase();
+        const name = (s.name || '').toLowerCase();
+        const cat = (s.category || '').toLowerCase();
+        const provName = (s.providerName || s.provider || '').toLowerCase();
+        const mappedCat = (store.getServiceMappedCategory(s.id, s.rawId) || '').toLowerCase();
+
+        return cleanId === cleanQuery ||
+               fullId === cleanQuery ||
+               cleanId.includes(cleanQuery) ||
+               fullId.includes(cleanQuery) ||
+               name.includes(cleanQuery) ||
+               cat.includes(cleanQuery) ||
+               provName.includes(cleanQuery) ||
+               mappedCat.includes(cleanQuery);
+      });
     }
     if (statusF === 'active') {
       filtered = filtered.filter(s => store.isServiceActiveInCatalog(s.id, s.rawId));
@@ -3495,30 +3847,38 @@ const AdminApp = {
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => this.selectedServiceIds.has(id));
     const selectedCount = this.selectedServiceIds.size;
 
+    const wosCount = (this.providerServicesCache['worldofsmm'] || []).length || 1685;
+    const sfCount = (this.providerServicesCache['socialfans'] || []).length || 460;
+    const totalServicesCount = wosCount + sfCount;
+
     return `
       <div style="display: flex; flex-direction: column; gap: 16px;">
         <!-- Top Info Header -->
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main);">⚡ Provider Service Importer & Manager</h2>
+            <h2 style="font-size: 24px; font-weight: 800; color: var(--text-main);">⚡ Provider Services & Catalog Manager</h2>
             <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 2px;">
-              Browse all raw provider services, filter by category, and add or remove services to LikeX Customer Catalog in bulk.
+              Search any service ID across all upstream providers, customize selling price & map services directly into LikeX Categories.
             </p>
           </div>
-          <button class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;" onclick="AdminApp.fetchProviderServices('${prov}', true)">
-            <span>${this.isLoadingProviderServices ? '⏳ Fetching...' : '🔄 Refresh Live API'}</span>
+          <button class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 6px;" onclick="AdminApp.fetchProviderServices('all', true)">
+            <span>${this.isLoadingProviderServices ? '⏳ Fetching...' : '🔄 Refresh Live APIs'}</span>
           </button>
         </div>
 
-        <!-- Provider Switcher Tabs -->
+        <!-- Provider Switcher Tabs (Unified All Providers vs Specific) -->
         <div class="provider-selector-tabs">
+          <button class="provider-tab-btn ${prov === 'all' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('all')">
+            <span>🌐 All Providers (Unified Search)</span>
+            <span class="badge ${prov === 'all' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">${totalServicesCount.toLocaleString()} Services</span>
+          </button>
           <button class="provider-tab-btn ${prov === 'worldofsmm' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('worldofsmm')">
             <span>🇮🇳 WorldOfSMM (Funded $0.10)</span>
-            <span class="badge ${prov === 'worldofsmm' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">1,685 Live Services</span>
+            <span class="badge ${prov === 'worldofsmm' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">${wosCount.toLocaleString()} Live Services</span>
           </button>
           <button class="provider-tab-btn ${prov === 'socialfans' ? 'active' : ''}" onclick="AdminApp.handleSelectProvider('socialfans')">
             <span>🔥 SocialFans (Direct API)</span>
-            <span class="badge ${prov === 'socialfans' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">460 Live Services</span>
+            <span class="badge ${prov === 'socialfans' ? 'badge-neutral' : 'badge-primary'}" style="font-size: 11px;">${sfCount.toLocaleString()} Live Services</span>
           </button>
         </div>
 
@@ -3538,9 +3898,9 @@ const AdminApp = {
               </select>
             </div>
 
-            <div style="flex: 1; min-width: 220px;">
+            <div style="flex: 1.5; min-width: 260px;">
               <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-bottom: 4px; display: block;">
-                Search by Service Name or ID
+                Search by Service ID (e.g. 4997, 2982, 7292) or Keyword
               </label>
               <input 
                 type="text" 
@@ -3550,8 +3910,8 @@ const AdminApp = {
                 autocapitalize="off"
                 spellcheck="false"
                 class="form-input" 
-                style="height: 40px; font-size: 13px;" 
-                placeholder="Search e.g. Followers, Views, Likes, 1407..." 
+                style="height: 40px; font-size: 13px; font-weight: 600;" 
+                placeholder="Search any service ID (4997, 7292, 2982, 6433) or keyword..." 
                 value="${this.serviceSearchQuery || ''}"
                 oninput="AdminApp.handleServiceSearch(this.value)" 
               />
@@ -3589,22 +3949,22 @@ const AdminApp = {
                 <th style="width: 40px; text-align: center;">
                   <input type="checkbox" ${allVisibleSelected ? 'checked' : ''} onchange="AdminApp.handleSelectAllVisible(this.checked)" title="Select All Visible" />
                 </th>
-                <th style="width: 90px;">Service ID</th>
-                <th>Package Name & Category</th>
+                <th style="width: 110px;">Service ID & Upstream</th>
+                <th>Package Name & Categories</th>
                 <th>Wholesale Cost</th>
                 <th>Selling Price (+${store.data.adminStats.globalMarkupPercent}%)</th>
                 <th>Min / Max</th>
                 <th>Status in LikeX</th>
-                <th style="text-align: right;">Action</th>
+                <th style="text-align: right; min-width: 170px;">Action</th>
               </tr>
             </thead>
             <tbody id="admin-services-table-tbody">
-              ${this.renderAdminServicesRows(filtered, store, isWos, prov)}
+              ${this.renderAdminServicesRows(filtered, store)}
             </tbody>
           </table>
-          ${filtered.length > 100 ? `
+          ${filtered.length > 120 ? `
             <div style="text-align: center; padding: 14px; background: var(--bg-subtle); font-size: 12.5px; color: var(--text-secondary);">
-              Showing first 100 of ${filtered.length} services. Use category or search to narrow down.
+              Showing first 120 of ${filtered.length} services. Use category or ID search above to narrow down.
             </div>
           ` : ''}
         </div>
@@ -3614,11 +3974,11 @@ const AdminApp = {
           <div class="floating-batch-bar">
             <div class="batch-info">
               <span style="font-size: 20px;">📌</span>
-              <span><strong>${selectedCount}</strong> services selected from ${isWos ? 'WorldOfSMM' : (prov === 'socialfans' ? 'SocialFans' : prov)}</span>
+              <span><strong>${selectedCount}</strong> services selected</span>
             </div>
             <div class="batch-actions">
-              <button class="btn btn-success btn-md" style="background: #10B981; border: none; font-weight: 700; color: #FFFFFF;" onclick="AdminApp.handleAddSelectedToCatalog()">
-                ➕ Add Selected (${selectedCount}) to Customer Catalog
+              <button class="btn btn-success btn-md" style="background: #10B981; border: none; font-weight: 700; color: #FFFFFF;" onclick="AdminApp.openBatchAddModal()">
+                ➕ Add Selected (${selectedCount}) to Category
               </button>
               <button class="btn btn-sm" style="background: #EF4444; border: none; font-weight: 700; color: #FFFFFF;" onclick="AdminApp.handleRemoveSelectedFromCatalog()">
                 🗑️ Remove Selected (${selectedCount})

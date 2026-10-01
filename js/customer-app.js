@@ -1148,7 +1148,10 @@ const CustomerApp = {
         this.currentCategory = exactMatchedService ? exactMatchedService.category : categories[0];
       }
     } else if (plat === 'instagram') {
-      categories = [...INSTAGRAM_CATEGORIES];
+      const activePlatformCats = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
+      const customCats = (store && store.catalogCustomizations && store.catalogCustomizations.customCategories) || [];
+      const extraCats = [...customCats, ...activePlatformCats].filter(c => !INSTAGRAM_CATEGORIES.includes(c));
+      categories = [...INSTAGRAM_CATEGORIES, ...extraCats];
     } else if (plat === 'all') {
       const otherCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
       categories = [...INSTAGRAM_CATEGORIES, ...otherCategories.filter(c => !INSTAGRAM_CATEGORIES.includes(c))];

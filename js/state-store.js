@@ -78,13 +78,15 @@ class SmmStateStore {
         });
         this.catalogCustomizations = {
           addedServices: cleanAdded,
-          disabledServiceIds: new Set(parsed.disabledServiceIds || [])
+          disabledServiceIds: new Set(parsed.disabledServiceIds || []),
+          categoryOverrides: parsed.categoryOverrides || {},
+          customCategories: Array.isArray(parsed.customCategories) ? parsed.customCategories : []
         };
       } else {
-        this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
+        this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set(), categoryOverrides: {}, customCategories: [] };
       }
     } catch (e) {
-      this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set() };
+      this.catalogCustomizations = { addedServices: [], disabledServiceIds: new Set(), categoryOverrides: {}, customCategories: [] };
     }
 
     // Ensure official core services (e.g. World of SMM 6433 & SocialFans 4997) are never suppressed by stale localStorage
@@ -657,7 +659,9 @@ class SmmStateStore {
     try {
       const payload = {
         addedServices: this.catalogCustomizations.addedServices,
-        disabledServiceIds: Array.from(this.catalogCustomizations.disabledServiceIds)
+        disabledServiceIds: Array.from(this.catalogCustomizations.disabledServiceIds),
+        categoryOverrides: this.catalogCustomizations.categoryOverrides || {},
+        customCategories: this.catalogCustomizations.customCategories || []
       };
       localStorage.setItem('likex_catalog_customizations_v4', JSON.stringify(payload));
       // Cloud sync to Supabase so all devices receive catalog updates uniformly
@@ -801,6 +805,7 @@ class SmmStateStore {
     const disabled = this.catalogCustomizations.disabledServiceIds || new Set();
     const added = this.catalogCustomizations.addedServices || [];
     const overrides = this.data.serviceOverrides || {};
+    const catOverrides = (this.catalogCustomizations && this.catalogCustomizations.categoryOverrides) || {};
 
     const activeMap = new Map();
     // 1. Base services not disabled (core categories like Custom Comment & LikeX Special are protected)
@@ -823,8 +828,11 @@ class SmmStateStore {
           effectiveCost = Number(ov.cost);
         }
 
+        const mappedCategory = catOverrides[sId] || catOverrides[rId] || s.category || 'General Services';
+
         activeMap.set(sId, {
           ...s,
+          category: mappedCategory,
           cost: effectiveCost,
           min: (ov && ov.min !== undefined) ? ov.min : ((liveInfo && liveInfo.min) ? liveInfo.min : s.min),
           max: (ov && ov.max !== undefined) ? ov.max : ((liveInfo && liveInfo.max) ? liveInfo.max : s.max),
@@ -858,8 +866,11 @@ class SmmStateStore {
           effectiveCost = Number(ov.cost);
         }
 
+        const mappedCategory = catOverrides[sId] || catOverrides[rId] || s.category || 'General Services';
+
         activeMap.set(sId, {
           ...s,
+          category: mappedCategory,
           cost: effectiveCost,
           min: (ov && ov.min !== undefined) ? ov.min : ((liveInfo && liveInfo.min) ? liveInfo.min : s.min),
           max: (ov && ov.max !== undefined) ? ov.max : ((liveInfo && liveInfo.max) ? liveInfo.max : s.max),
@@ -889,10 +900,103 @@ class SmmStateStore {
     return (window.JAP_SERVICES || []).some(s => String(s.id) === idStr || (rawStr && String(s.rawId) === rawStr));
   }
 
-  addServicesToCatalog(servicesList) {
+  getServiceMappedCategory(serviceId, rawId = null) {
+    const sId = String(serviceId);
+    const rId = rawId ? String(rawId) : sId.replace(/^wos-/, '').replace(/^sf-/, '');
+    const catOverrides = (this.catalogCustomizations && this.catalogCustomizations.categoryOverrides) || {};
+    if (catOverrides[sId]) return catOverrides[sId];
+    if (rId && catOverrides[rId]) return catOverrides[rId];
+
+    const added = (this.catalogCustomizations && this.catalogCustomizations.addedServices) || [];
+    const addedMatch = added.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
+    if (addedMatch && addedMatch.category) return addedMatch.category;
+
+    const base = window.JAP_SERVICES || [];
+    const baseMatch = base.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
+    if (baseMatch && baseMatch.category) return baseMatch.category;
+
+    return null;
+  }
+
+  getAllLikeXCategories() {
+    const baseCats = window.INSTAGRAM_CATEGORIES || [
+      'LikeX Special',
+      'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      'Instagram 👑 Low-Drop Followers — No Refill',
+      'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
+      'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
+      'Instagram 👑 High-Drop Followers — No Refill',
+      'Instagram 👑 Views — Non-Drop',
+      'Instagram 👑 Likes — Non-Drop',
+      'Instagram 👑 Comment / Custom Comment — No Drop',
+      '👑Instagram❤️Likes (The Best)✅',
+      '👑Instagram Reel Views [Best👁️]',
+      '✅Instagram Best Services👑',
+      'Instagram Services❤️ (No Refill)',
+      '👑Instagram Likes❤️[ Non-Drop ]',
+      'Instagram Services ( UAE, USA, Brazil )',
+      '👑Instagram Reel Views👁️',
+      '👑Instagram Reel Likes',
+      '👑Instagram 🇮🇳Indian Likes Services',
+      '👑INSTAGRAM BLUETICK VERIFICATION🎉💯',
+      '👑Instagram Saves, Story Views & Poll Votes',
+      '👑Instagram Comments, Comment likes & Shares',
+      '▶️Youtube Best Services👑',
+      'Old Services [ No Refill & Support ]'
+    ];
+    const custom = (this.catalogCustomizations && this.catalogCustomizations.customCategories) || [];
+    const active = this.getActiveServices();
+    const activeCats = active.map(s => s.category).filter(Boolean);
+    const set = new Set([...baseCats, ...custom, ...activeCats]);
+    return Array.from(set).filter(Boolean);
+  }
+
+  createCustomCategory(categoryName) {
+    const clean = String(categoryName || '').trim();
+    if (!clean) return false;
+    if (!this.catalogCustomizations.customCategories) {
+      this.catalogCustomizations.customCategories = [];
+    }
+    if (!this.catalogCustomizations.customCategories.includes(clean)) {
+      this.catalogCustomizations.customCategories.push(clean);
+      this.saveCatalogCustomizations();
+      this.showToast(`✅ Created new custom category "${clean}"!`, 'success');
+      return true;
+    }
+    return false;
+  }
+
+  updateServiceCategory(serviceId, rawId, newCategory) {
+    const sId = String(serviceId);
+    const rId = rawId ? String(rawId) : sId.replace(/^wos-/, '').replace(/^sf-/, '');
+    const cleanCat = String(newCategory || '').trim();
+    if (!cleanCat) return;
+
+    if (!this.catalogCustomizations.categoryOverrides) {
+      this.catalogCustomizations.categoryOverrides = {};
+    }
+    this.catalogCustomizations.categoryOverrides[sId] = cleanCat;
+    if (rId) this.catalogCustomizations.categoryOverrides[rId] = cleanCat;
+
+    const added = this.catalogCustomizations.addedServices || [];
+    const existing = added.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
+    if (existing) {
+      existing.category = cleanCat;
+      existing.platform = this._detectPlatform(existing.name, cleanCat);
+    }
+
+    this.saveCatalogCustomizations();
+    this.showToast(`✅ Assigned service #${rId} to "${cleanCat}"!`, 'success');
+  }
+
+  addServicesToCatalog(servicesList, targetCategory = null) {
     if (!Array.isArray(servicesList) || servicesList.length === 0) return 0;
     let count = 0;
     const inrRate = this.data.exchangeRate || 95.385;
+    if (!this.catalogCustomizations.categoryOverrides) {
+      this.catalogCustomizations.categoryOverrides = {};
+    }
+
     servicesList.forEach(rawSvc => {
       const prov = rawSvc.provider || (String(rawSvc.id || rawSvc.service || '').startsWith('sf-') ? 'socialfans' : 'worldofsmm');
       const sId = String(rawSvc.id || (prov === 'worldofsmm' ? `wos-${rawSvc.service || rawSvc.rawId}` : `sf-${rawSvc.service || rawSvc.rawId}`));
@@ -901,15 +1005,19 @@ class SmmStateStore {
       this.catalogCustomizations.disabledServiceIds.delete(sId);
       this.catalogCustomizations.disabledServiceIds.delete(rId);
 
+      const chosenCategory = (targetCategory || rawSvc.targetCategory || rawSvc.category || 'General Services').trim();
+      this.catalogCustomizations.categoryOverrides[sId] = chosenCategory;
+      if (rId) this.catalogCustomizations.categoryOverrides[rId] = chosenCategory;
+
       const rawRateVal = parseFloat(rawSvc.rate || rawSvc.cost || 0.1);
       const costUsd = prov === 'socialfans' ? (rawRateVal / inrRate) : rawRateVal;
 
       const formattedSvc = {
         id: sId,
         rawId: rId,
-        name: rawSvc.name,
-        category: rawSvc.category || 'General Services',
-        platform: rawSvc.platform || this._detectPlatform(rawSvc.name, rawSvc.category),
+        name: rawSvc.name || `Service #${rId}`,
+        category: chosenCategory,
+        platform: rawSvc.platform || this._detectPlatform(rawSvc.name, chosenCategory),
         cost: costUsd,
         min: parseInt(rawSvc.min || 10, 10),
         max: parseInt(rawSvc.max || 1000000, 10),
@@ -918,7 +1026,10 @@ class SmmStateStore {
         provider: prov
       };
 
-      const existingIdx = this.catalogCustomizations.addedServices.findIndex(s => String(s.id) === sId);
+      // Deduplicate by sId or rId
+      const existingIdx = this.catalogCustomizations.addedServices.findIndex(s => 
+        String(s.id) === sId || (rId && String(s.rawId) === rId)
+      );
       if (existingIdx >= 0) {
         this.catalogCustomizations.addedServices[existingIdx] = formattedSvc;
       } else {
@@ -928,7 +1039,8 @@ class SmmStateStore {
     });
 
     this.saveCatalogCustomizations();
-    this.showToast(`✅ Successfully added ${count} service(s) to Customer Catalog!`, 'success');
+    const catLabel = targetCategory ? ` to "${targetCategory}"` : '';
+    this.showToast(`✅ Successfully added ${count} service(s)${catLabel}!`, 'success');
     return count;
   }
 
@@ -1356,6 +1468,12 @@ class SmmStateStore {
             }
             if (Array.isArray(parsed.catalog_customizations.disabledServiceIds)) {
               this.catalogCustomizations.disabledServiceIds = new Set(parsed.catalog_customizations.disabledServiceIds);
+            }
+            if (parsed.catalog_customizations.categoryOverrides && typeof parsed.catalog_customizations.categoryOverrides === 'object') {
+              this.catalogCustomizations.categoryOverrides = parsed.catalog_customizations.categoryOverrides;
+            }
+            if (Array.isArray(parsed.catalog_customizations.customCategories)) {
+              this.catalogCustomizations.customCategories = parsed.catalog_customizations.customCategories;
             }
           }
           if (parsed.maintenance_mode) {
