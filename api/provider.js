@@ -374,6 +374,7 @@ export default async function handler(req, res) {
       const providerCostVal = calculatedProviderCost || Number(paramsObj.wholesaleCost ? (Number(paramsObj.wholesaleCost) / 1000) * Number(paramsObj.quantity || 1000) : 0);
 
       const baseSnapshot = {
+        likeXOrderId: displayLikeXId,
         rawServiceId: rawSvcId,
         serviceId: String(paramsObj.serviceId || paramsObj.service || ''),
         serviceName: serviceName,
@@ -471,9 +472,10 @@ export default async function handler(req, res) {
       };
 
       const updatedTargetUrl = `${rawTargetLink}#meta=${encodeURIComponent(JSON.stringify(finalSnapshotPayload))}`;
-      const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 95);
+      // Postgres schema strictly enforces refill_status VARCHAR(50) — truncate to 48 characters to guarantee no SQL rejection
+      const safeRefillStatus = String(orderErrorNote || 'Standard').slice(0, 48);
 
-      // 3. Fast Single Database Order Log Persistence (Non-blocking async insertion)
+      // 3. Fast Single Database Order Log Persistence (Non-blocking async insertion with automatic failover)
       const orderDbPayload = {
         id: orderIdNum,
         user_id: userId,
@@ -491,7 +493,7 @@ export default async function handler(req, res) {
       };
 
       try {
-        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+        const insRes = await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?on_conflict=id`, {
           method: 'POST',
           headers: {
             apikey: SUPABASE_ANON_KEY,
@@ -501,6 +503,23 @@ export default async function handler(req, res) {
           },
           body: JSON.stringify(orderDbPayload)
         });
+
+        if (!insRes.ok) {
+          const insErr = await insRes.json().catch(() => ({}));
+          console.warn('[LikeX Backend] Supabase order upsert notice:', insErr);
+          // Fallback: If merge fails or duplicate error, retry plain insert without explicit id
+          const fallbackPayload = { ...orderDbPayload };
+          delete fallbackPayload.id;
+          await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(fallbackPayload)
+          });
+        }
       } catch (insertErr) {
         console.warn('[LikeX Backend] Supabase order insertion notice:', insertErr.message);
       }
