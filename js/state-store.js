@@ -111,16 +111,19 @@ class SmmStateStore {
       const savedAnnounce = localStorage.getItem('likex_announcement_config');
       if (savedAnnounce) {
         this.data.announcement = JSON.parse(savedAnnounce);
+        if (this.data.announcement && this.data.announcement.text && this.data.announcement.text.includes('9837371137')) {
+          this.data.announcement.text = this.data.announcement.text.replace(/💬\s*WhatsApp:[^•]+•\s*/gi, '').replace(/WhatsApp:[^•]+•\s*/gi, '');
+        }
       } else {
         this.data.announcement = {
           enabled: true,
-          text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 WhatsApp: +91 9837371137 • ✈️ Telegram: @Likex_support • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+          text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • ✈️ Telegram: @Likex_support • ✉️ Email: support@likex.in • 🛡️ 365-Day Refill & Drop Protection Guarantee"
         };
       }
     } catch (e) {
       this.data.announcement = {
         enabled: true,
-        text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 WhatsApp: +91 9837371137 • ✈️ Telegram: @Likex_support • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+        text: "⚡ Welcome to LikeX! • 👑 World's Most Famous & India's #1 SMM Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • ✈️ Telegram: @Likex_support • ✉️ Email: support@likex.in • 🛡️ 365-Day Refill & Drop Protection Guarantee"
       };
     }
 
@@ -129,11 +132,14 @@ class SmmStateStore {
       const savedNotice = localStorage.getItem('likex_header_notice_config');
       if (savedNotice) {
         this.data.headerNotification = JSON.parse(savedNotice);
+        if (this.data.headerNotification && this.data.headerNotification.message && this.data.headerNotification.message.includes('9837371137')) {
+          this.data.headerNotification.message = this.data.headerNotification.message.replace(/•\s*WhatsApp:[^\n]+\n?/gi, '• Email: support@likex.in\n');
+        }
       } else {
         this.data.headerNotification = {
           enabled: true,
           title: "📢 Official Notice & Updates",
-          message: "⚡ Welcome to LikeX!\n\n👑 India's Wholesale SMM & Creator Platform.\n🚀 All services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!",
+          message: "⚡ Welcome to LikeX!\n\n👑 India's Wholesale SMM & Creator Platform.\n🚀 All services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• Telegram: @Likex_support\n• Email: support@likex.in\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!",
           updatedAt: new Date().toISOString()
         };
       }
@@ -141,7 +147,7 @@ class SmmStateStore {
       this.data.headerNotification = {
         enabled: true,
         title: "📢 Official Notice & Updates",
-        message: "⚡ Welcome to LikeX!\n\n👑 India's Wholesale SMM & Creator Platform.\n🚀 All services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!",
+        message: "⚡ Welcome to LikeX!\n\n👑 India's Wholesale SMM & Creator Platform.\n🚀 All services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• Telegram: @Likex_support\n• Email: support@likex.in\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!",
         updatedAt: new Date().toISOString()
       };
     }

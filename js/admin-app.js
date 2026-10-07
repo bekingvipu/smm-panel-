@@ -1357,7 +1357,8 @@ const AdminApp = {
         <!-- Preset Insertion Chips -->
         <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;">
           <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); align-self: center;">Quick Add:</span>
-          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 💬 24/7 WhatsApp VIP Support: +91 9837371137')">+ WhatsApp VIP</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • ✈️ 24/7 Telegram VIP: @Likex_support')">+ Telegram VIP</button>
+          <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 📧 Email Support: support@likex.in')">+ Email Support</button>
           <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 🛡️ 365-Day Refill & Drop Protection Guarantee')">+ 365D Refill</button>
           <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 💰 Guaranteed Lowest Wholesale Prices in India')">+ Lowest Rates</button>
           <button type="button" class="btn btn-sm btn-secondary" style="font-size: 11px; padding: 4px 10px;" onclick="AdminApp.appendAnnouncementSnippet(' • 🚀 Instant 0-Min Delivery Active')">+ Instant Delivery</button>
@@ -1721,7 +1722,7 @@ const AdminApp = {
     const msgEl = document.getElementById('admin-notice-message');
     if (titleEl) titleEl.value = '⚡ LikeX Live Server & Speed Updates';
     if (msgEl) {
-      msgEl.value = `👑 Welcome to LikeX Wholesale Platform!\n\n🔥 Live Services Status:\n• Instagram Followers: 100% Active (Instant Start)\n• YouTube Views & Subs: Non-Drop & Stable\n• Telegram Members: 0-5 Mins Fast Delivery\n\n💬 Need help? Our VIP Desk is available 24/7:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!\nThank you for choosing LikeX!`;
+      msgEl.value = `👑 Welcome to LikeX Wholesale Platform!\n\n🔥 Live Services Status:\n• Instagram Followers: 100% Active (Instant Start)\n• YouTube Views & Subs: Non-Drop & Stable\n• Telegram Members: 0-5 Mins Fast Delivery\n\n💬 Need help? Our VIP Desk is available 24/7:\n• Telegram: @Likex_support\n• Email: support@likex.in\n\n🛡️ 365-Day Refill & Drop Protection Guarantee Active!\nThank you for choosing LikeX!`;
     }
     this.updateNoticePreview();
   },
@@ -5956,26 +5957,24 @@ const AdminApp = {
           </div>
         </div>
 
-        <!-- WhatsApp Support Card -->
-        <div class="card" style="background: linear-gradient(135deg, rgba(37, 211, 102, 0.1), rgba(18, 140, 126, 0.15)); border: 1.5px solid #25D366; border-radius: var(--radius-xl); padding: 28px;">
+        <!-- Email Support Card -->
+        <div class="card" style="background: linear-gradient(135deg, rgba(234, 67, 53, 0.1), rgba(197, 34, 31, 0.15)); border: 1.5px solid #EA4335; border-radius: var(--radius-xl); padding: 28px;">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
             <div>
-              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(37, 211, 102, 0.2); color: #075E54; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px;">
-                <span>🟢</span> <span>WHATSAPP SUPPORT CENTER</span>
+              <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(234, 67, 53, 0.2); color: #C5221F; font-size: 12px; font-weight: 800; padding: 4px 12px; border-radius: 999px; margin-bottom: 8px;">
+                <span>🔴</span> <span>OFFICIAL EMAIL SUPPORT CENTER</span>
               </div>
-              <h2 style="font-size: 22px; font-weight: 900; margin: 0; color: var(--text-main);">24/7 WhatsApp Customer Helpline</h2>
+              <h2 style="font-size: 22px; font-weight: 900; margin: 0; color: var(--text-main);">24/7 Email & Gmail Support</h2>
               <p style="font-size: 13.5px; color: var(--text-secondary); margin-top: 6px; line-height: 1.5;">
-                Helpline: <strong>+91 9837371137</strong> • Real-time messaging & instant screenshot verification.
+                Mailbox: <strong>support@likex.in</strong> • Official customer inquiries & payment disputes.
               </p>
             </div>
             <a 
-              href="https://wa.me/919837371137" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+              href="mailto:support@likex.in" 
               class="btn" 
-              style="background: #25D366; color: #fff; font-weight: 800; font-size: 15px; padding: 12px 24px; border-radius: 9999px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 18px rgba(37, 211, 102, 0.4);"
+              style="background: #EA4335; color: #fff; font-weight: 800; font-size: 15px; padding: 12px 24px; border-radius: 9999px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 6px 18px rgba(234, 67, 53, 0.4);"
             >
-              <span>💬</span> <span>Open WhatsApp Web</span>
+              <span>📧</span> <span>Open Support Mailbox</span>
             </a>
           </div>
         </div>
@@ -5983,7 +5982,7 @@ const AdminApp = {
         <div class="card" style="padding: 24px;">
           <h3 style="font-size: 16px; font-weight: 800; margin-bottom: 10px; color: var(--text-main);">Support Protocol</h3>
           <p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6;">
-            Customer inquiries regarding <strong>Order Refills</strong>, <strong>UPI Payment Manual Top-ups</strong>, and <strong>Service Inquiries</strong> are routed directly to your official Telegram desk (<strong>@Likex_support</strong>) and WhatsApp helpline (<strong>+91 9837371137</strong>).
+            Customer inquiries regarding <strong>Order Refills</strong>, <strong>UPI Payment Manual Top-ups</strong>, and <strong>Service Inquiries</strong> are routed directly to your official Telegram desk (<strong>@Likex_support</strong>) and official Email desk (<strong>support@likex.in</strong>).
           </p>
         </div>
       </div>

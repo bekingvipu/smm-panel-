@@ -2219,6 +2219,17 @@
   box-shadow: 0 4px 12px rgba(37, 211, 102, 0.15);
 }
 
+.support-btn-email {
+  background: rgba(234, 67, 53, 0.08);
+  border-color: rgba(234, 67, 53, 0.25);
+}
+
+.support-btn-email:hover {
+  background: rgba(234, 67, 53, 0.16);
+  border-color: rgba(234, 67, 53, 0.5);
+  box-shadow: 0 4px 12px rgba(234, 67, 53, 0.15);
+}
+
 .support-channel-icon {
   width: 40px;
   height: 40px;
@@ -2237,6 +2248,11 @@
 .support-channel-icon.wa-bg {
   background: linear-gradient(135deg, #25D366, #128C7E);
   box-shadow: 0 4px 10px rgba(37, 211, 102, 0.35);
+}
+
+.support-channel-icon.email-bg {
+  background: linear-gradient(135deg, #EA4335, #C5221F);
+  box-shadow: 0 4px 10px rgba(234, 67, 53, 0.35);
 }
 
 .support-channel-details {

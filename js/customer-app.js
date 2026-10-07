@@ -8,7 +8,7 @@ const CustomerApp = {
   renderAnnouncementBar(store) {
     const announce = (store && store.data && store.data.announcement) || {
       enabled: true,
-      text: "⚡ Welcome to LikeX! • 👑 India's Direct Wholesale SMM & Creator Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • 💬 WhatsApp: +91 9837371137 • ✈️ Telegram: @Likex_support • 🛡️ 365-Day Refill & Drop Protection Guarantee"
+      text: "⚡ Welcome to LikeX! • 👑 India's Direct Wholesale SMM & Creator Platform • 💰 Guaranteed Lowest Wholesale Prices • 🔥 Fast Instagram Followers & Likes Active • 🚀 Indian High-Speed Services Live • ✈️ Telegram: @Likex_support • ✉️ Email: support@likex.in • 🛡️ 365-Day Refill & Drop Protection Guarantee"
     };
 
     if (!announce.enabled || !announce.text) return '';
@@ -71,10 +71,10 @@ const CustomerApp = {
           ${maint.message || 'LikeX is currently undergoing scheduled performance optimizations to provide you with faster delivery speeds. All active orders are processing normally.'}
         </p>
 
-        <!-- Direct VIP WhatsApp Button & Refresh Action -->
+        <!-- Direct VIP Telegram Button & Refresh Action -->
         <div style="display: flex; flex-direction: column; gap: 12px; width: 100%; max-width: 360px; margin-bottom: 28px;">
-          <a href="https://wa.me/919837371137?text=Hi%20LikeX%20Support%2C%20I%20have%20an%20urgent%20query%20during%20maintenance." target="_blank" rel="noopener noreferrer" class="btn btn-lg" style="background: #25D366; color: white; font-weight: 800; border-radius: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35); height: 50px; font-size: 14px;">
-            <span>💬 24/7 WhatsApp VIP Support</span>
+          <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" class="btn btn-lg" style="background: #2AABEE; color: white; font-weight: 800; border-radius: 14px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.35); height: 50px; font-size: 14px;">
+            <span>✈️ 24/7 Telegram VIP Support</span>
           </a>
           <button type="button" class="btn btn-secondary btn-lg" onclick="location.reload()" style="border-radius: 14px; font-weight: 700; height: 48px; font-size: 14px;">
             🔄 Refresh Status
@@ -108,7 +108,7 @@ const CustomerApp = {
 
     const notice = (window.store && window.store.data && window.store.data.headerNotification) || {};
     const title = notice.title || '📢 Official Notice & Updates';
-    const message = notice.message || '⚡ Welcome to LikeX!\n\n👑 India\'s Wholesale SMM & Creator Platform.\nAll services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• WhatsApp: +91 9837371137\n• Telegram: @Likex_support';
+    const message = notice.message || '⚡ Welcome to LikeX!\n\n👑 India\'s Wholesale SMM & Creator Platform.\nAll services are active and running at direct wholesale rates.\n\n💬 24/7 VIP Support:\n• Telegram: @Likex_support\n• Email: support@likex.in';
     const updateDate = notice.updatedAt ? new Date(notice.updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Live Broadcast';
 
     // Mark as seen so unread pulse stops
@@ -3199,8 +3199,8 @@ const CustomerApp = {
             <a href="https://t.me/Likex_support" target="_blank" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('telegram')" class="btn btn-secondary btn-lg" style="background: rgba(42,171,238,0.3); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
               ✈️ Telegram VIP
             </a>
-            <a href="https://wa.me/919837371137" target="_blank" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('whatsapp')" class="btn btn-secondary btn-lg" style="background: rgba(255,255,255,0.2); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
-              💬 WhatsApp Support
+            <a href="mailto:support@likex.in" class="btn btn-secondary btn-lg" style="background: rgba(234,67,53,0.3); color: #FFFFFF; border: 1.5px solid rgba(255,255,255,0.4); font-weight: 700; border-radius: 999px;">
+              📧 Email Support
             </a>
           </div>
         </div>
@@ -3567,12 +3567,12 @@ const CustomerApp = {
               </div>
             </div>
             <a 
-              href="https://wa.me/919837371137?text=${encodeURIComponent('Hello LikeX Support, my Order #' + primaryDisplayId + ' (LikeX Ref: #' + displayLikeX + ') is held in High Traffic queue with ' + (order.remains || 0) + ' remaining likes. Please priority complete my order.')}" 
+              href="https://t.me/Likex_support" 
               target="_blank" 
               rel="noopener noreferrer" 
-              style="display: flex; align-items: center; justify-content: center; background: #25D366; color: #FFFFFF; font-weight: 800; font-size: 13.5px; padding: 10px 16px; border-radius: 999px; text-decoration: none; margin-top: 10px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); transition: transform 0.15s ease;"
+              style="display: flex; align-items: center; justify-content: center; background: #2AABEE; color: #FFFFFF; font-weight: 800; font-size: 13.5px; padding: 10px 16px; border-radius: 999px; text-decoration: none; margin-top: 10px; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); transition: transform 0.15s ease;"
             >
-              <span>Contact Support to Complete</span>
+              <span>Contact Telegram Support to Complete</span>
             </a>
           </div>
         ` : canRefill ? `
@@ -3944,14 +3944,12 @@ const CustomerApp = {
             </a>
 
             <a 
-              href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need assistance with my account' + (userEmail ? ' (' + userEmail + ')' : ''))}" 
-              target="_blank" 
-              rel="noopener noreferrer" 
+              href="mailto:support@likex.in?subject=${encodeURIComponent('Hi LikeX Support, I need assistance with my account' + (userEmail ? ' (' + userEmail + ')' : ''))}" 
               class="btn" 
-              style="background: linear-gradient(135deg, #25D366, #128C7E); color: #ffffff; font-weight: 800; font-size: 12.5px; padding: 9px 12px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; box-shadow: 0 3px 12px rgba(37, 211, 102, 0.25); transition: transform 0.2s;"
+              style="background: linear-gradient(135deg, #EA4335, #C5221F); color: #ffffff; font-weight: 800; font-size: 12.5px; padding: 9px 12px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; box-shadow: 0 3px 12px rgba(234, 67, 53, 0.25); transition: transform 0.2s;"
             >
-              <span style="font-size: 15px;">💬</span>
-              <span>WhatsApp VIP</span>
+              <span style="font-size: 15px;">📧</span>
+              <span>Email Support</span>
             </a>
           </div>
         </div>
@@ -4045,13 +4043,11 @@ const CustomerApp = {
                     Refill on Telegram →
                   </a>
                   <a 
-                    href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="btn"
-                    style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); border: none;"
+                    href="mailto:support@likex.in?subject=${encodeURIComponent('Hi LikeX Support, I need a refill for my order.' + (recentOrders[0] ? ' Order ID #' + recentOrders[0].id : '') + (userEmail ? ' Account: ' + userEmail : ''))}" 
+                    class="btn" 
+                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(234, 67, 53, 0.35); border: none;"
                   >
-                    Refill on WhatsApp →
+                    Refill via Email →
                   </a>
                 </div>
               </div>
@@ -4076,20 +4072,18 @@ const CustomerApp = {
                   <a 
                     href="https://t.me/Likex_support" 
                     target="_blank" 
-                    rel="noopener noreferrer"
-                    class="btn"
+                    rel="noopener noreferrer" 
+                    class="btn" 
                     style="background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); border: none;"
                   >
                     Send on Telegram →
                   </a>
                   <a 
-                    href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="btn"
-                    style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); border: none;"
+                    href="mailto:support@likex.in?subject=${encodeURIComponent('Hi LikeX Support, I sent payment via UPI. Please credit my wallet.' + (userEmail ? ' Account: ' + userEmail : ''))}" 
+                    class="btn" 
+                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(234, 67, 53, 0.35); border: none;"
                   >
-                    Send on WhatsApp →
+                    Send via Email →
                   </a>
                 </div>
               </div>
@@ -4114,20 +4108,18 @@ const CustomerApp = {
                   <a 
                     href="https://t.me/Likex_support" 
                     target="_blank" 
-                    rel="noopener noreferrer"
-                    class="btn"
+                    rel="noopener noreferrer" 
+                    class="btn" 
                     style="background: linear-gradient(135deg, #2AABEE 0%, #229ED9 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(42, 171, 238, 0.35); border: none;"
                   >
                     Inquire on Telegram →
                   </a>
                   <a 
-                    href="https://wa.me/919837371137?text=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    class="btn"
-                    style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(37, 211, 102, 0.35); border: none;"
+                    href="mailto:support@likex.in?subject=${encodeURIComponent('Hi LikeX Team, I want to discuss bulk orders or API integration.')}" 
+                    class="btn" 
+                    style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12px; padding: 0 8px; box-shadow: 0 3px 10px rgba(234, 67, 53, 0.35); border: none;"
                   >
-                    Inquire on WhatsApp →
+                    Inquire via Email →
                   </a>
                 </div>
               </div>
@@ -4150,7 +4142,7 @@ const CustomerApp = {
                 </p>
                 <a 
                   href="mailto:support@likex.in?subject=${encodeURIComponent('LikeX Support Query' + (userEmail ? ' - ' + userEmail : ''))}" 
-                  class="btn"
+                  class="btn" 
                   style="background: linear-gradient(135deg, #EA4335 0%, #C5221F 100%); color: #FFFFFF; font-weight: 800; border-radius: 12px; height: 38px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; font-size: 12.5px; width: 100%; box-shadow: 0 3px 10px rgba(234, 67, 53, 0.3); border: none;"
                 >
                   Write to support@likex.in →
@@ -4161,67 +4153,35 @@ const CustomerApp = {
 
         </div>
 
-        <!-- Sleek Micro Contact Channels Strip (Frosted Matte Glass 2x2 Grid) -->
-        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; margin-top: 4px; width: 100%; box-sizing: border-box;">
+        <!-- Sleek Micro Contact Channels Strip (Frosted Matte Glass 2-Column Grid: Telegram & Gmail) -->
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-top: 6px; width: 100%; box-sizing: border-box;">
           <!-- 1. Telegram Matte Glass Card -->
           <a 
             href="https://t.me/Likex_support" 
             target="_blank" 
             rel="noopener noreferrer" 
-            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(42, 171, 238, 0.32); background: rgba(42, 171, 238, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
+            style="display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid rgba(42, 171, 238, 0.32); background: rgba(42, 171, 238, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
-            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(42, 171, 238, 0.18); border: 1px solid rgba(42, 171, 238, 0.3); color: #0284C7; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(42, 171, 238, 0.18); border: 1px solid rgba(42, 171, 238, 0.3); color: #0284C7; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
               ✈️
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
               <div style="font-size: 9px; font-weight: 800; color: #0284C7; text-transform: uppercase; letter-spacing: 0.5px;">Telegram</div>
-              <div style="font-size: 12px; font-weight: 800; color: #0369A1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
+              <div style="font-size: 12.5px; font-weight: 800; color: #0369A1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@Likex_support</div>
             </div>
           </a>
 
-          <!-- 2. WhatsApp Matte Glass Card -->
-          <a 
-            href="https://wa.me/919837371137" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(37, 211, 102, 0.32); background: rgba(37, 211, 102, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
-          >
-            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(37, 211, 102, 0.18); border: 1px solid rgba(37, 211, 102, 0.3); color: #047857; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
-              💬
-            </div>
-            <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9px; font-weight: 800; color: #047857; text-transform: uppercase; letter-spacing: 0.5px;">WhatsApp</div>
-              <div style="font-size: 12px; font-weight: 800; color: #065F46; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">+91 9837371137</div>
-            </div>
-          </a>
-
-          <!-- 3. Instagram Matte Glass Card -->
-          <a 
-            href="https://www.instagram.com/likexofficial/" 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(225, 48, 108, 0.32); background: rgba(225, 48, 108, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(225, 48, 108, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
-          >
-            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(225, 48, 108, 0.18); border: 1px solid rgba(225, 48, 108, 0.3); color: #BE185D; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
-              📸
-            </div>
-            <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9px; font-weight: 800; color: #BE185D; text-transform: uppercase; letter-spacing: 0.5px;">Instagram</div>
-              <div style="font-size: 12px; font-weight: 800; color: #9D174D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">@likexofficial</div>
-            </div>
-          </a>
-
-          <!-- 4. Official Email Matte Glass Card -->
+          <!-- 2. Official Gmail / Email Desk Matte Glass Card -->
           <a 
             href="mailto:support@likex.in" 
-            style="display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 14px; border: 1.5px solid rgba(234, 67, 53, 0.32); background: rgba(234, 67, 53, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
+            style="display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 14px; border: 1.5px solid rgba(234, 67, 53, 0.32); background: rgba(234, 67, 53, 0.08); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.08); transition: transform 0.15s ease; box-sizing: border-box; overflow: hidden;"
           >
-            <div style="width: 34px; height: 34px; border-radius: 10px; background: rgba(234, 67, 53, 0.18); border: 1px solid rgba(234, 67, 53, 0.3); color: #C5221F; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0;">
+            <div style="width: 36px; height: 36px; border-radius: 10px; background: rgba(234, 67, 53, 0.18); border: 1px solid rgba(234, 67, 53, 0.3); color: #C5221F; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">
               📧
             </div>
             <div style="flex: 1; min-width: 0; text-align: left;">
-              <div style="font-size: 9px; font-weight: 800; color: #C5221F; text-transform: uppercase; letter-spacing: 0.5px;">Email Desk</div>
-              <div style="font-size: 12px; font-weight: 800; color: #991B1B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">Send Email ✉️</div>
+              <div style="font-size: 9px; font-weight: 800; color: #C5221F; text-transform: uppercase; letter-spacing: 0.5px;">Email / Gmail</div>
+              <div style="font-size: 12.5px; font-weight: 800; color: #991B1B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;">support@likex.in</div>
             </div>
           </a>
         </div>
@@ -4392,11 +4352,11 @@ const CustomerApp = {
 
           <!-- Contact Buttons Grid -->
           <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px;">
-            <a href="https://wa.me/919837371137?text=Hi%20LikeX%20Team%2C%20I%20am%20a%20Creator%2FAgency%20interested%20in%20Bulk%20Orders" target="_blank" rel="noopener noreferrer" class="btn" style="background: #25D366; color: white; font-weight: 800; border-radius: 14px; height: 50px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35);" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('whatsapp');">
-              <span>💬 Contact Bulk Support on WhatsApp</span>
-            </a>
-            <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" class="btn" style="background: #0088cc; color: white; font-weight: 800; border-radius: 14px; height: 50px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(0, 136, 204, 0.35);" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('telegram');">
+            <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" class="btn" style="background: #2AABEE; color: white; font-weight: 800; border-radius: 14px; height: 50px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(42, 171, 238, 0.35);" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('telegram');">
               <span>✈️ Contact VIP Desk on Telegram</span>
+            </a>
+            <a href="mailto:support@likex.in?subject=LikeX%20Bulk%20Orders%20%26%20Agency%20Inquiry" class="btn" style="background: #EA4335; color: white; font-weight: 800; border-radius: 14px; height: 50px; font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; box-shadow: 0 4px 14px rgba(234, 67, 53, 0.35);" onclick="if(window.PixelTracker) window.PixelTracker.trackContact('email');">
+              <span>📧 Contact VIP Desk via Email</span>
             </a>
           </div>
         </div>
@@ -5088,8 +5048,8 @@ const CustomerApp = {
             <button class="btn btn-secondary" onclick="store.setCustomerTab('wallet')" style="font-weight: 700; border-radius: 12px; height: 44px; font-size: 13.5px;">
               Add Funds to Wallet
             </button>
-            <a href="https://wa.me/919837371137?text=Hi%20LikeX%2C%20I%20want%20to%20start%20my%20SMM%20reselling%20business%20and%20need%20mentorship." target="_blank" rel="noopener noreferrer" class="btn btn-success" style="font-weight: 700; border-radius: 12px; height: 44px; font-size: 13.5px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;">
-              <span>WhatsApp VIP Help</span>
+            <a href="https://t.me/Likex_support" target="_blank" rel="noopener noreferrer" class="btn" style="background: #2AABEE; color: white; font-weight: 700; border-radius: 12px; height: 44px; font-size: 13.5px; text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 4px 12px rgba(42, 171, 238, 0.35);">
+              <span>✈️ Telegram VIP Help</span>
             </a>
           </div>
         </div>
@@ -5453,8 +5413,8 @@ const CustomerApp = {
     const user = (window.store && window.store.data && window.store.data.customer) || {};
     const userIdentifier = user.email || user.username || 'My LikeX Account';
 
-    const waText = encodeURIComponent(`Hi LikeX Support, maine Trustpilot par honest review submit kar diya hai (Account: ${userIdentifier}). Please ye screenshot verify karke mere wallet me ₹100 bonus credit kar dein!`);
-    const waUrl = `https://wa.me/919837371137?text=${waText}`;
+    const emailText = encodeURIComponent(`Hi LikeX Support, maine Trustpilot par honest review submit kar diya hai (Account: ${userIdentifier}). Please ye screenshot verify karke mere wallet me ₹100 bonus credit kar dein!`);
+    const emailUrl = `mailto:support@likex.in?subject=${encodeURIComponent('Trustpilot ₹100 Bonus Claim - ' + userIdentifier)}&body=${emailText}`;
     const tgUrl = `https://t.me/Likex_support`;
 
     sheet.innerHTML = `
@@ -5504,14 +5464,14 @@ const CustomerApp = {
             <div style="background: #10B981; color: #fff; width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; flex-shrink: 0;">3</div>
             <div style="flex: 1;">
               <div style="font-weight: 800; font-size: 13.5px; color: var(--text-main);">Screenshot Bhej Kar ₹100 Payein</div>
-              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Hamare official WhatsApp ya Telegram support par screenshot share karein. Team turant verify karke aapke wallet me ₹100 add kar degi!</div>
+              <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">Hamare official Telegram ya Email support par screenshot share karein. Team turant verify karke aapke wallet me ₹100 add kar degi!</div>
               
               <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px;">
-                <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #25D366; color: #fff; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; box-shadow: 0 2px 6px rgba(37, 211, 102, 0.25);">
-                  <span>💬 WhatsApp Claim</span>
-                </a>
                 <a href="${tgUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-sm" style="background: #0088cc; color: #fff; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; box-shadow: 0 2px 6px rgba(0, 136, 204, 0.25);">
                   <span>✈️ Telegram Claim</span>
+                </a>
+                <a href="${emailUrl}" class="btn btn-sm" style="background: #EA4335; color: #fff; font-weight: 800; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; box-shadow: 0 2px 6px rgba(234, 67, 53, 0.25);">
+                  <span>📧 Email Claim</span>
                 </a>
               </div>
             </div>
