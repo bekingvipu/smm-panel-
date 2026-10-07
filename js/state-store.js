@@ -834,7 +834,10 @@ class SmmStateStore {
           effectiveCost = Number(ov.cost);
         }
 
-        const mappedCategory = catOverrides[sId] || catOverrides[rId] || s.category || 'General Services';
+        let mappedCategory = catOverrides[sId] || catOverrides[rId] || s.category || 'General Services';
+        if (mappedCategory === 'Instagram 👑 Non-Drop Followers — Refill Guaranteed') {
+          mappedCategory = 'Instagram 👑 Non-Drop Followers';
+        }
 
         activeMap.set(sId, {
           ...s,
@@ -872,7 +875,10 @@ class SmmStateStore {
           effectiveCost = Number(ov.cost);
         }
 
-        const mappedCategory = catOverrides[sId] || catOverrides[rId] || s.category || 'General Services';
+        let mappedCategory = catOverrides[sId] || catOverrides[rId] || s.category || 'General Services';
+        if (mappedCategory === 'Instagram 👑 Non-Drop Followers — Refill Guaranteed') {
+          mappedCategory = 'Instagram 👑 Non-Drop Followers';
+        }
 
         activeMap.set(sId, {
           ...s,
@@ -910,24 +916,30 @@ class SmmStateStore {
     const sId = String(serviceId);
     const rId = rawId ? String(rawId) : sId.replace(/^wos-/, '').replace(/^sf-/, '');
     const catOverrides = (this.catalogCustomizations && this.catalogCustomizations.categoryOverrides) || {};
-    if (catOverrides[sId]) return catOverrides[sId];
-    if (rId && catOverrides[rId]) return catOverrides[rId];
+    let res = null;
+    if (catOverrides[sId]) res = catOverrides[sId];
+    else if (rId && catOverrides[rId]) res = catOverrides[rId];
+    else {
+      const added = (this.catalogCustomizations && this.catalogCustomizations.addedServices) || [];
+      const addedMatch = added.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
+      if (addedMatch && addedMatch.category) res = addedMatch.category;
+      else {
+        const base = window.JAP_SERVICES || [];
+        const baseMatch = base.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
+        if (baseMatch && baseMatch.category) res = baseMatch.category;
+      }
+    }
 
-    const added = (this.catalogCustomizations && this.catalogCustomizations.addedServices) || [];
-    const addedMatch = added.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
-    if (addedMatch && addedMatch.category) return addedMatch.category;
-
-    const base = window.JAP_SERVICES || [];
-    const baseMatch = base.find(s => String(s.id) === sId || (rId && String(s.rawId) === rId));
-    if (baseMatch && baseMatch.category) return baseMatch.category;
-
-    return null;
+    if (res === 'Instagram 👑 Non-Drop Followers — Refill Guaranteed') {
+      return 'Instagram 👑 Non-Drop Followers';
+    }
+    return res;
   }
 
   getAllLikeXCategories() {
     const baseCats = window.INSTAGRAM_CATEGORIES || [
       'LikeX Special',
-      'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      'Instagram 👑 Non-Drop Followers',
       'Instagram 👑 Low-Drop Followers — No Refill',
       'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
       'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',

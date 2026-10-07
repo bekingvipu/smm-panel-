@@ -1111,7 +1111,7 @@ const CustomerApp = {
 
     const INSTAGRAM_CATEGORIES = window.INSTAGRAM_CATEGORIES || [
       'LikeX Special',
-      'Instagram 👑 Non-Drop Followers — Refill Guaranteed',
+      'Instagram 👑 Non-Drop Followers',
       'Instagram 👑 Low-Drop Followers — No Refill',
       'Instagram 👑 🇮🇳 Indian Followers — Low Drop — No Refill',
       'Instagram 👑 🇮🇳 Indian Followers — No Guarantee',
@@ -1175,7 +1175,7 @@ const CustomerApp = {
         return 2;
       };
       activePackages.sort((a, b) => getSpecialRank(a) - getSpecialRank(b));
-    } else if ((this.currentCategory || '').includes('Non-Drop Followers — Refill Guaranteed') && activePackages.length > 0) {
+    } else if (((this.currentCategory || '').includes('Non-Drop Followers') && !(this.currentCategory || '').includes('Low-Drop') && !(this.currentCategory || '').includes('High-Drop')) && activePackages.length > 0) {
       // Order: 4137, 7244, 7551, 7365, 7419
       const order = ['4137', '7244', '7551', '7365', '7419'];
       activePackages.sort((a, b) => {
@@ -3508,7 +3508,7 @@ const CustomerApp = {
     const startCount = Number(order.startCount || 0).toLocaleString();
     const currentCount = Number(order.currentCount || 0).toLocaleString();
     const remains = Number(order.remains || 0).toLocaleString();
-    const canRefill = order.status === 'Completed';
+    const canRefill = false; // Refill button disabled globally for all orders
     const isFailedOrLow = (order.isLowBalance || order.status.includes('Low Provider Balance') || (order.status === 'Processing' && String(order.id).startsWith('48') && !order.providerOrderId)) && order.status !== 'Refunded' && !isPartial;
 
     const primaryDisplayId = order.providerOrderId || order.likeXOrderId || order.id;
@@ -3575,13 +3575,6 @@ const CustomerApp = {
               <span>Contact Telegram Support to Complete</span>
             </a>
           </div>
-        ` : canRefill ? `
-          <button class="btn-refill-full" onclick="CustomerApp.promptRefill('${order.id}')">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
-            </svg>
-            <span>Request Refill</span>
-          </button>
         ` : order.status === 'Refunded' ? `
           <div style="text-align: center; padding: 6px 0; font-size: 12.5px; color: #7E22CE; font-weight: 700;">
             ✓ ${store.formatMoney(order.amount)} refunded to your wallet
@@ -3590,9 +3583,9 @@ const CustomerApp = {
           <button class="btn btn-sm btn-block" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 700; margin-top: 6px; padding: 8px; border-radius: 8px;" onclick="store.refundOrder('${order.id}', 'Provider Service Unavailable')">
             💸 Cancel & Refund ${store.formatMoney(order.amount)} to Wallet
           </button>
-        ` : `
+        ` : order.status === 'Completed' ? '' : `
           <div style="text-align: center; padding: 6px 0; font-size: 12.5px; color: var(--text-secondary);">
-            Order in progress • Refill warranty activates upon completion
+            Order in progress • Automated delivery active
           </div>
         `}
       </div>
