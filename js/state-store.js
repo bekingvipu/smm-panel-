@@ -3869,38 +3869,12 @@ class SmmStateStore {
     }
   }
 
-  // Auto-reconcile old failed mock test orders (like #48452, #48609)
+  // Auto-reconcile old failed mock test orders (Disabled to prevent client-side memory balance desync)
   reconcilePendingOrders() {
-    if (!this.data.orders || this.data.orders.length === 0) return;
-    let refundedCount = 0;
-    for (const order of this.data.orders) {
-      const isUnfulfilledMock = (order.status === 'Pending (Low Provider Balance)') ||
-        (order.isLowBalance && order.status !== 'Refunded') ||
-        (String(order.id).startsWith('48') && !order.providerOrderId && order.status === 'Processing');
-
-      if (isUnfulfilledMock && order.status !== 'Refunded' && order.status !== 'Completed') {
-        const refundAmt = Number(order.amount) || 0;
-        this.data.customer.balance += refundAmt;
-        order.status = 'Refunded';
-        order.refillReason = 'Automated refund: Upstream provider rejected order';
-        this.data.transactions.unshift({
-          id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
-          type: 'Order Refund',
-          description: `Auto-Refund for test Order #${order.id}`,
-          amount: refundAmt,
-          balanceAfter: this.data.customer.balance,
-          status: 'Success',
-          createdAt: Date.now(),
-          date: this.formatRealDate(Date.now())
-        });
-        refundedCount++;
-      }
-    }
-    if (refundedCount > 0) {
-      this.saveUserData();
-      this.notify();
-      this.showToast(`✅ Auto-reconciled & refunded ${refundedCount} unfulfilled test orders to your wallet!`, 'success');
-    }
+    // Disabled: Client-side local memory auto-reconciliation was falsely inflating UI balance
+    // and showing toast notifications for real queued/low-balance orders. Real refunds are
+    // handled via Supabase cloud database RPC and admin actions.
+    return;
   }
 
   async requestRefill(orderId) {
