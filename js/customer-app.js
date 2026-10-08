@@ -1048,6 +1048,7 @@ const CustomerApp = {
       const name = (s.name || '').toLowerCase();
       if (cat.includes('jap exclusive') || name.includes('jap exclusive')) return true;
       if (cat.includes('ai growth') || name.includes('ai growth')) return true;
+      if (cat.includes('facebook') && cat.includes('india')) return true;
       return false;
     };
 
@@ -1155,6 +1156,11 @@ const CustomerApp = {
     } else if (plat === 'all') {
       const otherCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
       categories = [...INSTAGRAM_CATEGORIES, ...otherCategories.filter(c => !INSTAGRAM_CATEGORIES.includes(c))];
+    } else if (plat === 'facebook') {
+      const rawCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
+      const bestCat = '💎Facebook Best Services👑';
+      const otherCats = rawCategories.filter(c => c !== bestCat).sort((a, b) => a.localeCompare(b));
+      categories = rawCategories.includes(bestCat) ? [bestCat, ...otherCats] : otherCats;
     } else {
       const rawCategories = [...new Set(filteredServices.map(s => s.category).filter(Boolean))];
       categories = rawCategories.sort((a, b) => a.localeCompare(b));

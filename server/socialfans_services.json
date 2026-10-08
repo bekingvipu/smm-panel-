@@ -1365,6 +1365,19 @@
     "cancel": false
   },
   {
+    "name": "\u2705\ud83d\udc41\ufe0fFacebook Reels Short Video Views [ Good ] - 1M/D Speed",
+    "rate": "2.9208",
+    "min": 10,
+    "max": 10000000,
+    "service": 7461,
+    "type": "default",
+    "category": "\ud83d\udc8eFacebook Best Services\ud83d\udc51",
+    "description": "Good One\n30days Refill Guarantee\n1M/Day Speed",
+    "dripfeed": false,
+    "refill": true,
+    "cancel": false
+  },
+  {
     "name": "\u2705\ud83e\udd33Facebook Page\u2763\ufe0fLikes+Followers [ Good & 60days RG ] - 30k/D ",
     "rate": "28.2149",
     "min": 100,
@@ -3481,19 +3494,6 @@
     "description": "6hrs Start time\n20k/day Speed\nPage With Follow Button\n30days Refill Guaranteed",
     "dripfeed": false,
     "refill": true,
-    "cancel": false
-  },
-  {
-    "name": "\ud83c\uddee\ud83c\uddf3 Facebook Real India Super [ SAD\ud83d\ude22 ] [ Instant ]",
-    "rate": "124.5391",
-    "min": 10,
-    "max": 10000,
-    "service": 3794,
-    "type": "default",
-    "category": "\ud83d\udc8eFacebook [ \ud83c\uddee\ud83c\uddf3 INDIA ] Services",
-    "description": "Instant Start\n50k/day Speed\n0-5% Nondrop\nReal Indian Quality",
-    "dripfeed": false,
-    "refill": false,
     "cancel": false
   },
   {
