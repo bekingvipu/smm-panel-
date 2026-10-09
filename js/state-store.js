@@ -2681,6 +2681,20 @@ class SmmStateStore {
               }
             })
             .catch(() => {});
+
+          // 3. Fetch customer's authoritative orders from Supabase orders table
+          window.supabaseClient
+            .from('orders')
+            .select('*')
+            .eq('user_id', u.id)
+            .order('created_at', { ascending: false })
+            .then(({ data: userCloudOrders, error: oErr }) => {
+              if (!oErr && Array.isArray(userCloudOrders) && userCloudOrders.length > 0) {
+                this.refreshCustomerOrders(cleanEmail, code, u.id);
+                this.notify();
+              }
+            })
+            .catch(() => {});
         }
       })
       .catch(() => {});
@@ -4533,6 +4547,42 @@ class SmmStateStore {
         localStorage.setItem('likex_supabase_orders', JSON.stringify(supa));
       }
     } catch (e) {}
+
+    // 5. Fire-and-forget background cloud sync to Supabase so Admin Console (Incognito/any PC) gets Queued orders
+    if (updatedOrder.isQueued || String(updatedOrder.status).toLowerCase() === 'queued' || updatedOrder.providerOrderId) {
+      try {
+        const rawIdNum = parseInt(String(updatedOrder.likeXOrderId || updatedOrder.id || '').replace(/\D/g, ''), 10);
+        if (rawIdNum && !isNaN(rawIdNum) && typeof fetch !== 'undefined') {
+          const snapshotJson = updatedOrder.serviceSnapshot ? encodeURIComponent(JSON.stringify(updatedOrder.serviceSnapshot)) : '';
+          const cleanTgt = updatedOrder.target ? String(updatedOrder.target).split('#meta=')[0].split('###')[0].trim() : '';
+          const fullTgt = snapshotJson ? `${cleanTgt}#meta=${snapshotJson}` : cleanTgt;
+          
+          fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?on_conflict=id`, {
+            method: 'POST',
+            headers: {
+              apikey: SUPABASE_ANON_KEY,
+              Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+              Prefer: 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify({
+              id: rawIdNum,
+              user_id: updatedOrder.customerUserId || null,
+              target_url: fullTgt,
+              quantity: Number(updatedOrder.quantity) || 1000,
+              charge: Number(updatedOrder.amount || 0),
+              provider_cost: Number(updatedOrder.providerCost || 0),
+              provider_order_id: updatedOrder.providerOrderId || null,
+              assigned_provider_id: updatedOrder.provider === 'socialfans' ? 3 : 2,
+              status: updatedOrder.status || 'Queued',
+              remains: Number(updatedOrder.remains || updatedOrder.quantity || 1000),
+              refill_status: String(updatedOrder.upstreamError || updatedOrder.errorReason || 'Queued').slice(0, 48),
+              created_at: updatedOrder.createdAt ? new Date(Number(updatedOrder.createdAt)).toISOString() : new Date().toISOString()
+            })
+          }).catch(() => {});
+        }
+      } catch (cloudSyncErr) {}
+    }
   }
 
   dispatchQueuedOrder(orderId) {
