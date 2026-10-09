@@ -814,15 +814,23 @@ class SmmStateStore {
     const catOverrides = (this.catalogCustomizations && this.catalogCustomizations.categoryOverrides) || {};
 
     const activeMap = new Map();
-    // 1. Base services not disabled (core categories like Custom Comment & LikeX Special are protected)
+    const isSvcDisabled = (sId, rId) => {
+      const sStr = String(sId);
+      const rStr = rId ? String(rId) : sStr.replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
+      if (disabled.has(sStr) || (rStr && disabled.has(rStr))) return true;
+      if (rStr && (disabled.has(`wos-${rStr}`) || disabled.has(`sf-${rStr}`))) return true;
+      if (disabled.has(`${sStr}-likex`)) return true;
+      return false;
+    };
+
+    // 1. Base services not disabled
     for (const s of base) {
       const sId = String(s.id);
       const rId = String(s.rawId || s.id).replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
       if (((sId === 'wos-6288' || rId === '6288') || (sId === 'wos-3100' || rId === '3100')) && (s.category || '') === 'LikeX Special') {
         continue; // 6288 and 3100 are strictly excluded from LikeX Special
       }
-      const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
-      if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
+      if (!isSvcDisabled(sId, rId)) {
         // Authoritative cost priority: overrides -> liveRatesCache -> baseline canonical s.cost
         let effectiveCost = Number(s.cost || 0.1);
         const liveInfo = this.getLiveRateInfo(sId, rId, s.provider);
@@ -863,8 +871,7 @@ class SmmStateStore {
         continue;
       }
 
-      const isProtectedCat = s.category === 'Instagram 👑 Comment / Custom Comment — No Drop' || s.category === 'Instagram Custom Comment — Non Drop' || s.category === 'LikeX Special';
-      if ((isProtectedCat || !disabled.has(sId)) && (isProtectedCat || !rId || !disabled.has(rId))) {
+      if (!isSvcDisabled(sId, rId)) {
         let effectiveCost = Number(s.cost || 0.1);
         const liveInfo = this.getLiveRateInfo(sId, rId, s.provider);
         if (liveInfo && liveInfo.rate !== undefined && !isNaN(Number(liveInfo.rate)) && Number(liveInfo.rate) > 0) {
@@ -898,10 +905,10 @@ class SmmStateStore {
 
   isServiceActiveInCatalog(serviceId, rawId = null) {
     const idStr = String(serviceId);
-    const rawStr = rawId ? String(rawId) : '';
-    const disabled = this.catalogCustomizations.disabledServiceIds;
+    const rawStr = rawId ? String(rawId) : idStr.replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '');
+    const disabled = this.catalogCustomizations.disabledServiceIds || new Set();
 
-    if (disabled.has(idStr) || (rawStr && disabled.has(rawStr))) {
+    if (disabled.has(idStr) || (rawStr && disabled.has(rawStr)) || (rawStr && (disabled.has(`wos-${rawStr}`) || disabled.has(`sf-${rawStr}`))) || disabled.has(`${idStr}-likex`)) {
       return false;
     }
 
