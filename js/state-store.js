@@ -1,6 +1,6 @@
 class SmmStateStore {
   constructor() {
-    this.data = JSON.parse(JSON.stringify(window.SMM_MOCK));
+    this.data = JSON.parse(JSON.stringify(window.SMM_MOCK || {}));
     this.deviceMode = 'desktop';
     this.persona = 'customer';
     // Restore active customer and admin tabs from URL query or localStorage
@@ -2159,6 +2159,9 @@ class SmmStateStore {
           const cleanCustDigits = rawCustCode ? String(rawCustCode).replace(/\D/g, '') : null;
           const derivedUserId = cleanCustDigits ? (Number(cleanCustDigits) > 10000 ? String(Number(cleanCustDigits) - 10000) : cleanCustDigits) : null;
 
+          // Authoritative Wallet Balance Ledger Lookup
+          const matchedTx = txMap.get(String(so.id)) || txMap.get(String(so.id).replace(/\D/g, ''));
+
           let matchedUser = null;
           if (so.user_id) matchedUser = userMap.get(String(so.user_id));
           if (!matchedUser && snapshot?.email) matchedUser = userMap.get(String(snapshot.email).toLowerCase().trim());
@@ -2220,8 +2223,6 @@ class SmmStateStore {
 
           const resolvedCustCode = matchedUser?.customer_code || rawCustCode || (matchedUser?.id ? `LX-${10000 + Number(matchedUser.id)}` : (userEmail ? this.getCustomerId(userEmail) : 'LX-Guest'));
 
-          // Authoritative Wallet Balance Ledger Lookup
-          const matchedTx = txMap.get(String(so.id)) || txMap.get(String(so.id).replace(/\D/g, ''));
           let balBeforeVal = null;
           let balAfterVal = null;
 

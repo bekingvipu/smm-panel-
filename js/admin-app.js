@@ -4624,6 +4624,8 @@ const AdminApp = {
                     provKey.includes('wos') ||
                     (!isSf && (provIdStr.startsWith('58') || provIdStr.startsWith('59') || String(o.id).startsWith('58')));
 
+      const isLow = Boolean(o.isLowBalance || (o.status && o.status.includes('Low Provider Balance')));
+
       let custCode = o.customerId || o.customerCode || o.serviceSnapshot?.customerCode || null;
       let custEmail = o.userEmail || o.customerEmail || o.serviceSnapshot?.email || '';
       let custName = (o.customerName && o.customerName !== 'Customer' && o.customerName !== 'Guest') ? o.customerName : (o.serviceSnapshot?.name || '');
