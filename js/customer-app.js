@@ -2570,7 +2570,6 @@ const CustomerApp = {
   },
 
   openDynamicPaymentModal({ order_id, amount, payment_url }) {
-    let countdownSeconds = 480; // 8 minutes timer (perfectly synced with ZapUPI 8-minute session)
     if (this._depositPollInterval) {
       clearInterval(this._depositPollInterval);
       this._depositPollInterval = null;
@@ -2591,7 +2590,7 @@ const CustomerApp = {
 
     overlay.innerHTML = `
       <!-- Top Header Bar (Template 12 Ticket Stub Theme) -->
-      <div style="background: linear-gradient(135deg, #02363f 0%, #034854 50%, #045866 100%); color: white; padding: 10px 14px; border-bottom: 2px dashed rgba(255, 122, 69, 0.45); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 56px; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+      <div style="background: linear-gradient(135deg, #02363f 0%, #034854 50%, #045866 100%); color: white; padding: 10px 14px; border-bottom: 2px dashed rgba(255, 122, 69, 0.45); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 54px; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
         <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
           <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; width: 34px; height: 34px; border-radius: 9px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: all 0.2s;" title="Close & Cancel">&times;</button>
           <div style="min-width: 0;">
@@ -2618,18 +2617,6 @@ const CustomerApp = {
         </div>
       </div>
 
-      <!-- Status Banner Bar (Synchronized 8-min Timer) -->
-      <div style="background: #012b32; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 11.5px;">
-        <div style="display: flex; align-items: center; gap: 7px; color: #a5c7cc;">
-          <span class="pulse-indicator" style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
-          <span style="font-weight: 600;" id="deposit-status-text">Listening for payment confirmation...</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 5px; color: #ff9f43; font-weight: 800; background: rgba(255, 159, 67, 0.12); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 159, 67, 0.25);">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style="font-family: var(--font-mono); font-size: 11.5px;" id="deposit-countdown-timer">08:00</span>
-        </div>
-      </div>
-
       <!-- Main Fullscreen Iframe -->
       <div style="flex: 1; position: relative; width: 100%; height: 100%; background: #f7f6ed;">
         <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none;" title="Paytm Dynamic QR" allow="clipboard-write"></iframe>
@@ -2639,21 +2626,13 @@ const CustomerApp = {
     document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
 
-    // Start 8-minute countdown timer (perfectly synchronized with ZapUPI session)
-    this._depositTimerInterval = setInterval(() => {
-      countdownSeconds--;
-      const min = String(Math.floor(countdownSeconds / 60)).padStart(2, '0');
-      const sec = String(countdownSeconds % 60).padStart(2, '0');
-      const timerEl = document.getElementById('deposit-countdown-timer');
-      if (timerEl) timerEl.textContent = `${min}:${sec}`;
-
-      if (countdownSeconds <= 0) {
-        clearInterval(this._depositTimerInterval);
+    // Stop background auto-polling when 8-minute session expires
+    this._depositTimerInterval = setTimeout(() => {
+      if (this._depositPollInterval) {
         clearInterval(this._depositPollInterval);
-        const statusText = document.getElementById('deposit-status-text');
-        if (statusText) statusText.textContent = 'Session expired. Please generate a new QR.';
+        this._depositPollInterval = null;
       }
-    }, 1000);
+    }, 480 * 1000);
 
     // Auto-polling verification loop every 3.5 seconds
     this._depositPollInterval = setInterval(() => {
