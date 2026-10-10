@@ -1343,7 +1343,7 @@ const CustomerApp = {
   },
 
   renderServiceDropdownGroupHtml(activePackages, activeService, store, isLikeXSpecial) {
-    const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId) : (activeService.cost || 0.10)) : 0;
+    const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId, activeService.provider) : (activeService.cost || 0.10)) : 0;
     return `
       <label class="form-label">
         <span style="font-weight: 800;">2. Select Service Package</span>
@@ -1353,11 +1353,11 @@ const CustomerApp = {
       <!-- Hidden Native Select for 100% calculation & form compatibility -->
       <select id="new-order-service-select" style="display: none;" onchange="CustomerApp.handleServiceChange(this.value)">
         ${activePackages.length > 0 ? activePackages.map(s => {
-          const p = store.getSellingPrice ? store.getSellingPrice(s.cost || 0.1, s.id, s.rawId) : (s.cost || 0.1);
+          const sProv = s.provider || (String(s.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+          const p = store.getSellingPrice ? store.getSellingPrice(s.cost || 0.1, s.id, s.rawId, sProv) : (s.cost || 0.1);
           const isComm = (s.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (s.category || '').toLowerCase().includes('comment'));
           const sMin = isComm ? Math.max(50, s.min || 10) : (s.min || 10);
           const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
-          const sProv = s.provider || (String(s.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
           return `
             <option 
               value="${s.id}" 
@@ -1396,7 +1396,8 @@ const CustomerApp = {
         <div class="custom-dropdown-menu" id="custom-service-dropdown-menu" style="display: none;">
           ${activePackages.length > 0 ? activePackages.map(s => {
             const isSelected = activeService && String(s.id) === String(activeService.id);
-            const p = store.getSellingPrice ? store.getSellingPrice(s.cost || 0.1, s.id, s.rawId) : (s.cost || 0.1);
+            const sProv = s.provider || (String(s.id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
+            const p = store.getSellingPrice ? store.getSellingPrice(s.cost || 0.1, s.id, s.rawId, sProv) : (s.cost || 0.1);
             const tags = this.getServiceTags(s);
             const cleanId = String(s.rawId || s.id || '').replace(/^wos-/, '').replace(/^sf-/, '').replace(/^jap-/, '').replace(/-likex$/, '');
             return `
@@ -2082,6 +2083,7 @@ const CustomerApp = {
         const name = selectedOpt.getAttribute('data-name') || '';
         const id = selectedOpt.value;
         const rawId = selectedOpt.getAttribute('data-raw-id') || id;
+        const provider = selectedOpt.getAttribute('data-provider') || (String(id).startsWith('sf-') ? 'socialfans' : 'worldofsmm');
 
         const isCatSpecial = (CustomerApp.currentCategory || '').toLowerCase().includes('likex special') || (CustomerApp.currentCategory || '').toLowerCase().includes('special very good');
         const isComment = name.toLowerCase().includes('comment') || (!isCatSpecial && (CustomerApp.currentCategory || '').toLowerCase().includes('comment'));
@@ -2126,7 +2128,7 @@ const CustomerApp = {
           }
         }
 
-        const sellingPrice = store.getSellingPrice(cost, id, rawId);
+        const sellingPrice = store.getSellingPrice(cost, id, rawId, provider);
 
         const nameEl = document.getElementById('service-detail-name');
         if (nameEl) nameEl.textContent = name;
@@ -2283,7 +2285,7 @@ const CustomerApp = {
       return;
     }
 
-    const unitSellingPrice = store.getSellingPrice(wholesaleCost, serviceId, rawServiceId);
+    const unitSellingPrice = store.getSellingPrice(wholesaleCost, serviceId, rawServiceId, provider);
     const totalCost = (unitSellingPrice / 1000) * quantity;
     if (store.data.customer.balance < totalCost) {
       store.showToast('Insufficient wallet balance. Please add funds first!', 'error');

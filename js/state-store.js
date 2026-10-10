@@ -688,11 +688,11 @@ class SmmStateStore {
     return 'other';
   }
 
-  // Retrieve live rate override from auto-sync cache if available (strictly provider-scoped to avoid ID collisions)
+  // Retrieve live rate override from auto-sync cache or authoritative baseline tables (instant 100% sync)
   getLiveRateInfo(serviceId, rawId = null, provider = null) {
-    if (!this.liveRatesCache) return null;
     const sId = String(serviceId || '');
     const rId = String(rawId || sId).replace(/^sf-/, '').replace(/^wos-/, '').replace(/-c\d+$/, '').replace(/-likex$/, '');
+    const inrRate = this.data.exchangeRate || 95.385;
     
     // Determine provider context
     let prov = (provider ? String(provider) : '').toLowerCase();
@@ -701,20 +701,44 @@ class SmmStateStore {
       else if (sId.startsWith('wos-')) prov = 'worldofsmm';
     }
 
-    if (prov === 'socialfans') {
-      if (this.liveRatesCache[`sf-${rId}`]) return this.liveRatesCache[`sf-${rId}`];
-      if (this.liveRatesCache[sId] && sId.startsWith('sf-')) return this.liveRatesCache[sId];
-      return null;
+    // 1. Check liveRatesCache if populated
+    if (this.liveRatesCache) {
+      if (prov === 'socialfans') {
+        if (this.liveRatesCache[`sf-${rId}`]) return this.liveRatesCache[`sf-${rId}`];
+        if (this.liveRatesCache[sId] && sId.startsWith('sf-')) return this.liveRatesCache[sId];
+      } else if (prov === 'worldofsmm') {
+        if (this.liveRatesCache[`wos-${rId}`]) return this.liveRatesCache[`wos-${rId}`];
+        if (this.liveRatesCache[sId] && sId.startsWith('wos-')) return this.liveRatesCache[sId];
+      } else {
+        if (this.liveRatesCache[`sf-${rId}`]) return this.liveRatesCache[`sf-${rId}`];
+        if (this.liveRatesCache[`wos-${rId}`]) return this.liveRatesCache[`wos-${rId}`];
+        if (this.liveRatesCache[sId]) return this.liveRatesCache[sId];
+      }
     }
 
-    if (prov === 'worldofsmm') {
-      if (this.liveRatesCache[`wos-${rId}`]) return this.liveRatesCache[`wos-${rId}`];
-      if (this.liveRatesCache[sId] && sId.startsWith('wos-')) return this.liveRatesCache[sId];
-      return null;
+    // 2. Authoritative Baseline Fallback from window rate tables (Instant 100% sync)
+    const sfRates = window.SF_RATES_INR || {};
+    const wosRates = window.WOS_RATES_USD || {};
+
+    if (prov === 'socialfans' || sId.startsWith('sf-')) {
+      if (sfRates[rId] !== undefined) {
+        const inr = Number(sfRates[rId]);
+        return { rate: inr / inrRate, providerPriceINR: inr, provider: 'socialfans' };
+      }
+    } else if (prov === 'worldofsmm' || sId.startsWith('wos-')) {
+      if (wosRates[rId] !== undefined) {
+        return { rate: Number(wosRates[rId]), provider: 'worldofsmm' };
+      }
+    } else {
+      if (wosRates[rId] !== undefined) {
+        return { rate: Number(wosRates[rId]), provider: 'worldofsmm' };
+      }
+      if (sfRates[rId] !== undefined) {
+        const inr = Number(sfRates[rId]);
+        return { rate: inr / inrRate, providerPriceINR: inr, provider: 'socialfans' };
+      }
     }
 
-    // Direct match if provider is unspecified
-    if (this.liveRatesCache[sId]) return this.liveRatesCache[sId];
     return null;
   }
 
@@ -1102,7 +1126,7 @@ class SmmStateStore {
   }
 
   // Dynamic profit calculation (supports per-service cloud overrides & global margin with strict NO-LOSS safeguard)
-  getSellingPrice(wholesaleCostUsd, serviceId = null, rawId = null) {
+  getSellingPrice(wholesaleCostUsd, serviceId = null, rawId = null, provider = null) {
     const sId = serviceId ? String(serviceId).trim() : null;
     const rId = rawId ? String(rawId).trim() : (sId ? sId.replace(/^wos-/, '').replace(/^sf-/, '').replace(/-likex$/, '') : null);
     const overrides = this.data.serviceOverrides || {};
@@ -1110,7 +1134,7 @@ class SmmStateStore {
 
     // 1. Authoritative base cost resolution (overrides -> liveRatesCache -> passed wholesaleCostUsd)
     let baseCost = Number(wholesaleCostUsd) || 0.10;
-    const liveInfo = this.getLiveRateInfo(sId, rId);
+    const liveInfo = this.getLiveRateInfo(sId, rId, provider);
     if (liveInfo && liveInfo.rate !== undefined && !isNaN(Number(liveInfo.rate)) && Number(liveInfo.rate) > 0) {
       baseCost = Number(liveInfo.rate);
     }
@@ -3141,11 +3165,18 @@ class SmmStateStore {
         }
       }
 
-      // Firmly stamp dual wallet balances on order
+      // Firmly stamp dual wallet balances and exact charged amount on order
+      const finalAmountPaid = (dispatchResult.chargedAmount !== undefined && dispatchResult.chargedAmount > 0) ? Number(dispatchResult.chargedAmount) : totalCost;
+      newOrder.amount = finalAmountPaid;
+      if (dispatchResult.providerCost !== undefined) {
+        newOrder.cost = dispatchResult.providerCost;
+        newOrder.providerCost = dispatchResult.providerCost;
+      }
       newOrder.walletBalanceAtOrder = currentWalletBal;
       newOrder.walletBalanceBeforeOrder = currentWalletBal;
       newOrder.walletBalanceAfter = finalBalAfter;
       if (newOrder.serviceSnapshot) {
+        newOrder.serviceSnapshot.charge = finalAmountPaid;
         newOrder.serviceSnapshot.walletBalanceAtOrder = currentWalletBal;
         newOrder.serviceSnapshot.walletBalanceBeforeOrder = currentWalletBal;
         newOrder.serviceSnapshot.walletBalanceAfter = finalBalAfter;
@@ -3156,7 +3187,7 @@ class SmmStateStore {
         id: `TXN-${Math.floor(100000 + Math.random() * 900000)}`,
         type: 'Order Placed',
         description: `Order #${finalOrderId} — ${serviceName}`,
-        amount: -totalCost,
+        amount: -finalAmountPaid,
         balanceBefore: currentWalletBal,
         balanceAfter: finalBalAfter,
         orderId: finalOrderId,
@@ -3323,7 +3354,9 @@ class SmmStateStore {
         success: !order.isQueued && Boolean(order.providerOrderId),
         providerOrderId: order.providerOrderId || null,
         error: order.upstreamError || null,
-        newBalance: returnedBalance
+        newBalance: returnedBalance,
+        chargedAmount: liveData?.chargedAmount !== undefined ? Number(liveData.chargedAmount) : undefined,
+        providerCost: liveData?.providerCost !== undefined ? Number(liveData.providerCost) : undefined
       };
     } catch (err) {
       const errMsg = err.name === 'AbortError' ? 'Provider timeout (15s)' : err.message;

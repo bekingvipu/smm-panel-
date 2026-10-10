@@ -224,9 +224,9 @@ export default async function handler(req, res) {
       const calculatedSellingCharge = Number(((authoritativeSellingPriceUsd / 1000.0) * orderQuantity).toFixed(4));
 
       let orderCharge = Number(paramsObj.charge || 0);
-      // Hard Backend Safeguard: If frontend submitted price is below intended selling price or below provider cost, enforce authoritative price!
-      if (orderCharge < calculatedSellingCharge * 0.98 || orderCharge < calculatedProviderCost) {
-        console.warn(`[LikeX Backend] Adjusted order charge from ${orderCharge} to ${calculatedSellingCharge} (Provider cost: ${calculatedProviderCost})`);
+      // Hard Backend Safeguard: strictly prevent loss (order charge must at least cover provider wholesale cost)
+      if (orderCharge < calculatedProviderCost) {
+        console.warn(`[LikeX Backend] Adjusted order charge from ${orderCharge} to ${calculatedSellingCharge} to prevent wholesale loss (Provider cost: ${calculatedProviderCost})`);
         orderCharge = calculatedSellingCharge;
       }
 
@@ -538,7 +538,9 @@ export default async function handler(req, res) {
         customerId: customerCode,
         walletBalanceAtOrder: userBalanceBefore,
         walletBalanceBeforeOrder: userBalanceBefore,
-        walletBalanceAfter: balanceAfter
+        walletBalanceAfter: balanceAfter,
+        chargedAmount: orderCharge,
+        providerCost: calculatedProviderCost
       });
     }
 
