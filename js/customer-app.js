@@ -2589,37 +2589,12 @@ const CustomerApp = {
     overlay.style.cssText = 'position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999999; background: #02363f; display: flex; flex-direction: column; overflow: hidden;';
 
     overlay.innerHTML = `
-      <!-- Top Header Bar (Template 12 Ticket Stub Theme) -->
-      <div style="background: linear-gradient(135deg, #02363f 0%, #034854 50%, #045866 100%); color: white; padding: 10px 14px; border-bottom: 2px dashed rgba(255, 122, 69, 0.45); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 54px; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
-        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
-          <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; width: 34px; height: 34px; border-radius: 9px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: all 0.2s;" title="Close & Cancel">&times;</button>
-          <div style="min-width: 0;">
-            <div style="font-size: 13px; font-weight: 800; color: #38e1b0; display: flex; align-items: center; gap: 6px; letter-spacing: -0.01em;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              <span>LikeX Gateway</span>
-              <span style="font-size: 9px; background: rgba(56, 225, 176, 0.2); color: #38e1b0; padding: 1px 6px; border-radius: 20px; font-weight: 700; text-transform: uppercase;">Verified</span>
-            </div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.75); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">
-              Order: ${order_id}
-            </div>
-          </div>
-        </div>
+      <!-- Floating Close Button (Clean & unobtrusive, allows customer to exit anytime) -->
+      <button onclick="CustomerApp.closeDynamicPaymentModal()" style="position: absolute; top: 10px; right: 10px; z-index: 10000000; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.25); color: #ffffff; width: 32px; height: 32px; border-radius: 50%; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 4px 12px rgba(0,0,0,0.35); transition: transform 0.15s;" title="Close">&times;</button>
 
-        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
-          <div style="text-align: right;">
-            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); font-weight: 800;">Amount</div>
-            <div style="font-size: 18px; font-weight: 900; color: #10b981; line-height: 1;">₹${Number(amount).toFixed(2)}</div>
-          </div>
-          <button id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="background: linear-gradient(135deg, #0d9488 0%, #059669 100%); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 13px; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 12px rgba(13,148,136,0.35); transition: all 0.2s;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Verify</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Main Fullscreen Iframe -->
-      <div style="flex: 1; position: relative; width: 100%; height: 100%; background: #f7f6ed;">
-        <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none;" title="Paytm Dynamic QR" allow="clipboard-write"></iframe>
+      <!-- 100% Fullscreen ZapUPI Gateway (Template 12 Ticket Stub) -->
+      <div style="flex: 1; width: 100%; height: 100%; position: relative; background: #f7f6ed;">
+        <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none; display: block;" title="ZapUPI Payment Gateway" allow="clipboard-write"></iframe>
       </div>
     `;
 
