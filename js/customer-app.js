@@ -2570,7 +2570,7 @@ const CustomerApp = {
   },
 
   openDynamicPaymentModal({ order_id, amount, payment_url }) {
-    let countdownSeconds = 300; // 5 minutes timer
+    let countdownSeconds = 480; // 8 minutes timer (perfectly synced with ZapUPI 8-minute session)
     if (this._depositPollInterval) {
       clearInterval(this._depositPollInterval);
       this._depositPollInterval = null;
@@ -2587,49 +2587,51 @@ const CustomerApp = {
 
     const overlay = document.createElement('div');
     overlay.id = 'fullscreen-payment-overlay';
-    overlay.style.cssText = 'position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999999; background: #0f172a; display: flex; flex-direction: column; overflow: hidden;';
+    overlay.style.cssText = 'position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: 9999999; background: #02363f; display: flex; flex-direction: column; overflow: hidden;';
 
     overlay.innerHTML = `
-      <!-- Top Header Bar -->
-      <div style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 60px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; width: 36px; height: 36px; border-radius: 10px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1;" title="Close & Cancel">&times;</button>
-          <div>
-            <div style="font-size: 13px; font-weight: 700; color: #38bdf8; display: flex; align-items: center; gap: 5px;">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> LikeX Payment Gateway
+      <!-- Top Header Bar (Template 12 Ticket Stub Theme) -->
+      <div style="background: linear-gradient(135deg, #02363f 0%, #034854 50%, #045866 100%); color: white; padding: 10px 14px; border-bottom: 2px dashed rgba(255, 122, 69, 0.45); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; min-height: 56px; box-shadow: 0 4px 15px rgba(0,0,0,0.25);">
+        <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+          <button onclick="CustomerApp.closeDynamicPaymentModal()" style="background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); color: white; width: 34px; height: 34px; border-radius: 9px; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; flex-shrink: 0; transition: all 0.2s;" title="Close & Cancel">&times;</button>
+          <div style="min-width: 0;">
+            <div style="font-size: 13px; font-weight: 800; color: #38e1b0; display: flex; align-items: center; gap: 6px; letter-spacing: -0.01em;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+              <span>LikeX Gateway</span>
+              <span style="font-size: 9px; background: rgba(56, 225, 176, 0.2); color: #38e1b0; padding: 1px 6px; border-radius: 20px; font-weight: 700; text-transform: uppercase;">Verified</span>
             </div>
-            <div style="font-size: 11px; color: rgba(255,255,255,0.6); font-family: var(--font-mono);">
+            <div style="font-size: 11px; color: rgba(255,255,255,0.75); font-family: var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px;">
               Order: ${order_id}
             </div>
           </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-shrink: 0;">
           <div style="text-align: right;">
-            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.5); font-weight: 700;">Amount</div>
-            <div style="font-size: 20px; font-weight: 900; color: #10b981; line-height: 1;">₹${Number(amount).toFixed(2)}</div>
+            <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.6); font-weight: 800;">Amount</div>
+            <div style="font-size: 18px; font-weight: 900; color: #10b981; line-height: 1;">₹${Number(amount).toFixed(2)}</div>
           </div>
-          <button id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="background: #2563eb; color: white; border: none; padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 4px 12px rgba(37,99,235,0.3);">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            <span>Verify Payment</span>
+          <button id="btn-manual-verify-qr" onclick="CustomerApp.verifyDynamicPaymentStatus('${order_id}', ${amount}, true)" style="background: linear-gradient(135deg, #0d9488 0%, #059669 100%); color: white; border: 1px solid rgba(255,255,255,0.2); padding: 8px 13px; border-radius: 9px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 5px; box-shadow: 0 4px 12px rgba(13,148,136,0.35); transition: all 0.2s;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>Verify</span>
           </button>
         </div>
       </div>
 
-      <!-- Status Banner Bar -->
-      <div style="background: #1e293b; padding: 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 12px;">
-        <div style="display: flex; align-items: center; gap: 8px; color: #94a3b8;">
-          <span class="pulse-indicator" style="width: 8px; height: 8px; background: #10B981; border-radius: 50%; display: inline-block;"></span>
+      <!-- Status Banner Bar (Synchronized 8-min Timer) -->
+      <div style="background: #012b32; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-size: 11.5px;">
+        <div style="display: flex; align-items: center; gap: 7px; color: #a5c7cc;">
+          <span class="pulse-indicator" style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; display: inline-block; box-shadow: 0 0 8px #10b981;"></span>
           <span style="font-weight: 600;" id="deposit-status-text">Listening for payment confirmation...</span>
         </div>
-        <div style="display: flex; align-items: center; gap: 6px; color: #f59e0b; font-weight: 700;">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span style="font-family: var(--font-mono);" id="deposit-countdown-timer">05:00</span>
+        <div style="display: flex; align-items: center; gap: 5px; color: #ff9f43; font-weight: 800; background: rgba(255, 159, 67, 0.12); padding: 3px 8px; border-radius: 6px; border: 1px solid rgba(255, 159, 67, 0.25);">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span style="font-family: var(--font-mono); font-size: 11.5px;" id="deposit-countdown-timer">08:00</span>
         </div>
       </div>
 
       <!-- Main Fullscreen Iframe -->
-      <div style="flex: 1; position: relative; width: 100%; height: 100%; background: #ffffff;">
+      <div style="flex: 1; position: relative; width: 100%; height: 100%; background: #f7f6ed;">
         <iframe src="${payment_url}" id="zapupi-payment-iframe" style="width: 100%; height: 100%; border: none;" title="Paytm Dynamic QR" allow="clipboard-write"></iframe>
       </div>
     `;
@@ -2637,7 +2639,7 @@ const CustomerApp = {
     document.body.appendChild(overlay);
     document.body.style.overflow = 'hidden';
 
-    // Start 5-minute countdown timer
+    // Start 8-minute countdown timer (perfectly synchronized with ZapUPI session)
     this._depositTimerInterval = setInterval(() => {
       countdownSeconds--;
       const min = String(Math.floor(countdownSeconds / 60)).padStart(2, '0');
