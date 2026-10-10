@@ -1237,8 +1237,35 @@ const AdminApp = {
               <tbody>
                 ${recentOrders.map(ro => {
                   const sId = this.getOrderServiceId(ro);
-                  const custEmail = ro.userEmail || ro.customerEmail || '';
-                  const custName = ro.customerName || (custEmail ? custEmail.split('@')[0] : 'Guest Customer');
+                  let custCode = ro.customerId || ro.customerCode || ro.serviceSnapshot?.customerCode || null;
+                  let custEmail = ro.userEmail || ro.customerEmail || ro.serviceSnapshot?.email || '';
+                  let custName = (ro.customerName && ro.customerName !== 'Customer' && ro.customerName !== 'Guest') ? ro.customerName : (ro.serviceSnapshot?.name || '');
+
+                  // Resilient fallback lookup from store.data.users
+                  if ((!custEmail || !custName) && store?.data?.users && Array.isArray(store.data.users)) {
+                    const u = store.data.users.find(user => {
+                      if (custCode) {
+                        const cleanCode = String(custCode).toUpperCase().trim();
+                        const uCode = String(user.customer_code || `LX-${10000 + Number(user.id)}`).toUpperCase().trim();
+                        if (cleanCode === uCode) return true;
+                        const digits = cleanCode.replace(/\D/g, '');
+                        if (digits && (String(user.id) === digits || String(10000 + Number(user.id)) === digits)) return true;
+                      }
+                      if (ro.customerUserId && String(user.id) === String(ro.customerUserId)) return true;
+                      if (ro.user_id && String(user.id) === String(ro.user_id)) return true;
+                      return false;
+                    });
+                    if (u) {
+                      if (!custEmail && u.email) custEmail = u.email;
+                      if (!custName && u.username) custName = u.username;
+                      if (!custCode) custCode = u.customer_code || `LX-${10000 + Number(u.id)}`;
+                    }
+                  }
+
+                  if (!custName) custName = custEmail ? custEmail.split('@')[0] : 'Customer';
+                  if (custName && custName.includes('_') && /_[a-f0-9]{5}$/.test(custName)) {
+                    custName = custName.replace(/_[a-f0-9]{5}$/, '');
+                  }
                   const avatarLetter = (custName || 'U').charAt(0).toUpperCase();
                   const dateStr = ro.date || (ro.createdAt ? store.formatRealDate(ro.createdAt) : 'Recently');
                   const relativeBadge = store.formatOrderDisplayDate ? store.formatOrderDisplayDate(ro) : '';
@@ -1950,10 +1977,7 @@ const AdminApp = {
     allUsers.forEach(u => {
       const emailKey = (u.email || '').trim().toLowerCase();
       const code = u.customer_code || store.getCustomerId(u);
-      const key = emailKey || code || String(u.id);
-      if (!key) return;
-
-      customerMap.set(key, {
+      const custObj = {
         id: code,
         userId: u.id,
         name: u.username || u.name || (emailKey ? emailKey.split('@')[0] : 'Customer'),
@@ -1964,7 +1988,23 @@ const AdminApp = {
         createdAt: u.created_at || u.createdAt || null,
         orders: [],
         transactions: []
-      });
+      };
+
+      if (emailKey) customerMap.set(emailKey, custObj);
+      if (code) {
+        customerMap.set(code.toLowerCase(), custObj);
+        customerMap.set(code.toUpperCase(), custObj);
+        const digits = code.replace(/\D/g, '');
+        if (digits) {
+          customerMap.set(digits, custObj);
+          customerMap.set(`LX-${digits}`, custObj);
+          customerMap.set(`LX${digits}`, custObj);
+          if (Number(digits) > 10000) {
+            customerMap.set(String(Number(digits) - 10000), custObj);
+          }
+        }
+      }
+      if (u.id) customerMap.set(String(u.id), custObj);
     });
 
     // 2. Process currently logged in customer if exists
@@ -1973,7 +2013,7 @@ const AdminApp = {
       const emailKey = c.email.trim().toLowerCase();
       const code = store.getCustomerId(c);
       if (!customerMap.has(emailKey)) {
-        customerMap.set(emailKey, {
+        const custObj = {
           id: code,
           userId: c.id,
           name: c.name || c.username || emailKey.split('@')[0],
@@ -1984,20 +2024,28 @@ const AdminApp = {
           createdAt: c.createdAt || null,
           orders: [],
           transactions: []
-        });
+        };
+        customerMap.set(emailKey, custObj);
+        if (code) customerMap.set(code.toLowerCase(), custObj);
       }
     }
 
     // 3. Map orders to customers
     allOrders.forEach(o => {
       if (!o) return;
-      const orderEmail = (o.userEmail || o.customerEmail || '').trim().toLowerCase();
-      const orderCustCode = o.customerId || o.customerCode || (orderEmail ? store.getCustomerId(orderEmail) : null);
+      const orderEmail = (o.userEmail || o.customerEmail || o.serviceSnapshot?.email || '').trim().toLowerCase();
+      const orderCustCode = (o.customerId || o.customerCode || o.serviceSnapshot?.customerCode || (orderEmail ? store.getCustomerId(orderEmail) : '') || '').trim();
       let matchedCust = null;
       if (orderEmail && customerMap.has(orderEmail)) {
         matchedCust = customerMap.get(orderEmail);
-      } else if (orderCustCode && customerMap.has(orderCustCode)) {
-        matchedCust = customerMap.get(orderCustCode);
+      } else if (orderCustCode && customerMap.has(orderCustCode.toLowerCase())) {
+        matchedCust = customerMap.get(orderCustCode.toLowerCase());
+      } else if (orderCustCode && customerMap.has(orderCustCode.toUpperCase())) {
+        matchedCust = customerMap.get(orderCustCode.toUpperCase());
+      } else if (o.customerUserId && customerMap.has(String(o.customerUserId))) {
+        matchedCust = customerMap.get(String(o.customerUserId));
+      } else if (o.user_id && customerMap.has(String(o.user_id))) {
+        matchedCust = customerMap.get(String(o.user_id));
       } else if (orderEmail && orderEmail !== 'guest customer' && !orderEmail.includes('guest@')) {
         const newCode = orderCustCode || store.getCustomerId(orderEmail);
         matchedCust = {
@@ -2013,10 +2061,15 @@ const AdminApp = {
           transactions: []
         };
         customerMap.set(orderEmail, matchedCust);
+        if (newCode) customerMap.set(newCode.toLowerCase(), matchedCust);
       }
 
       if (matchedCust) {
-        matchedCust.orders.push(o);
+        if (!o.userEmail && matchedCust.email) o.userEmail = matchedCust.email;
+        if ((!o.customerName || o.customerName === 'Customer') && matchedCust.name) o.customerName = matchedCust.name;
+        if (!matchedCust.orders.some(ex => ex.id === o.id || ex.likeXOrderId === o.likeXOrderId)) {
+          matchedCust.orders.push(o);
+        }
       }
     });
 
@@ -2024,12 +2077,16 @@ const AdminApp = {
     allTransactions.forEach(tx => {
       if (!tx) return;
       const txEmail = (tx.user_email || tx.userEmail || '').trim().toLowerCase();
-      const txCode = tx.customer_code || (txEmail ? store.getCustomerId(txEmail) : null);
+      const txCode = (tx.customer_code || (txEmail ? store.getCustomerId(txEmail) : '') || '').trim();
       let matchedCust = null;
       if (txEmail && customerMap.has(txEmail)) {
         matchedCust = customerMap.get(txEmail);
-      } else if (txCode && customerMap.has(txCode)) {
-        matchedCust = customerMap.get(txCode);
+      } else if (txCode && customerMap.has(txCode.toLowerCase())) {
+        matchedCust = customerMap.get(txCode.toLowerCase());
+      } else if (txCode && customerMap.has(txCode.toUpperCase())) {
+        matchedCust = customerMap.get(txCode.toUpperCase());
+      } else if (tx.user_id && customerMap.has(String(tx.user_id))) {
+        matchedCust = customerMap.get(String(tx.user_id));
       }
 
       if (matchedCust) {
@@ -2037,8 +2094,8 @@ const AdminApp = {
       }
     });
 
-    // Finalize stats
-    const customers = Array.from(customerMap.values()).map(c => {
+    // Finalize stats with deduplicated unique customer entities
+    const customers = Array.from(new Set(customerMap.values())).map(c => {
       c.orders.sort((a, b) => {
         const timeA = new Date(a.createdAt || a.date || 0).getTime();
         const timeB = new Date(b.createdAt || b.date || 0).getTime();
@@ -4567,12 +4624,37 @@ const AdminApp = {
                     provKey.includes('wos') ||
                     (!isSf && (provIdStr.startsWith('58') || provIdStr.startsWith('59') || String(o.id).startsWith('58')));
 
-      const isLow = o.isLowBalance || (o.status && o.status.includes('Low Provider Balance'));
+      let custCode = o.customerId || o.customerCode || o.serviceSnapshot?.customerCode || null;
+      let custEmail = o.userEmail || o.customerEmail || o.serviceSnapshot?.email || '';
+      let custName = (o.customerName && o.customerName !== 'Customer' && o.customerName !== 'Guest') ? o.customerName : (o.serviceSnapshot?.name || '');
 
-      const custEmail = o.userEmail || o.customerEmail || '';
-      const custName = o.customerName || (custEmail ? custEmail.split('@')[0] : 'Customer');
+      // Resilient fallback lookup from store.data.users
+      if ((!custEmail || !custName) && store?.data?.users && Array.isArray(store.data.users)) {
+        const u = store.data.users.find(user => {
+          if (custCode) {
+            const cleanCode = String(custCode).toUpperCase().trim();
+            const uCode = String(user.customer_code || `LX-${10000 + Number(user.id)}`).toUpperCase().trim();
+            if (cleanCode === uCode) return true;
+            const digits = cleanCode.replace(/\D/g, '');
+            if (digits && (String(user.id) === digits || String(10000 + Number(user.id)) === digits)) return true;
+          }
+          if (o.customerUserId && String(user.id) === String(o.customerUserId)) return true;
+          if (o.user_id && String(user.id) === String(o.user_id)) return true;
+          return false;
+        });
+        if (u) {
+          if (!custEmail && u.email) custEmail = u.email;
+          if (!custName && u.username) custName = u.username;
+          if (!custCode) custCode = u.customer_code || `LX-${10000 + Number(u.id)}`;
+        }
+      }
+
+      if (!custCode && custEmail) custCode = store.getCustomerId ? store.getCustomerId(custEmail) : null;
+      if (!custName) custName = custEmail ? custEmail.split('@')[0] : 'Customer';
+      if (custName && custName.includes('_') && /_[a-f0-9]{5}$/.test(custName)) {
+        custName = custName.replace(/_[a-f0-9]{5}$/, '');
+      }
       const avatarLetter = (custName || 'C').charAt(0).toUpperCase();
-      const custCode = o.customerId || o.customerCode || (custEmail ? store.getCustomerId(custEmail) : null);
 
       // Customer Wallet Balances (Authoritative Database Ledger Before/After)
       let balBeforeNum = o.walletBalanceBeforeOrder ?? o.walletBalanceAtOrder ?? (o.serviceSnapshot?.walletBalanceBeforeOrder ?? o.serviceSnapshot?.walletBalanceAtOrder ?? null);
@@ -4792,7 +4874,7 @@ const AdminApp = {
                 <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 11px; margin-top: 1px;">
                   <span style="color: var(--text-muted);">Profit:</span>
                   <span style="font-weight: 800; color: ${profit >= 0 ? '#10B981' : '#EF4444'};">
-                    +₹${profit.toFixed(2)} (${margin}%)
+                    +${store.formatMoney(profit)} (${margin}%)
                   </span>
                 </div>
               ` : `

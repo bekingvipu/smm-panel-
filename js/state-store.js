@@ -1178,7 +1178,15 @@ class SmmStateStore {
 
   // Generate unique LikeX Order ID (e.g. LX58392)
   generateLikeXOrderId() {
-    const existing = new Set((this.data.orders || []).map(o => String(o.id || o.likeXOrderId || '')));
+    const existing = new Set();
+    (this.data.orders || []).forEach(o => {
+      if (o.id) existing.add(String(o.id));
+      if (o.likeXOrderId) existing.add(String(o.likeXOrderId));
+    });
+    (this.data.allAdminSupabaseOrders || []).forEach(o => {
+      if (o.id) existing.add(String(o.id));
+      if (o.likeXOrderId) existing.add(String(o.likeXOrderId));
+    });
     for (let attempts = 0; attempts < 1000; attempts++) {
       const num = Math.floor(10000 + Math.random() * 90000);
       const candidate = `LX${num}`;
@@ -2025,7 +2033,21 @@ class SmmStateStore {
             u.customer_code = `LX-${10000 + Number(u.id || 1)}`;
           }
           userMap.set(String(u.id), u);
-          if (u.email) userMap.set(u.email.toLowerCase(), u);
+          if (u.email) userMap.set(u.email.toLowerCase().trim(), u);
+          if (u.customer_code) {
+            const rawCode = String(u.customer_code).trim();
+            userMap.set(rawCode.toLowerCase(), u);
+            userMap.set(rawCode.toUpperCase(), u);
+            const digits = rawCode.replace(/\D/g, '');
+            if (digits) {
+              userMap.set(digits, u);
+              userMap.set(`LX-${digits}`, u);
+              userMap.set(`LX${digits}`, u);
+              if (Number(digits) > 10000) {
+                userMap.set(String(Number(digits) - 10000), u);
+              }
+            }
+          }
         });
         this.data.users = supaUsers;
         const prevUsers = localStorage.getItem('likex_supabase_users');
@@ -2133,7 +2155,19 @@ class SmmStateStore {
             } catch (e) {}
           }
 
-          const matchedUser = so.user_id ? userMap.get(String(so.user_id)) : (snapshot?.email ? userMap.get(String(snapshot.email).toLowerCase()) : null);
+          const rawCustCode = snapshot?.customerCode || (so.user_id ? `LX-${10000 + Number(so.user_id)}` : null);
+          const cleanCustDigits = rawCustCode ? String(rawCustCode).replace(/\D/g, '') : null;
+          const derivedUserId = cleanCustDigits ? (Number(cleanCustDigits) > 10000 ? String(Number(cleanCustDigits) - 10000) : cleanCustDigits) : null;
+
+          let matchedUser = null;
+          if (so.user_id) matchedUser = userMap.get(String(so.user_id));
+          if (!matchedUser && snapshot?.email) matchedUser = userMap.get(String(snapshot.email).toLowerCase().trim());
+          if (!matchedUser && rawCustCode) {
+            matchedUser = userMap.get(String(rawCustCode).toUpperCase()) || userMap.get(String(rawCustCode).toLowerCase());
+          }
+          if (!matchedUser && cleanCustDigits) matchedUser = userMap.get(cleanCustDigits);
+          if (!matchedUser && derivedUserId) matchedUser = userMap.get(derivedUserId);
+          if (!matchedUser && matchedTx?.user_id) matchedUser = userMap.get(String(matchedTx.user_id));
 
           let rawServiceId = snapshot?.rawServiceId || (so.service_id ? String(so.service_id) : null);
           let svcTitle = snapshot?.serviceName || null;
@@ -2164,10 +2198,10 @@ class SmmStateStore {
                             so.assigned_provider_id === 3 || 
                             (matchedSvc && matchedSvc.provider === 'socialfans');
           const isWosOrder = prov === 'worldofsmm' || 
-                             so.assigned_provider_id === 2 || 
-                             orderIdStr.startsWith('58') || 
-                             orderIdStr.startsWith('59') ||
-                             (matchedSvc && matchedSvc.provider === 'worldofsmm');
+                            so.assigned_provider_id === 2 || 
+                            orderIdStr.startsWith('58') || 
+                            orderIdStr.startsWith('59') ||
+                            (matchedSvc && matchedSvc.provider === 'worldofsmm');
 
           const finalProvider = isSfOrder ? 'socialfans' : (isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 3 ? 'socialfans' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
@@ -2184,7 +2218,7 @@ class SmmStateStore {
             customerName = customerName.replace(/_[a-f0-9]{5}$/, '');
           }
 
-          const resolvedCustCode = matchedUser?.customer_code || snapshot?.customerCode || (matchedUser?.id ? `LX-${10000 + Number(matchedUser.id)}` : (userEmail ? this.getCustomerId(userEmail) : 'LX-Guest'));
+          const resolvedCustCode = matchedUser?.customer_code || rawCustCode || (matchedUser?.id ? `LX-${10000 + Number(matchedUser.id)}` : (userEmail ? this.getCustomerId(userEmail) : 'LX-Guest'));
 
           // Authoritative Wallet Balance Ledger Lookup
           const matchedTx = txMap.get(String(so.id)) || txMap.get(String(so.id).replace(/\D/g, ''));
@@ -2510,6 +2544,16 @@ class SmmStateStore {
     const savedCustomerId = localStorage.getItem('smm_user_customer_id');
     this.data.customer.customerId = savedCustomerId || this.getCustomerId(cleanEmail);
 
+    const savedUserId = localStorage.getItem('smm_user_id');
+    if (savedUserId && !isNaN(Number(savedUserId))) {
+      this.data.customer.id = Number(savedUserId);
+    } else if (this.data.customer.customerId) {
+      const derivedDigits = this.data.customer.customerId.replace(/\D/g, '');
+      if (derivedDigits && Number(derivedDigits) > 10000) {
+        this.data.customer.id = Number(derivedDigits) - 10000;
+      }
+    }
+
     const savedOrders = localStorage.getItem(ordersKey);
     const parsedOrders = savedOrders ? JSON.parse(savedOrders) : [];
     const mappedOrders = parsedOrders.map(o => {
@@ -2559,14 +2603,18 @@ class SmmStateStore {
     const oUserId = order.customerUserId || order.user_id || order.serviceSnapshot?.customerUserId || order.serviceSnapshot?.user_id || null;
     const oUserIdStr = oUserId !== null && oUserId !== undefined ? String(oUserId).trim() : null;
 
+    const normCode = (c) => c ? String(c).toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+    const normO = normCode(oCustId);
+    const normClean = normCode(cleanCustId);
+
     // 1. Explicit Mismatch Check: If order explicitly belongs to a DIFFERENT email/customerId/userId -> False
     if (oEmail && cleanEmail && oEmail !== cleanEmail) return false;
-    if (oCustId && cleanCustId && oCustId !== cleanCustId) return false;
+    if (normO && normClean && normO !== normClean) return false;
     if (oUserIdStr && cleanUserId && oUserIdStr !== String(cleanUserId)) return false;
 
     // 2. Explicit Match Check: Matches email, customerId, or userId -> True
     if (oEmail && cleanEmail && oEmail === cleanEmail) return true;
-    if (oCustId && cleanCustId && oCustId === cleanCustId) return true;
+    if (normO && normClean && normO === normClean) return true;
     if (oUserIdStr && cleanUserId && oUserIdStr === String(cleanUserId)) return true;
 
     return false;
@@ -2659,8 +2707,10 @@ class SmmStateStore {
           if (u.spent !== null && u.spent !== undefined) {
             this.data.customer.spent = Number(u.spent);
           }
+          this.data.customer.id = u.id;
           this.data.customer.customerId = code;
           localStorage.setItem('smm_user_customer_id', code);
+          localStorage.setItem('smm_user_id', String(u.id));
           this.saveUserData();
           this.notify();
           this.updateCustomerHeader();
@@ -2915,15 +2965,15 @@ class SmmStateStore {
       const inrVal = absUsd * inrRate;
 
       let formatted = '';
-      if (inrVal >= 1) {
-        // Standard 2 decimal precision rounding (e.g. 9.9963 becomes 10.00)
+      if (inrVal >= 0.005) {
+        // Standard 2 decimal precision rounding (e.g. 9.9963 becomes 10.00, 0.0191 becomes 0.02, 0.0095 becomes 0.01)
         const truncated2 = Math.round((inrVal + Number.EPSILON) * 100) / 100;
         formatted = truncated2.toLocaleString('en-IN', {
           minimumFractionDigits: 2,
           maximumFractionDigits: 2
         });
       } else {
-        // Micro amounts (< ₹1) e.g. ₹0.2862, ₹0.1431 (Never rounds down to ₹0!)
+        // Extreme micro amounts (< half paisa) e.g. ₹0.0028 (Never rounds down to ₹0.00!)
         const fourDec = inrVal.toFixed(4);
         if (fourDec.slice(-2) === '00') {
           formatted = inrVal.toFixed(2);
@@ -3067,6 +3117,9 @@ class SmmStateStore {
       const resolvedServiceId = serviceId || (targetProvider === 'socialfans' ? `sf-${cleanRawServiceId}` : `wos-${cleanRawServiceId}`);
 
       const customerCode = this.data.customer?.customerId || this.getCustomerId(this.data.customer);
+      const customerEmail = this.data.customer?.email || '';
+      const customerName = this.data.customer?.name || (customerEmail ? customerEmail.split('@')[0] : 'Customer');
+      const customerUserId = this.data.customer?.id || null;
 
       const serviceSnapshot = {
         serviceId: resolvedServiceId,
@@ -3081,6 +3134,11 @@ class SmmStateStore {
         charge: totalCost,
         unitSellingPrice: unitSellingPrice,
         customerCode: customerCode,
+        email: customerEmail,
+        customerEmail: customerEmail,
+        name: customerName,
+        customerName: customerName,
+        customerUserId: customerUserId,
         walletBalanceBeforeOrder: currentWalletBal,
         walletBalanceAtOrder: currentWalletBal,
         walletBalanceAfter: walletBalAfter
@@ -3123,9 +3181,10 @@ class SmmStateStore {
         remains: Number(quantity),
         refillEligible: false,
         refillReason: `Dispatched to ${providerDisplayName}`,
-        userEmail: this.data.customer?.email || '',
-        customerName: this.data.customer?.name || 'Customer',
-        customerUserId: this.data.customer?.id || null,
+        userEmail: customerEmail,
+        customerEmail: customerEmail,
+        customerName: customerName,
+        customerUserId: customerUserId,
         customerId: customerCode,
         customerCode: customerCode,
         walletBalanceBeforeOrder: currentWalletBal,
@@ -3156,6 +3215,22 @@ class SmmStateStore {
       // Apply authoritative balance returned by server or calculated
       const finalBalAfter = dispatchResult.newBalance !== undefined ? Number(dispatchResult.newBalance) : walletBalAfter;
       this.data.customer.balance = finalBalAfter;
+
+      // Capture authoritative customer details returned by provider backend
+      if (dispatchResult.customerUserId) {
+        newOrder.customerUserId = dispatchResult.customerUserId;
+        if (this.data.customer && !this.data.customer.id) {
+          this.data.customer.id = dispatchResult.customerUserId;
+          localStorage.setItem('smm_user_id', String(dispatchResult.customerUserId));
+        }
+      }
+      if (dispatchResult.customerEmail && !newOrder.userEmail) {
+        newOrder.userEmail = dispatchResult.customerEmail;
+        newOrder.customerEmail = dispatchResult.customerEmail;
+      }
+      if (dispatchResult.customerName && (!newOrder.customerName || newOrder.customerName === 'Customer')) {
+        newOrder.customerName = dispatchResult.customerName;
+      }
 
       // Update in cached users list
       if (Array.isArray(this.data.users)) {
@@ -3356,7 +3431,10 @@ class SmmStateStore {
         error: order.upstreamError || null,
         newBalance: returnedBalance,
         chargedAmount: liveData?.chargedAmount !== undefined ? Number(liveData.chargedAmount) : undefined,
-        providerCost: liveData?.providerCost !== undefined ? Number(liveData.providerCost) : undefined
+        providerCost: liveData?.providerCost !== undefined ? Number(liveData.providerCost) : undefined,
+        customerUserId: liveData?.customerUserId || liveData?.userId || undefined,
+        customerEmail: liveData?.customerEmail || undefined,
+        customerName: liveData?.customerName || undefined
       };
     } catch (err) {
       const errMsg = err.name === 'AbortError' ? 'Provider timeout (15s)' : err.message;
@@ -4586,10 +4664,44 @@ class SmmStateStore {
       try {
         const rawIdNum = parseInt(String(updatedOrder.likeXOrderId || updatedOrder.id || '').replace(/\D/g, ''), 10);
         if (rawIdNum && !isNaN(rawIdNum) && typeof fetch !== 'undefined') {
-          const snapshotJson = updatedOrder.serviceSnapshot ? encodeURIComponent(JSON.stringify(updatedOrder.serviceSnapshot)) : '';
-          const cleanTgt = updatedOrder.target ? String(updatedOrder.target).split('#meta=')[0].split('###')[0].trim() : '';
-          const fullTgt = snapshotJson ? `${cleanTgt}#meta=${snapshotJson}` : cleanTgt;
+          // Resolve customer userId safely
+          const resolvedUserId = updatedOrder.customerUserId || this.data?.customer?.id || null;
           
+          // Ensure snapshot has complete customer identity preserved
+          const existingSnapshot = updatedOrder.serviceSnapshot || {};
+          const snapshotWithIdentity = {
+            ...existingSnapshot,
+            email: updatedOrder.userEmail || existingSnapshot.email || this.data?.customer?.email || '',
+            name: updatedOrder.customerName || existingSnapshot.name || this.data?.customer?.name || '',
+            customerCode: updatedOrder.customerId || updatedOrder.customerCode || existingSnapshot.customerCode || this.data?.customer?.customerId || null
+          };
+          if (resolvedUserId) {
+            snapshotWithIdentity.customerUserId = resolvedUserId;
+          }
+
+          const snapshotJson = encodeURIComponent(JSON.stringify(snapshotWithIdentity));
+          const cleanTgt = updatedOrder.target ? String(updatedOrder.target).split('#meta=')[0].split('###')[0].trim() : '';
+          const fullTgt = `${cleanTgt}#meta=${snapshotJson}`;
+          
+          const payload = {
+            id: rawIdNum,
+            target_url: fullTgt,
+            quantity: Number(updatedOrder.quantity) || 1000,
+            charge: Number(updatedOrder.amount || 0),
+            provider_cost: Number(updatedOrder.providerCost || 0),
+            provider_order_id: updatedOrder.providerOrderId || null,
+            assigned_provider_id: updatedOrder.provider === 'socialfans' ? 3 : 2,
+            status: updatedOrder.status || 'Queued',
+            remains: Number(updatedOrder.remains || updatedOrder.quantity || 1000),
+            refill_status: String(updatedOrder.upstreamError || updatedOrder.errorReason || 'Queued').slice(0, 48),
+            created_at: updatedOrder.createdAt ? new Date(Number(updatedOrder.createdAt)).toISOString() : new Date().toISOString()
+          };
+
+          // ONLY include user_id if resolved, DO NOT overwrite an existing DB user_id with null!
+          if (resolvedUserId) {
+            payload.user_id = resolvedUserId;
+          }
+
           fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?on_conflict=id`, {
             method: 'POST',
             headers: {
@@ -4598,20 +4710,7 @@ class SmmStateStore {
               'Content-Type': 'application/json',
               Prefer: 'resolution=merge-duplicates'
             },
-            body: JSON.stringify({
-              id: rawIdNum,
-              user_id: updatedOrder.customerUserId || null,
-              target_url: fullTgt,
-              quantity: Number(updatedOrder.quantity) || 1000,
-              charge: Number(updatedOrder.amount || 0),
-              provider_cost: Number(updatedOrder.providerCost || 0),
-              provider_order_id: updatedOrder.providerOrderId || null,
-              assigned_provider_id: updatedOrder.provider === 'socialfans' ? 3 : 2,
-              status: updatedOrder.status || 'Queued',
-              remains: Number(updatedOrder.remains || updatedOrder.quantity || 1000),
-              refill_status: String(updatedOrder.upstreamError || updatedOrder.errorReason || 'Queued').slice(0, 48),
-              created_at: updatedOrder.createdAt ? new Date(Number(updatedOrder.createdAt)).toISOString() : new Date().toISOString()
-            })
+            body: JSON.stringify(payload)
           }).catch(() => {});
         }
       } catch (cloudSyncErr) {}
