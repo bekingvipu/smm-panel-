@@ -1274,7 +1274,7 @@ const CustomerApp = {
     }
 
     const activeService = activePackages.length > 0 ? activePackages[0] : null;
-    const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId) : (activeService.cost || 0.10)) : 0;
+    const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId, activeService.provider) : (activeService.cost || 0.10)) : 0;
     const isCommentService = activeService ? ((activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'))) : false;
     const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom'));
     const effectiveMin = activeService ? (isCommentService ? Math.max(50, activeService.min || 10) : (activeService.min || 10)) : 10;
@@ -1555,7 +1555,7 @@ const CustomerApp = {
                   // In Instagram banner, strip redundant "Instagram" prefix so meaningful service info shows cleanly (e.g. "HQ Followers R365" instead of getting clipped to "In...")
                   shortName = shortName.replace(/^instagram\s+/i, '');
                   if (shortName.length > 20) shortName = shortName.substring(0, 20).trim() + '...';
-                  const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1, sMatch.id, sMatch.rawId) : null;
+                  const rateNum = sMatch ? store.getSellingPrice(sMatch.cost || 0.1, sMatch.id, sMatch.rawId, sMatch.provider) : null;
                   const rateStr = rateNum ? `${store.formatMoney(rateNum)}/1K` : '';
                   return `
                     <button type="button" class="rec-service-chip" onclick="CustomerApp.selectRecommendedService('${id}')" title="Click to auto-select #${id}">
@@ -1742,7 +1742,7 @@ const CustomerApp = {
           </div>
           <div class="receipt-row">
             <span>Current Wallet Balance:</span>
-            <strong style="color: var(--text-main);">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Guest Mode (Sign in to view)'}</strong>
+            <strong id="calc-balance-label" style="color: var(--text-main);">${store.data.isLoggedIn ? store.formatMoney(store.data.customer.balance) : 'Guest Mode (Sign in to view)'}</strong>
           </div>
           <div class="receipt-row total-charge-row">
             <span style="font-weight: 800; font-size: 15px; color: var(--text-main);">Total Charge:</span>
@@ -1751,9 +1751,17 @@ const CustomerApp = {
           <div id="balance-check-status" style="margin-top: 2px;">
             ${!activeService ? `
               <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">⏳ Category awaiting service setup</span>
-            ` : (store.data.isLoggedIn ? `
-              <span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>
-            ` : `
+            ` : (store.data.isLoggedIn ? (() => {
+              const initQty = isCommentService ? 50 : 1000;
+              const initTotal = (sellingPrice / 1000) * initQty;
+              const userBal = Number(store.data.customer.balance || 0);
+              if (userBal >= initTotal) {
+                return '<span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>';
+              } else {
+                const shortfall = Math.max(0, initTotal - userBal);
+                return `<span class="balance-status-pill badge-error" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; font-size: 12.5px; font-weight: 700;">⚠️ Insufficient Balance — Need ${store.formatMoney(shortfall)} more</span>`;
+              }
+            })() : `
               <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">ℹ️ Sign in required to place order</span>
             `)}
           </div>
@@ -1761,7 +1769,17 @@ const CustomerApp = {
 
         <!-- Submit Button with Refraction Glare Animation -->
         <button class="btn btn-primary btn-lg btn-block btn-refraction" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()" style="height: 52px; border-radius: 14px; font-size: 16px;" ${!activeService ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
-          <span>${!activeService ? '⏳ Category Awaiting Services' : (store.data.isLoggedIn ? '⚡ Confirm & Place Order' : '🔑 Sign In to Place Order')}</span>
+          <span>${!activeService ? '⏳ Category Awaiting Services' : (!store.data.isLoggedIn ? '🔑 Sign In to Place Order' : (() => {
+            const initQty = isCommentService ? 50 : 1000;
+            const initTotal = (sellingPrice / 1000) * initQty;
+            const userBal = Number(store.data.customer.balance || 0);
+            if (userBal >= initTotal) {
+              return '⚡ Confirm & Place Order';
+            } else {
+              const shortfall = Math.max(0, initTotal - userBal);
+              return `⚡ Add ${store.formatMoney(shortfall)} to Place Order`;
+            }
+          })()))}</span>
         </button>
       </div>
     `;
@@ -1899,14 +1917,14 @@ const CustomerApp = {
       const text = document.getElementById('trigger-service-name-text');
       if (text) text.textContent = s.name;
       const rate = document.getElementById('trigger-service-rate-text');
-      if (rate && store.getSellingPrice && store.formatMoney) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1, s.id, s.rawId)) + '/1K';
+      if (rate && store.getSellingPrice && store.formatMoney) rate.textContent = '≈ ' + store.formatMoney(store.getSellingPrice(s.cost || 0.1, s.id, s.rawId, s.provider)) + '/1K';
 
       if (window.PixelTracker) {
         window.PixelTracker.trackViewContent({
           contentName: s.name,
           contentCategory: this.currentCategory || 'SMM Service',
           serviceId: cleanId,
-          price: store.getSellingPrice(s.cost || 0.1, s.id, s.rawId)
+          price: store.getSellingPrice(s.cost || 0.1, s.id, s.rawId, s.provider)
         });
       }
 
@@ -2164,11 +2182,20 @@ const CustomerApp = {
         if (calcTotalEl) calcTotalEl.textContent = store.formatMoney(total);
 
         const statusBox = document.getElementById('balance-check-status');
+        const submitBtn = document.getElementById('btn-submit-order');
         if (statusBox && store.data.isLoggedIn) {
-          if (store.data.customer.balance >= total) {
-            statusBox.innerHTML = '<span class="balance-status-pill badge-success">✓ Sufficient Wallet Balance</span>';
+          const userBal = Number(store.data.customer.balance || 0);
+          if (userBal >= total) {
+            statusBox.innerHTML = '<span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>';
+            if (submitBtn) {
+              submitBtn.innerHTML = '<span>⚡ Confirm & Place Order</span>';
+            }
           } else {
-            statusBox.innerHTML = '<span class="balance-status-pill badge-error">⚠️ Insufficient Balance - Add funds before placing order</span>';
+            const shortfall = Math.max(0, total - userBal);
+            statusBox.innerHTML = `<span class="balance-status-pill badge-error" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; font-size: 12.5px; font-weight: 700;">⚠️ Insufficient Balance — Need ${store.formatMoney(shortfall)} more</span>`;
+            if (submitBtn) {
+              submitBtn.innerHTML = `<span>⚡ Add ${store.formatMoney(shortfall)} to Place Order</span>`;
+            }
           }
         }
       };
@@ -2288,7 +2315,8 @@ const CustomerApp = {
     const unitSellingPrice = store.getSellingPrice(wholesaleCost, serviceId, rawServiceId, provider);
     const totalCost = (unitSellingPrice / 1000) * quantity;
     if (store.data.customer.balance < totalCost) {
-      store.showToast('Insufficient wallet balance. Please add funds first!', 'error');
+      const shortfall = totalCost - store.data.customer.balance;
+      store.showToast(`⚠️ Insufficient balance! Please add ${store.formatMoney(shortfall)} to place this order.`, 'error');
       store.setCustomerTab('wallet');
       return;
     }

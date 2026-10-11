@@ -2918,7 +2918,7 @@ const AdminApp = {
                   marginBadge = `<span class="badge badge-info" style="background: rgba(59, 130, 246, 0.15); color: #2563EB; border: 1px solid rgba(59, 130, 246, 0.4); font-weight: 700;">Custom: +${override.customMarkupPercent}%</span>`;
                 }
               }
-              const sellingPrice = store.getSellingPrice(s.wholesaleCost || 0.12, s.id, s.rawId);
+              const sellingPrice = store.getSellingPrice(s.wholesaleCost || 0.12, s.id, s.rawId, s.provider);
               return `
               <tr>
                 <td>
@@ -3006,8 +3006,8 @@ const AdminApp = {
     const wholesaleUsd = parseFloat(svc.wholesaleCost || svc.cost || 0.10);
     const fx = store.data.exchangeRate || 95.385;
     const wholesaleInr = wholesaleUsd * fx;
-    const globalMarkup = store.data.adminStats.globalMarkupPercent || 50;
-    const currentSellingPrice = store.getSellingPrice(wholesaleUsd, svc.id, svc.rawId);
+    const globalMarkup = store.data.adminStats.globalMarkupPercent || 100;
+    const currentSellingPrice = store.getSellingPrice(wholesaleUsd, svc.id, svc.rawId, svc.provider);
 
     const override = (store.data.serviceOverrides || {})[cleanRaw] || (store.data.serviceOverrides || {})[String(serviceId)] || {};
     const hasOverride = Boolean(override.customSellingPriceInr !== undefined || override.customMarkupPercent !== undefined);
@@ -3544,7 +3544,7 @@ const AdminApp = {
       const isActive = store.isServiceActiveInCatalog(s.id, s.rawId);
       const mappedCat = store.getServiceMappedCategory(s.id, s.rawId);
       const wholesaleInr = store.formatMoney(s.cost);
-      const sellingPriceUsd = store.getSellingPrice(s.cost, s.id, s.rawId);
+      const sellingPriceUsd = store.getSellingPrice(s.cost, s.id, s.rawId, s.provider);
       const sellingPriceInr = store.formatMoney(sellingPriceUsd);
       const isWos = s.provider === 'worldofsmm';
 
@@ -3671,7 +3671,7 @@ const AdminApp = {
     const store = window.store;
     const categories = store.getAllLikeXCategories ? store.getAllLikeXCategories() : [];
     const wholesaleInr = store.formatMoney(serviceObj.cost);
-    const sellingPriceUsd = store.getSellingPrice(serviceObj.cost, serviceObj.id, serviceObj.rawId);
+    const sellingPriceUsd = store.getSellingPrice(serviceObj.cost, serviceObj.id, serviceObj.rawId, serviceObj.provider);
     const sellingPriceInr = store.formatMoney(sellingPriceUsd);
 
     modal.innerHTML = `

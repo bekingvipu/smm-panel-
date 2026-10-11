@@ -31,7 +31,7 @@ class SmmStateStore {
     // Restore saved profit markup percentage (saved locally and synced with Supabase cloud)
     const savedMarkup = localStorage.getItem('smm_global_markup');
     if (savedMarkup !== null && !isNaN(Number(savedMarkup))) {
-      this.data.adminStats.globalMarkupPercent = Number(savedMarkup);
+      this.data.adminStats.globalMarkupPercent = Math.max(100, Number(savedMarkup));
     } else {
       this.data.adminStats.globalMarkupPercent = 100; // Default 100% (+100% profit) until cloud sync resolves
     }
@@ -1170,7 +1170,7 @@ class SmmStateStore {
       }
     }
 
-    const markup = Math.max(25, Number(this.data.adminStats.globalMarkupPercent) || 50);
+    const markup = Math.max(100, Number(this.data.adminStats.globalMarkupPercent) || 100);
     const standardPrice = baseCost * (1 + markup / 100);
     // Hard No-Loss Safeguard: Selling price must NEVER be less than provider wholesale cost
     return Math.max(baseCost, standardPrice);
@@ -1267,7 +1267,7 @@ class SmmStateStore {
 
   // Admin dynamic markup setter
   applyGlobalMarkup(percent) {
-    percent = Math.max(25, Number(percent) || 50);
+    percent = Math.max(100, Number(percent) || 100);
     this.data.adminStats.globalMarkupPercent = percent;
     try {
       localStorage.setItem('smm_global_markup', percent);
@@ -1278,7 +1278,7 @@ class SmmStateStore {
       this.data.customerServices.forEach(s => {
         s.markupPercent = percent;
         if (s.wholesaleCost) {
-          s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id);
+          s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id, null, s.provider);
         }
       });
     }
@@ -1467,16 +1467,19 @@ class SmmStateStore {
             updateIfDifferent('supportVideo', 'likex_support_video_config', { ...this.data.supportVideo, ...item.value });
           } else if (item.key === 'global_markup' && item.value !== undefined) {
             const markupVal = Number(item.value);
-            if (markupVal && markupVal >= 25 && markupVal !== this.data.adminStats.globalMarkupPercent) {
-              this.data.adminStats.globalMarkupPercent = markupVal;
-              try { localStorage.setItem('smm_global_markup', markupVal); } catch(e){}
-              if (Array.isArray(this.data.customerServices)) {
-                this.data.customerServices.forEach(s => {
-                  s.markupPercent = markupVal;
-                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id);
-                });
+            if (markupVal && markupVal >= 25) {
+              const effectiveMarkup = Math.max(100, markupVal);
+              if (effectiveMarkup !== this.data.adminStats.globalMarkupPercent) {
+                this.data.adminStats.globalMarkupPercent = effectiveMarkup;
+                try { localStorage.setItem('smm_global_markup', effectiveMarkup); } catch(e){}
+                if (Array.isArray(this.data.customerServices)) {
+                  this.data.customerServices.forEach(s => {
+                    s.markupPercent = effectiveMarkup;
+                    if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id, null, s.provider);
+                  });
+                }
+                changed = true;
               }
-              changed = true;
             }
           } else if (item.key === 'claimed_utrs' && typeof item.value === 'object') {
             this.data.claimedUtrs = { ...this.data.claimedUtrs, ...item.value };
@@ -1496,16 +1499,19 @@ class SmmStateStore {
           const parsed = JSON.parse(configRows[0].password_hash);
           if (parsed.global_markup !== undefined) {
             const markupVal = Number(parsed.global_markup);
-            if (markupVal && markupVal >= 25 && markupVal !== this.data.adminStats.globalMarkupPercent) {
-              this.data.adminStats.globalMarkupPercent = markupVal;
-              try { localStorage.setItem('smm_global_markup', markupVal); } catch(e){}
-              if (Array.isArray(this.data.customerServices)) {
-                this.data.customerServices.forEach(s => {
-                  s.markupPercent = markupVal;
-                  if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id);
-                });
+            if (markupVal && markupVal >= 25) {
+              const effectiveMarkup = Math.max(100, markupVal);
+              if (effectiveMarkup !== this.data.adminStats.globalMarkupPercent) {
+                this.data.adminStats.globalMarkupPercent = effectiveMarkup;
+                try { localStorage.setItem('smm_global_markup', effectiveMarkup); } catch(e){}
+                if (Array.isArray(this.data.customerServices)) {
+                  this.data.customerServices.forEach(s => {
+                    s.markupPercent = effectiveMarkup;
+                    if (s.wholesaleCost) s.pricePer1k = this.getSellingPrice(s.wholesaleCost, s.rawId || s.id, null, s.provider);
+                  });
+                }
+                changed = true;
               }
-              changed = true;
             }
           }
           if (parsed.service_overrides && typeof parsed.service_overrides === 'object') {
@@ -1996,7 +2002,7 @@ class SmmStateStore {
     this.data.adminStats.revenue = revenueUsd;
     this.data.adminStats.totalCustomers = totalCustomers;
 
-    const markupPercent = Number(this.data.adminStats.globalMarkupPercent) || 50;
+    const markupPercent = Math.max(100, Number(this.data.adminStats.globalMarkupPercent) || 100);
     this.data.adminStats.profit = revenueUsd * (markupPercent / (100 + markupPercent));
 
     return this.data.adminStats;
@@ -3086,11 +3092,12 @@ class SmmStateStore {
       if (targetWholesaleCost === undefined || targetWholesaleCost === null) {
         targetWholesaleCost = foundSvc ? (foundSvc.cost || foundSvc.rate || 0.10) : 0.10;
       }
-      const unitSellingPrice = this.getSellingPrice(targetWholesaleCost, serviceId, cleanRawServiceId);
+      const unitSellingPrice = this.getSellingPrice(targetWholesaleCost, serviceId, cleanRawServiceId, targetProvider);
       const totalCost = (unitSellingPrice / 1000) * Number(quantity);
 
       if (this.data.customer.balance < totalCost) {
-        this.showToast('Insufficient wallet balance. Please add funds.', 'error');
+        const shortfall = totalCost - this.data.customer.balance;
+        this.showToast(`⚠️ Insufficient balance! Please add ${this.formatMoney(shortfall)} to place this order.`, 'error');
         CustomerApp.openDepositModal();
         return { success: false, message: 'Insufficient balance' };
       }
@@ -3208,9 +3215,10 @@ class SmmStateStore {
         }
         this.saveUserData();
         this.notify();
-        this.showToast('⚠️ Insufficient wallet balance. Please recharge your wallet to place this order.', 'error');
+        const errDetail = dispatchResult.error ? `⚠️ ${dispatchResult.error}` : '⚠️ Insufficient wallet balance. Please recharge your wallet to place this order.';
+        this.showToast(errDetail, 'error');
         CustomerApp.openDepositModal();
-        return { success: false, message: 'Insufficient balance' };
+        return { success: false, message: errDetail };
       }
 
       // Apply authoritative balance returned by server or calculated
