@@ -1445,6 +1445,34 @@ const CustomerApp = {
       cleanQuery
     } = this.getFilteredOrderData(store);
 
+    const initQty = isCommentService ? 50 : 1000;
+    const initTotal = activeService ? (sellingPrice / 1000) * initQty : 0;
+    const userBal = Number(store.data.customer ? store.data.customer.balance : 0) || 0;
+
+    let initialBalanceStatusHtml = '';
+    if (!activeService) {
+      initialBalanceStatusHtml = '<span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">⏳ Category awaiting service setup</span>';
+    } else if (!store.data.isLoggedIn) {
+      initialBalanceStatusHtml = '<span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">ℹ️ Sign in required to place order</span>';
+    } else if (userBal >= initTotal) {
+      initialBalanceStatusHtml = '<span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>';
+    } else {
+      const shortfall = Math.max(0, initTotal - userBal);
+      initialBalanceStatusHtml = `<span class="balance-status-pill badge-error" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; font-size: 12.5px; font-weight: 700;">⚠️ Insufficient Balance — Need ${store.formatMoney(shortfall)} more</span>`;
+    }
+
+    let initialSubmitButtonText = '';
+    if (!activeService) {
+      initialSubmitButtonText = '⏳ Category Awaiting Services';
+    } else if (!store.data.isLoggedIn) {
+      initialSubmitButtonText = '🔑 Sign In to Place Order';
+    } else if (userBal >= initTotal) {
+      initialSubmitButtonText = '⚡ Confirm & Place Order';
+    } else {
+      const shortfall = Math.max(0, initTotal - userBal);
+      initialSubmitButtonText = `⚡ Add ${store.formatMoney(shortfall)} to Place Order`;
+    }
+
     const isExcluded = (s) => {
       const cat = (s.category || '').toLowerCase();
       const name = (s.name || '').toLowerCase();
@@ -1749,37 +1777,13 @@ const CustomerApp = {
             <span class="receipt-total-amount" id="calc-total-label">${activeService ? store.formatMoney((sellingPrice / 1000) * (isCommentService ? 50 : 1000)) : store.formatMoney(0)}</span>
           </div>
           <div id="balance-check-status" style="margin-top: 2px;">
-            ${!activeService ? `
-              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">⏳ Category awaiting service setup</span>
-            ` : (store.data.isLoggedIn ? (() => {
-              const initQty = isCommentService ? 50 : 1000;
-              const initTotal = (sellingPrice / 1000) * initQty;
-              const userBal = Number(store.data.customer.balance || 0);
-              if (userBal >= initTotal) {
-                return '<span class="balance-status-pill badge-success" style="padding: 6px 14px; font-size: 12.5px;">✓ Sufficient Wallet Balance</span>';
-              } else {
-                const shortfall = Math.max(0, initTotal - userBal);
-                return `<span class="balance-status-pill badge-error" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 14px; font-size: 12.5px; font-weight: 700;">⚠️ Insufficient Balance — Need ${store.formatMoney(shortfall)} more</span>`;
-              }
-            })() : `
-              <span class="balance-status-pill" style="background: var(--bg-subtle); color: var(--text-secondary); padding: 6px 14px; font-size: 12.5px;">ℹ️ Sign in required to place order</span>
-            `)}
+            ${initialBalanceStatusHtml}
           </div>
         </div>
 
         <!-- Submit Button with Refraction Glare Animation -->
         <button class="btn btn-primary btn-lg btn-block btn-refraction" id="btn-submit-order" onclick="CustomerApp.handlePlaceOrder()" style="height: 52px; border-radius: 14px; font-size: 16px;" ${!activeService ? 'disabled style="opacity: 0.6; cursor: not-allowed;"' : ''}>
-          <span>${!activeService ? '⏳ Category Awaiting Services' : (!store.data.isLoggedIn ? '🔑 Sign In to Place Order' : (() => {
-            const initQty = isCommentService ? 50 : 1000;
-            const initTotal = (sellingPrice / 1000) * initQty;
-            const userBal = Number(store.data.customer.balance || 0);
-            if (userBal >= initTotal) {
-              return '⚡ Confirm & Place Order';
-            } else {
-              const shortfall = Math.max(0, initTotal - userBal);
-              return `⚡ Add ${store.formatMoney(shortfall)} to Place Order`;
-            }
-          })()))}</span>
+          <span>${initialSubmitButtonText}</span>
         </button>
       </div>
     `;
