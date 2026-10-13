@@ -307,16 +307,20 @@ class SmmStateStore {
       this.data.claimedUtrs = {};
     }
 
-    // Purge ALL legacy and stale localStorage rate caches immediately so customer prices never freeze
-    try {
-      localStorage.removeItem('likex_live_rates_cache');
-      localStorage.removeItem('likex_live_rates_cache_v2');
-      localStorage.removeItem('likex_live_rates_cache_v3');
-      localStorage.removeItem('likex_live_rates_cache_v4');
-      localStorage.removeItem('likex_last_rates_sync_time_v4');
-    } catch (e) {}
+    // Initialize liveRatesCache with localStorage persistence (2-hour TTL) to prevent price shifting on reload
     this.liveRatesCache = {};
     this.lastRatesSyncTime = 0;
+    try {
+      const cachedRates = localStorage.getItem('likex_live_rates_cache_v5');
+      const cachedTime = localStorage.getItem('likex_last_rates_sync_time_v5');
+      const now = Date.now();
+      if (cachedRates && cachedTime && (now - Number(cachedTime) < 2 * 60 * 60 * 1000)) {
+        this.liveRatesCache = JSON.parse(cachedRates);
+        this.lastRatesSyncTime = Number(cachedTime);
+      }
+    } catch (e) {
+      this.liveRatesCache = {};
+    }
     this.isSyncingLiveRates = false;
     this.data.serviceOverrides = {};
 
@@ -818,6 +822,10 @@ class SmmStateStore {
       }
 
       this.lastRatesSyncTime = now;
+      try {
+        localStorage.setItem('likex_live_rates_cache_v5', JSON.stringify(this.liveRatesCache));
+        localStorage.setItem('likex_last_rates_sync_time_v5', String(now));
+      } catch (storageErr) {}
 
       // Notify UI of updated rates
       this.notify();
