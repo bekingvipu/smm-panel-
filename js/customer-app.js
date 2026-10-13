@@ -1,6 +1,8 @@
 const CustomerApp = {
   currentPlatform: 'instagram',
   currentCategory: 'Instagram Followers [Guaranteed]',
+  currentServiceId: null,
+  currentQuantity: null,
   searchQuery: '',
   ordersFilter: 'all',
   ordersSearch: '',
@@ -1273,7 +1275,11 @@ const CustomerApp = {
       ];
     }
 
-    const activeService = activePackages.length > 0 ? activePackages[0] : null;
+    const activeService = (this.currentServiceId && activePackages.find(s => String(s.id) === String(this.currentServiceId)))
+      || (activePackages.length > 0 ? activePackages[0] : null);
+    if (activeService) {
+      this.currentServiceId = activeService.id;
+    }
     const sellingPrice = activeService ? (store.getSellingPrice ? store.getSellingPrice(activeService.cost || 0.10, activeService.id, activeService.rawId, activeService.provider) : (activeService.cost || 0.10)) : 0;
     const isCommentService = activeService ? ((activeService.name || '').toLowerCase().includes('comment') || (!isLikeXSpecial && (activeService.category || '').toLowerCase().includes('comment'))) : false;
     const isCustomComment = isCommentService && ((activeService.name || '').toLowerCase().includes('custom'));
@@ -1445,7 +1451,8 @@ const CustomerApp = {
       cleanQuery
     } = this.getFilteredOrderData(store);
 
-    const initQty = isCommentService ? 50 : 1000;
+    const defaultQty = isCommentService ? 50 : 1000;
+    const initQty = (this.currentQuantity !== null && this.currentQuantity !== undefined && this.currentQuantity !== '') ? Number(this.currentQuantity) : defaultQty;
     const initTotal = activeService ? (sellingPrice / 1000) * initQty : 0;
     const userBal = Number(store.data.customer ? store.data.customer.balance : 0) || 0;
 
@@ -1728,7 +1735,7 @@ const CustomerApp = {
             <span style="font-weight: 800;">Order Quantity</span>
             <span class="form-label-hint" id="qty-limits-hint" style="font-family: var(--font-mono); font-weight: 600;">Min: ${activeService ? effectiveMin.toLocaleString() : '—'} | Max: ${activeService ? (activeService.max || 100000).toLocaleString() : '—'}</span>
           </label>
-          <input type="number" class="form-input" id="new-order-quantity" value="${isCommentService ? 50 : 1000}" min="${effectiveMin}" max="${activeService ? (activeService.max || 100000) : 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" ${!activeService ? 'disabled' : ''} />
+          <input type="number" class="form-input" id="new-order-quantity" value="${initQty}" min="${effectiveMin}" max="${activeService ? (activeService.max || 100000) : 100000}" step="1" style="min-height: 48px; border-radius: 12px; font-weight: 700; font-size: 16px;" ${!activeService ? 'disabled' : ''} />
           <div class="qty-steppers-bar" id="qty-steppers-bar" style="${isCustomComment || !activeService ? 'display: none;' : 'display: flex;'}">
             ${isCommentService ? `
               <button type="button" class="qty-pill-btn" onclick="CustomerApp.setQty(50)">50</button>
@@ -1872,6 +1879,7 @@ const CustomerApp = {
   selectCategoryItem(e, cat) {
     if (e) e.stopPropagation();
     this.currentCategory = cat;
+    this.currentServiceId = null;
     const select = document.getElementById('new-order-category-select');
     if (select) {
       select.value = cat;
@@ -1883,8 +1891,7 @@ const CustomerApp = {
       });
     }
     this.closeAllCustomDropdowns();
-    const screenContainer = document.getElementById('screen-container');
-    this.render(screenContainer);
+    this.updateNewOrderDropdowns();
   },
 
   toggleServiceDropdown(e) {
@@ -1906,6 +1913,7 @@ const CustomerApp = {
 
   selectServicePackageItem(e, serviceId) {
     if (e) e.stopPropagation();
+    this.currentServiceId = serviceId;
     const serviceSelect = document.getElementById('new-order-service-select');
     if (serviceSelect) {
       serviceSelect.value = serviceId;
@@ -2205,7 +2213,12 @@ const CustomerApp = {
       };
 
       serviceSelect.addEventListener('change', updateCalc);
-      if (qtyInput.addEventListener) qtyInput.addEventListener('input', updateCalc);
+      if (qtyInput.addEventListener) {
+        qtyInput.addEventListener('input', () => {
+          CustomerApp.currentQuantity = qtyInput.value;
+          updateCalc();
+        });
+      }
 
       if (commentsBox && commentsBox.addEventListener) {
         commentsBox.addEventListener('input', () => {
@@ -2219,6 +2232,7 @@ const CustomerApp = {
             }
           }
           qtyInput.value = count > 0 ? count : 50;
+          CustomerApp.currentQuantity = qtyInput.value;
           updateCalc();
         });
       }
@@ -2456,6 +2470,7 @@ const CustomerApp = {
   },
 
   setQty(val) {
+    this.currentQuantity = val;
     const input = document.getElementById('new-order-quantity');
     if (input) {
       const serviceSelect = document.getElementById('new-order-service-select');
@@ -5499,6 +5514,7 @@ const CustomerApp = {
     if (found) {
       this.currentPlatform = found.platform || 'instagram';
       this.currentCategory = found.category;
+      this.currentServiceId = found.id;
       this.searchQuery = '';
       this.render(document.getElementById('screen-container'));
       setTimeout(() => {

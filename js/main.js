@@ -64,6 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let _renderRaf = null;
   let _lastPersona = null;
   let _lastAdminTab = null;
+  let _lastCustomerTab = null;
 
   const renderApp = (immediate = false) => {
     const doRender = () => {
@@ -88,17 +89,19 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         _lastPersona = 'admin';
         _lastAdminTab = store.adminTab;
+        _lastCustomerTab = null;
         AdminApp.render(screenContainer);
       } else {
         document.title = 'LikeX — India\'s Wholesale SMM & Creator Panel | likex.in';
-        const customerShell = document.querySelector('.customer-shell') || document.querySelector('.app-shell') || document.querySelector('.bottom-nav');
+        const customerShell = document.querySelector('.customer-header') || document.querySelector('.customer-bottom-nav') || document.querySelector('.customer-desktop-container');
         // If background state notification occurs while already on customer view, update wallet badges in-place without blinking
-        if (!immediate && customerShell && _lastPersona === 'customer') {
+        if (!immediate && customerShell && _lastPersona === 'customer' && store.customerTab === _lastCustomerTab) {
           store.updateCustomerHeader();
           return;
         }
         _lastPersona = 'customer';
         _lastAdminTab = null;
+        _lastCustomerTab = store.customerTab;
         CustomerApp.render(screenContainer);
       }
     };
