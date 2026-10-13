@@ -2177,7 +2177,7 @@ const CustomerApp = {
           badge.textContent = refill ? '🛡️ Refill Guarantee Active' : 'No Refill Warranty';
         }
 
-        const cleanId = String(id).replace(/^wos-/, '');
+        const cleanId = String(id).replace(/^(wos-|sf-|jap-)/, '').replace(/-likex$/, '');
         const triggerBadge = document.getElementById('trigger-service-id-badge');
         if (triggerBadge) triggerBadge.textContent = cleanId;
         const triggerName = document.getElementById('trigger-service-name-text');
