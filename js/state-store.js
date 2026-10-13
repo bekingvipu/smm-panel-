@@ -227,31 +227,28 @@ class SmmStateStore {
       this.data.pixelSettings = { enabled: true, pixelId: '1107755188608830' };
     }
 
-    // Initialize Recommended Instagram Followers Notice Config
-    const defaultRecNotice = 'To prevent follower drops during Instagram updates, use LikeX verified Non-Drop service IDs. Fast & stable delivery:';
+    // Initialize Recommended Instagram Followers Notice Config (Authoritative: 4137)
+    const defaultRecNotice = 'Instagram updates ke dauran followers drop hone se bachne ke liye LikeX verified Non-Drop service IDs use karein. Stable delivery & 100% refill protected:';
     try {
       const savedRec = localStorage.getItem('likex_recommended_followers_config');
       if (savedRec) {
         this.data.recommendedFollowers = JSON.parse(savedRec);
-        if (!this.data.recommendedFollowers.notice || this.data.recommendedFollowers.notice.includes('Instagram updates ke dauran') || this.data.recommendedFollowers.notice.toLowerCase().includes('refill')) {
-          this.data.recommendedFollowers.notice = defaultRecNotice;
-        }
       } else {
         this.data.recommendedFollowers = {
           enabled: true,
-          title: 'Best Non-Drop Instagram Followers [Tested & Verified]',
+          title: '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
           notice: defaultRecNotice,
-          serviceIds: '2868, 10323, 6435, 10349',
-          badgeText: '100% Non-Drop VIP'
+          serviceIds: '4137',
+          badgeText: '🔥 100% Non-Drop VIP'
         };
       }
     } catch (e) {
       this.data.recommendedFollowers = {
         enabled: true,
-        title: 'Best Non-Drop Instagram Followers [Tested & Verified]',
+        title: '💎 Best Non-Drop Instagram Followers [Tested & Verified]',
         notice: defaultRecNotice,
-        serviceIds: '2868, 10323, 6435, 10349',
-        badgeText: '100% Non-Drop VIP'
+        serviceIds: '4137',
+        badgeText: '🔥 100% Non-Drop VIP'
       };
     }
 
