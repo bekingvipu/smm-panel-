@@ -180,7 +180,7 @@ window.SMM_MOCK = {
       refillPeriod: 'None',
       description: 'High quality non-drop Instagram likes via SocialFans (4997).',
       provider: 'socialfans',
-      wholesaleCost: 0.107752,
+      wholesaleCost: 0.074102,
       markupPercent: 50
     },
 
