@@ -1567,6 +1567,24 @@ class SmmStateStore {
             this.data.claimedUtrs = { ...this.data.claimedUtrs, ...parsed.claimed_utrs };
             try { localStorage.setItem('likex_claimed_utrs', JSON.stringify(this.data.claimedUtrs)); } catch(e){}
           }
+          if (Array.isArray(parsed.deleted_orders)) {
+            if (!this.adminDeletedOrderIds) this.adminDeletedOrderIds = new Set();
+            parsed.deleted_orders.forEach(dId => {
+              const s = String(dId).trim();
+              if (s) {
+                this.adminDeletedOrderIds.add(s);
+                this.adminDeletedOrderIds.add(s.replace(/^LX/i, ''));
+                const digits = s.replace(/\D/g, '');
+                if (digits) {
+                  this.adminDeletedOrderIds.add(digits);
+                  this.adminDeletedOrderIds.add(`LX${digits}`);
+                }
+              }
+            });
+            try {
+              localStorage.setItem('likex_admin_deleted_orders', JSON.stringify([...this.adminDeletedOrderIds]));
+            } catch (e) {}
+          }
           if (parsed.announcement_config && parsed.announcement_config.text) {
             updateIfDifferent('announcement', 'likex_announcement_config', { ...this.data.announcement, ...parsed.announcement_config });
           }
@@ -1902,23 +1920,79 @@ class SmmStateStore {
     return finalOrders;
   }
 
-  // Admin soft-delete / hide orders from Admin Console (100% safe — customer orders & provider processing untouched)
-  adminDeleteOrders(orderIds) {
+  // Admin permanent delete orders from Admin Console & Supabase Cloud
+  async adminDeleteOrders(orderIds) {
     if (!Array.isArray(orderIds) || orderIds.length === 0) return { success: false, count: 0 };
     if (!this.adminDeletedOrderIds) this.adminDeletedOrderIds = new Set();
 
     let addedCount = 0;
+    const cleanNumericIds = [];
+
     orderIds.forEach(id => {
       const sId = String(id || '').trim();
       if (sId) {
         this.adminDeletedOrderIds.add(sId);
         this.adminDeletedOrderIds.add(sId.replace(/^LX/i, ''));
+        const digits = sId.replace(/\D/g, '');
+        if (digits) {
+          cleanNumericIds.push(digits);
+          this.adminDeletedOrderIds.add(digits);
+          this.adminDeletedOrderIds.add(`LX${digits}`);
+        }
         addedCount++;
       }
     });
 
     try {
       localStorage.setItem('likex_admin_deleted_orders', JSON.stringify([...this.adminDeletedOrderIds]));
+    } catch (e) {}
+
+    // 1. Remove from all in-memory arrays immediately
+    const filterOut = (o) => {
+      if (!o) return false;
+      const oId = String(o.id || '').trim();
+      const oLxId = String(o.likeXOrderId || '').trim();
+      const oProvId = String(o.providerOrderId || '').trim();
+      const oDigits = oId.replace(/\D/g, '');
+      return !this.adminDeletedOrderIds.has(oId) && 
+             !this.adminDeletedOrderIds.has(oLxId) && 
+             !this.adminDeletedOrderIds.has(oProvId) && 
+             (!oDigits || !this.adminDeletedOrderIds.has(oDigits));
+    };
+
+    if (Array.isArray(this.data.orders)) {
+      this.data.orders = this.data.orders.filter(filterOut);
+    }
+    if (Array.isArray(this.data.allAdminSupabaseOrders)) {
+      this.data.allAdminSupabaseOrders = this.data.allAdminSupabaseOrders.filter(filterOut);
+      try {
+        localStorage.setItem('likex_supabase_orders', JSON.stringify(this.data.allAdminSupabaseOrders));
+      } catch (e) {}
+    }
+
+    // 2. Permanent deletion from Supabase Database
+    if (cleanNumericIds.length > 0) {
+      try {
+        const idInQuery = cleanNumericIds.join(',');
+        await fetch(`${SUPABASE_PROJECT_URL}/rest/v1/orders?id=in.(${idInQuery})`, {
+          method: 'DELETE',
+          headers: {
+            apikey: SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        if (window.supabaseClient) {
+          window.supabaseClient.from('orders').delete().in('id', cleanNumericIds).catch(() => {});
+        }
+      } catch (delErr) {
+        console.warn('[LikeX Admin] Supabase order permanent deletion notice:', delErr);
+      }
+    }
+
+    // 3. Save to Cloud Config (Row 999) so all other browsers/devices sync the permanent deletion
+    try {
+      this.saveCloudConfig({ deleted_orders: [...this.adminDeletedOrderIds] });
     } catch (e) {}
 
     this.recalculateAdminStats();
@@ -2220,8 +2294,15 @@ class SmmStateStore {
           const finalProvider = isSfOrder ? 'socialfans' : (isWosOrder ? 'worldofsmm' : (so.assigned_provider_id === 3 ? 'socialfans' : 'worldofsmm'));
           const orderCreatedAt = so.created_at ? new Date(so.created_at).getTime() : Date.now();
 
-          const isQueuedOrder = so.status === 'Queued' || so.status === 'Pending' || (!so.provider_order_id && so.status !== 'Completed' && so.status !== 'Refunded' && so.status !== 'Canceled');
-          const finalErrorMsg = snapshot?.note || (so.refill_status && !so.refill_status.startsWith('SNAPSHOT:') ? so.refill_status : '') || null;
+          const rawErr = snapshot?.note || (so.refill_status && !so.refill_status.startsWith('SNAPSHOT:') ? so.refill_status : '') || '';
+          const isRefundedOrder = so.status === 'Refunded' || 
+                                  so.status === 'Canceled' || 
+                                  (matchedTx && (matchedTx.type === 'Refund' || String(matchedTx.description || '').toLowerCase().includes('refund'))) ||
+                                  String(rawErr).toLowerCase().includes('refund') ||
+                                  String(rawErr).toLowerCase().includes('incorrect service');
+          const isQueuedOrder = !isRefundedOrder && (so.status === 'Queued' || so.status === 'Pending' || (!so.provider_order_id && so.status !== 'Completed'));
+          const finalErrorMsg = rawErr || null;
+          const finalStatus = isRefundedOrder ? 'Refunded' : (so.status || 'Completed');
 
           const userEmail = snapshot?.email || matchedUser?.email || '';
           let customerName = snapshot?.name || matchedUser?.username;
@@ -2273,7 +2354,7 @@ class SmmStateStore {
             quantity: Number(so.quantity) || 1000,
             amount: Number(so.charge) || 0,
             providerCost: Number(so.provider_cost) || snapshot?.wholesaleCost || 0,
-            status: so.status || 'Completed',
+            status: finalStatus,
             isQueued: isQueuedOrder,
             errorReason: finalErrorMsg,
             upstreamError: finalErrorMsg,
@@ -3411,32 +3492,46 @@ class SmmStateStore {
       } else {
         const errMsg = liveError || 'Provider rejected order';
         const isLowBalance = Boolean(liveData?.isLowBalanceError || String(errMsg).toLowerCase().includes('balance') || String(errMsg).toLowerCase().includes('fund'));
+        const isFatal = Boolean(
+          liveData?.isFatalRejection || 
+          liveData?.status === 'Canceled' || 
+          liveData?.status === 'Refunded' || 
+          String(errMsg).toLowerCase().includes('incorrect') ||
+          String(errMsg).toLowerCase().includes('not found') ||
+          String(errMsg).toLowerCase().includes('disabled') ||
+          String(errMsg).toLowerCase().includes('minimal') ||
+          String(errMsg).toLowerCase().includes('maximum') ||
+          String(errMsg).toLowerCase().includes('private')
+        );
+
         order.providerOrderId = null;
-        order.isQueued = true;
-        order.needsTopup = isLowBalance;
-        order.isLowBalance = isLowBalance;
+        order.isQueued = !isFatal;
+        order.needsTopup = isLowBalance && !isFatal;
+        order.isLowBalance = isLowBalance && !isFatal;
         order.upstreamError = errMsg;
         order.errorReason = errMsg;
         order.providerResponse = liveData || null;
-        order.providerStatus = `Queued: ${errMsg}`;
-        order.status = 'Queued';
+        order.status = isFatal ? 'Refunded' : 'Queued';
+        order.providerStatus = isFatal ? `Refunded: ${errMsg}` : `Queued: ${errMsg}`;
         order.lastUpdatedAt = Date.now();
-        order.refillReason = `Queued: ${errMsg}`;
+        order.refillReason = isFatal ? `Auto-refunded to customer wallet (${errMsg})` : `Queued: ${errMsg}`;
 
         this.updateOrderInAllStorages(order);
-        this.triggerAlert({
-          type: 'queued_order',
-          orderId: finalOrderId,
-          providerName: providerDisplayName,
-          providerKey: targetProvider,
-          serviceName: serviceName,
-          target: cleanedTarget,
-          quantity: quantity,
-          customerPaid: totalCost.toFixed(2),
-          customerEmail: order.userEmail || '',
-          reason: errMsg,
-          isLowBalance: isLowBalance
-        });
+        if (!isFatal) {
+          this.triggerAlert({
+            type: 'queued_order',
+            orderId: finalOrderId,
+            providerName: providerDisplayName,
+            providerKey: targetProvider,
+            serviceName: serviceName,
+            target: cleanedTarget,
+            quantity: quantity,
+            customerPaid: totalCost.toFixed(2),
+            customerEmail: order.userEmail || '',
+            reason: errMsg,
+            isLowBalance: isLowBalance
+          });
+        }
       }
 
       return {

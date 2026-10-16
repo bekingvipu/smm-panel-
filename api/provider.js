@@ -532,6 +532,8 @@ export default async function handler(req, res) {
         success: isSuccess,
         error: liveError || null,
         isLowBalanceError: Boolean(isLowBalanceError),
+        isFatalRejection: Boolean(isFatalRejection),
+        status: orderStatus,
         provider: providerKey,
         providerName: providerConfig.name,
         newBalance: balanceAfter,

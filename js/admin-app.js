@@ -1942,6 +1942,12 @@ const AdminApp = {
     const queuedOrders = allOrders.filter(o => {
       if (!o) return false;
       const st = (o.status || '').toLowerCase();
+      const isRef = st === 'refunded' || 
+                    st === 'canceled' || 
+                    o.walletTransaction?.type === 'Refund' || 
+                    String(o.errorReason || '').toLowerCase().includes('refund') || 
+                    String(o.errorReason || '').toLowerCase().includes('incorrect service');
+      if (isRef) return false;
       return o.isQueued || o.needsTopup || o.isLowBalance || st === 'queued' || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
     });
     if (queuedOrders.length === 0) {
@@ -4451,13 +4457,13 @@ const AdminApp = {
     this.deleteSelectedOrders();
   },
 
-  confirmDeleteOrders(ids) {
+  async confirmDeleteOrders(ids) {
     const store = window.store;
     if (!store) return;
-    const res = store.adminDeleteOrders(ids);
+    const res = await store.adminDeleteOrders(ids);
     if (this.selectedOrderIds) this.selectedOrderIds.clear();
     CustomerApp.closeModal();
-    store.showToast(`${res.count || ids.length} order(s) removed from Admin Console. 🧹`, 'success');
+    store.showToast(`${res.count || ids.length} order(s) permanently deleted across all devices. 🗑️`, 'success');
     this.updateAdminOrdersTableView();
   },
 
@@ -4511,6 +4517,12 @@ const AdminApp = {
       if (filter === 'queued') {
         filtered = filtered.filter(o => {
           const st = (o.status || '').toLowerCase();
+          const isRef = st === 'refunded' || 
+                        st === 'canceled' || 
+                        o.walletTransaction?.type === 'Refund' || 
+                        String(o.errorReason || '').toLowerCase().includes('refund') ||
+                        String(o.errorReason || '').toLowerCase().includes('incorrect service');
+          if (isRef) return false;
           return st === 'queued' || o.isQueued || o.needsTopup || o.isLowBalance || st.includes('topup') || st.includes('top-up') || st.includes('low balance');
         });
       } else if (filter === 'partial') {
@@ -4521,7 +4533,11 @@ const AdminApp = {
       } else if (filter === 'refunded') {
         filtered = filtered.filter(o => {
           const st = (o.status || '').toLowerCase();
-          return st === 'refunded' || st === 'canceled';
+          return st === 'refunded' || 
+                 st === 'canceled' || 
+                 o.walletTransaction?.type === 'Refund' || 
+                 String(o.errorReason || '').toLowerCase().includes('refund') ||
+                 String(o.errorReason || '').toLowerCase().includes('incorrect service');
         });
       } else if (filter === 'in_progress') {
         filtered = filtered.filter(o => {
@@ -4625,6 +4641,11 @@ const AdminApp = {
                     (!isSf && (provIdStr.startsWith('58') || provIdStr.startsWith('59') || String(o.id).startsWith('58')));
 
       const isLow = Boolean(o.isLowBalance || (o.status && o.status.includes('Low Provider Balance')));
+      const isRefundedOrder = String(o.status).toLowerCase() === 'refunded' || 
+                              String(o.status).toLowerCase() === 'canceled' || 
+                              o.walletTransaction?.type === 'Refund' || 
+                              String(o.errorReason || '').toLowerCase().includes('refund') ||
+                              String(o.errorReason || '').toLowerCase().includes('incorrect service');
 
       let custCode = o.customerId || o.customerCode || o.serviceSnapshot?.customerCode || null;
       let custEmail = o.userEmail || o.customerEmail || o.serviceSnapshot?.email || '';
@@ -4888,7 +4909,11 @@ const AdminApp = {
           <!-- 7. STATUS & LIVE PROGRESS -->
           <td>
             <div style="display: flex; flex-direction: column; gap: 4px;">
-              ${(isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && String(o.status).toLowerCase() !== 'refunded' && !String(o.status).toLowerCase().includes('progress'))) ? `
+              ${isRefundedOrder ? `
+                <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800; border: 1px solid rgba(100, 116, 139, 0.3);">
+                  ✓ Refunded
+                </span>
+              ` : (isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && !String(o.status).toLowerCase().includes('progress'))) ? `
                 <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;">
                   ⚠️ Queued Top-Up
                 </span>
@@ -4909,10 +4934,6 @@ const AdminApp = {
               ` : (String(o.status).toLowerCase() === 'in_progress' || String(o.status).toLowerCase() === 'in progress') ? `
                 <span class="badge" style="background: rgba(139, 92, 246, 0.15); color: #7C3AED; font-weight: 800; border: 1px solid rgba(139, 92, 246, 0.3);">
                   In Progress
-                </span>
-              ` : (String(o.status).toLowerCase() === 'refunded' || String(o.status).toLowerCase() === 'canceled') ? `
-                <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800; border: 1px solid rgba(100, 116, 139, 0.3);">
-                  ✓ Refunded
                 </span>
               ` : `
                 <span class="badge badge-primary" style="font-weight: 800;">${o.status || 'Processing'}</span>
@@ -4970,7 +4991,16 @@ const AdminApp = {
   },
 
   renderQueuedBanner(queuedOrders = []) {
-    if (!queuedOrders || queuedOrders.length === 0) return '';
+    const validQueued = (queuedOrders || []).filter(o => {
+      const st = String(o.status || '').toLowerCase();
+      const isRef = st === 'refunded' || 
+                    st === 'canceled' || 
+                    o.walletTransaction?.type === 'Refund' || 
+                    String(o.errorReason || '').toLowerCase().includes('refund') || 
+                    String(o.errorReason || '').toLowerCase().includes('incorrect service');
+      return !isRef;
+    });
+    if (!validQueued || validQueued.length === 0) return '';
     return `
       <!-- HIGH-PRIORITY QUEUED ORDERS WAITING FOR PROVIDER TOP-UP -->
       <div class="card" style="margin-bottom: 2px; padding: 18px 20px; border: 1.5px solid #EF4444; background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(245, 158, 11, 0.08)); border-radius: 16px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.08);">
@@ -4979,7 +5009,7 @@ const AdminApp = {
             <span style="font-size: 26px;">🚨</span>
             <div>
               <h4 style="font-size: 16.5px; font-weight: 800; color: #DC2626; margin: 0;">
-                ${queuedOrders.length} Order(s) Queued — Waiting for Provider Top-Up
+                ${validQueued.length} Order(s) Queued — Waiting for Provider Top-Up
               </h4>
               <p style="font-size: 13px; color: #B45309; margin: 3px 0 0;">
                 Customer payment received. Recharge provider account and click <strong>"1-Click Dispatch All"</strong> or dispatch individual orders below.
@@ -4988,7 +5018,7 @@ const AdminApp = {
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn btn-sm" style="background: #10B981; color: white; font-weight: 800; border-radius: 999px; padding: 7px 18px; font-size: 13px; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);" onclick="AdminApp.dispatchAllQueuedOrders()">
-              ⚡ 1-Click Dispatch All Queued (${queuedOrders.length})
+              ⚡ 1-Click Dispatch All Queued (${validQueued.length})
             </button>
           </div>
         </div>
