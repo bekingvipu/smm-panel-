@@ -3673,12 +3673,19 @@ class SmmStateStore {
     if (allOrders.length === 0) return 0;
 
     // 1. Auto-reconcile and refund any orders that were cancelled / partial but not yet credited to wallet
+    // STRICT SAFETY CUTOFF: Only orders created TODAY (17 Oct 2026) onwards are eligible for auto-refund!
+    // Historical orders from previous days will NEVER be auto-refunded to protect admin from loss!
+    const todayStartTs = new Date().setHours(0, 0, 0, 0);
     const unrefundedCancelled = allOrders.filter(o => {
       const st = String(o.status || '').toLowerCase();
       const isCanc = st === 'canceled' || st === 'cancelled' || st.includes('cancel');
       const isPart = st === 'partial';
       const alreadyRefunded = o.isRefunded || o.refundProcessed || (st === 'refunded' && String(o.refillReason || '').toLowerCase().includes('refund'));
-      return (isCanc || isPart) && !alreadyRefunded && (Number(o.amount) || Number(o.charge) || 0) > 0;
+
+      const orderTs = o.createdAt ? (typeof o.createdAt === 'number' ? o.createdAt : new Date(o.createdAt).getTime()) : (o.date ? new Date(o.date).getTime() : 0);
+      const isFromToday = orderTs >= todayStartTs || String(o.date || '').includes('17 Oct 2026') || String(o.createdDateStr || '').includes('17 Oct 2026');
+
+      return (isCanc || isPart) && !alreadyRefunded && isFromToday && (Number(o.amount) || Number(o.charge) || 0) > 0;
     });
 
     for (const uo of unrefundedCancelled) {
@@ -3969,6 +3976,19 @@ class SmmStateStore {
     if (isPartial && String(order.refillReason || '').toLowerCase().includes('partial refund')) {
       order.isRefunded = true;
       return false;
+    }
+
+    // Safety Guard: Auto-refund ONLY applies to orders created TODAY (17 Oct 2026) onwards!
+    // Historical orders from previous dates will NEVER be auto-refunded to protect admin from loss!
+    const isManualAdmin = String(reason || '').toLowerCase().includes('admin') || String(reason || '').toLowerCase().includes('manual');
+    if (!isManualAdmin) {
+      const todayStartTs = new Date().setHours(0, 0, 0, 0);
+      const orderTs = order.createdAt ? (typeof order.createdAt === 'number' ? order.createdAt : new Date(order.createdAt).getTime()) : (order.date ? new Date(order.date).getTime() : 0);
+      const isFromToday = orderTs >= todayStartTs || String(order.date || '').includes('17 Oct 2026') || String(order.createdDateStr || '').includes('17 Oct 2026');
+      if (!isFromToday) {
+        console.log(`[LikeX Refund] Order #${orderId} is from a past date (${order.date || order.createdAt}). Auto-refund skipped to protect admin from loss.`);
+        return false;
+      }
     }
 
     this._refundingOrders.add(lockKey);
