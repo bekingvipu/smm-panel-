@@ -4641,10 +4641,14 @@ const AdminApp = {
                     (!isSf && (provIdStr.startsWith('58') || provIdStr.startsWith('59') || String(o.id).startsWith('58')));
 
       const isLow = Boolean(o.isLowBalance || (o.status && o.status.includes('Low Provider Balance')));
-      const isRefundedOrder = String(o.status).toLowerCase() === 'refunded' || 
-                              String(o.status).toLowerCase() === 'canceled' || 
+      const stLow = String(o.status || '').toLowerCase();
+      const isCancelledOrder = stLow === 'cancelled' || stLow === 'canceled' || stLow.includes('cancel');
+      const isRefundedOrder = stLow === 'refunded' || 
+                              Boolean(o.isRefunded) || 
+                              Boolean(o.refundProcessed) ||
                               o.walletTransaction?.type === 'Refund' || 
                               String(o.errorReason || '').toLowerCase().includes('refund') ||
+                              String(o.refillReason || '').toLowerCase().includes('refund') ||
                               String(o.errorReason || '').toLowerCase().includes('incorrect service');
 
       let custCode = o.customerId || o.customerCode || o.serviceSnapshot?.customerCode || null;
@@ -4807,6 +4811,11 @@ const AdminApp = {
                   <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Wallet Balance Before Order → Wallet Balance After Order Deduction">
                     <span>💳</span> <span>Wallet: ${balDisplayStr}</span>
                   </span>
+                  ${isRefundedOrder ? `
+                    <span style="color: #DC2626; font-weight: 800; font-family: var(--font-mono); font-size: 10.5px; display: inline-flex; align-items: center; gap: 3px;" title="Order amount refunded back to customer LikeX wallet">
+                      <span>↩️</span> <span>Refunded: +${store.formatMoney(o.refundAmount || o.amount || 0)}</span>
+                    </span>
+                  ` : ''}
                 </div>
               </div>
             </div>
@@ -4910,9 +4919,18 @@ const AdminApp = {
           <td>
             <div style="display: flex; flex-direction: column; gap: 4px;">
               ${isRefundedOrder ? `
-                <span class="badge" style="background: rgba(100, 116, 139, 0.15); color: #475569; font-weight: 800; border: 1px solid rgba(100, 116, 139, 0.3);">
-                  ✓ Refunded
+                <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.25); font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
+                  ✓ ${stLow.includes('partial') ? 'Partial (Refunded)' : (isCancelledOrder ? 'Cancelled (Refunded)' : 'Refunded')}
                 </span>
+              ` : isCancelledOrder ? `
+                <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
+                  Cancelled
+                </span>
+                <div style="margin-top: 2px;" onclick="event.stopPropagation()">
+                  <button type="button" class="btn btn-xs" style="background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; font-weight: 800; border-radius: 6px; padding: 2px 7px; font-size: 10.5px; cursor: pointer;" onclick="AdminApp.handleAdminRefund('${o.id}')" title="Refund exact amount to customer wallet">
+                    💸 Refund
+                  </button>
+                </div>
               ` : (isLow || o.isQueued || o.needsTopup || String(o.status).toLowerCase() === 'queued' || (String(o.id).length <= 5 && String(o.status).toLowerCase() !== 'completed' && !String(o.status).toLowerCase().includes('progress'))) ? `
                 <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800; display: inline-flex; align-items: center; gap: 4px; font-size: 11px;">
                   ⚠️ Queued Top-Up

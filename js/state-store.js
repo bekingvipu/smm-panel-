@@ -3646,6 +3646,14 @@ class SmmStateStore {
           }
 
           this.updateOrderInAllStorages(order);
+
+          // Auto-refund to customer's wallet if provider cancelled, refunded, or partial
+          if (low === 'canceled' || low === 'cancelled' || low === 'refunded') {
+            await this.processOrderRefund(order, null, 'Provider Cancelled Order', false);
+          } else if (low === 'partial') {
+            await this.processOrderRefund(order, null, 'Partial Order Unfulfilled Balance', true);
+          }
+
           this.showToast(`✅ Order #${order.likeXOrderId || order.id} live status: ${liveStatus}`, 'success');
           this.notify();
           return order;
@@ -3663,6 +3671,20 @@ class SmmStateStore {
   async syncOrdersStatus(silent = false) {
     const allOrders = (this.persona === 'admin' && this.getAllAdminOrders ? this.getAllAdminOrders() : (this.getCustomerOrders ? this.getCustomerOrders() : (this.data.orders || []))) || [];
     if (allOrders.length === 0) return 0;
+
+    // 1. Auto-reconcile and refund any orders that were cancelled / partial but not yet credited to wallet
+    const unrefundedCancelled = allOrders.filter(o => {
+      const st = String(o.status || '').toLowerCase();
+      const isCanc = st === 'canceled' || st === 'cancelled' || st.includes('cancel');
+      const isPart = st === 'partial';
+      const alreadyRefunded = o.isRefunded || o.refundProcessed || (st === 'refunded' && String(o.refillReason || '').toLowerCase().includes('refund'));
+      return (isCanc || isPart) && !alreadyRefunded && (Number(o.amount) || Number(o.charge) || 0) > 0;
+    });
+
+    for (const uo of unrefundedCancelled) {
+      const isPart = String(uo.status || '').toLowerCase() === 'partial';
+      await this.processOrderRefund(uo, null, isPart ? 'Partial Order Unfulfilled Balance' : 'Provider Cancelled Order', isPart);
+    }
 
     let updatedCount = 0;
     const activeToSync = allOrders.filter(o => {
@@ -3723,6 +3745,14 @@ class SmmStateStore {
             }
 
             this.updateOrderInAllStorages(order);
+
+            // Auto-refund immediately if provider reported order as cancelled, refunded, or partial
+            if (low === 'canceled' || low === 'cancelled' || low === 'refunded') {
+              await this.processOrderRefund(order, null, 'Provider Cancelled Order', false);
+            } else if (low === 'partial') {
+              await this.processOrderRefund(order, null, 'Partial Order Unfulfilled Balance', true);
+            }
+
             updatedCount++;
           }
         }
@@ -3901,134 +3931,230 @@ class SmmStateStore {
     return true;
   }
 
-  // Admin-initiated refund directly to customer's LikeX wallet balance (zero loss, exact amount)
-  async adminRefundOrder(orderId, customReason = 'Unfulfilled / Queued Order Refund') {
-    const allOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : (this.data.orders || []);
-    const order = allOrders.find(o => String(o.id) === String(orderId) || String(o.providerOrderId) === String(orderId));
+  // Universal Secure Order Refund Engine (Idempotent, Zero Admin Loss, Exact Amount)
+  async processOrderRefund(orderInput, refundAmountInput = null, reason = 'Provider Cancelled Order', isPartial = false) {
+    if (!orderInput) return false;
+
+    // Resolve order object if ID was passed
+    let order = orderInput;
+    if (typeof orderInput === 'string' || typeof orderInput === 'number') {
+      const allOrders = this.getAllAdminOrders ? this.getAllAdminOrders() : (this.data.orders || []);
+      order = allOrders.find(o => String(o.id) === String(orderInput) || String(o.likeXOrderId) === String(orderInput) || String(o.providerOrderId) === String(orderInput));
+    }
     if (!order) {
-      this.showToast(`Order #${orderId} not found in system.`, 'error');
-      return false;
-    }
-    if (order.status === 'Refunded') {
-      this.showToast(`Order #${orderId} is already refunded.`, 'warning');
+      console.warn('[LikeX Refund] Order not found for refund:', orderInput);
       return false;
     }
 
-    // Exact refund amount (never rounds up, zero financial loss)
-    const exactRefundAmount = Number(order.amount) || Number(order.charge) || 0;
-    const custEmail = (order.userEmail || order.customerEmail || '').trim();
+    const orderId = order.likeXOrderId || order.id;
 
-    // 1. Mark order as Refunded locally
-    order.status = 'Refunded';
-    order.isQueued = false;
-    order.refillReason = `Refunded: ${customReason}`;
-
-    // Update in this.data.orders
-    const localOrder = (this.data.orders || []).find(o => String(o.id) === String(orderId));
-    if (localOrder) {
-      localOrder.status = 'Refunded';
-      localOrder.isQueued = false;
-      localOrder.refillReason = `Refunded: ${customReason}`;
+    // 1. Strict Double-Refund Protection Locks (In-Memory Set)
+    if (!this._refundingOrders) this._refundingOrders = new Set();
+    const lockKey = String(orderId);
+    if (this._refundingOrders.has(lockKey)) {
+      console.log(`[LikeX Refund] Order #${orderId} refund already in-flight, skipping.`);
+      return false;
     }
 
-    // Update in likex_master_orders in localStorage
-    try {
-      const master = JSON.parse(localStorage.getItem('likex_master_orders') || '[]');
-      const mIdx = master.findIndex(o => String(o.id) === String(orderId));
-      if (mIdx !== -1) {
-        master[mIdx].status = 'Refunded';
-        master[mIdx].isQueued = false;
-        master[mIdx].refillReason = `Refunded: ${customReason}`;
-        localStorage.setItem('likex_master_orders', JSON.stringify(master));
-      }
-    } catch (e) {}
-
-    // Update in likex_supabase_orders in localStorage
-    try {
-      const supa = JSON.parse(localStorage.getItem('likex_supabase_orders') || '[]');
-      const sIdx = supa.findIndex(o => String(o.id) === String(orderId));
-      if (sIdx !== -1) {
-        supa[sIdx].status = 'Refunded';
-        supa[sIdx].isQueued = false;
-        supa[sIdx].refillReason = `Refunded: ${customReason}`;
-        localStorage.setItem('likex_supabase_orders', JSON.stringify(supa));
-      }
-    } catch (e) {}
-
-    // 2. Credit wallet in customer localStorage if customer exists on this device
-    if (custEmail) {
-      const balKey = this._getUserStorageKey(custEmail, 'balance');
-      const curBal = parseFloat(localStorage.getItem(balKey) || '0');
-      const newBal = Number((curBal + exactRefundAmount).toFixed(4));
-      localStorage.setItem(balKey, newBal.toFixed(4));
-
-      const txnsKey = this._getUserStorageKey(custEmail, 'txns');
-      const uTxns = JSON.parse(localStorage.getItem(txnsKey) || '[]');
-      uTxns.unshift({
-        id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
-        type: 'Order Refund',
-        description: `Refund for Order #${orderId} (${customReason})`,
-        amount: exactRefundAmount,
-        balanceAfter: newBal,
-        status: 'Success',
-        createdAt: Date.now(),
-        date: this.formatRealDate(Date.now())
-      });
-      localStorage.setItem(txnsKey, JSON.stringify(uTxns));
+    // 2. Check if already marked refunded on order
+    if (order.isRefunded || order.refundProcessed) {
+      return false;
     }
 
-    // 3. Update Supabase Cloud Database (Orders, Transactions, and User Balance)
-    if (window.supabaseClient) {
-      try {
-        const orderNum = parseInt(orderId, 10);
-        if (orderNum) {
-          await window.supabaseClient
-            .from('orders')
-            .update({
-              status: 'Refunded',
-              refill_status: `Refunded: ${customReason}`
-            })
-            .eq('id', orderNum);
+    const st = String(order.status || '').toLowerCase();
+    if (!isPartial && (st === 'refunded' || String(order.refillReason || '').toLowerCase().includes('refunded'))) {
+      order.isRefunded = true;
+      return false;
+    }
+    if (isPartial && String(order.refillReason || '').toLowerCase().includes('partial refund')) {
+      order.isRefunded = true;
+      return false;
+    }
+
+    this._refundingOrders.add(lockKey);
+
+    try {
+      // 3. Exact Refund Amount Calculation (Never rounds up, zero financial loss)
+      const totalOrderCharge = Number(order.amount) || Number(order.charge) || 0;
+      let exactRefundAmount = 0;
+
+      if (refundAmountInput !== null && refundAmountInput !== undefined && !isNaN(refundAmountInput)) {
+        exactRefundAmount = Math.min(totalOrderCharge, Math.max(0, Number(refundAmountInput)));
+      } else if (isPartial) {
+        const qty = Number(order.quantity) || 1;
+        const remains = Number(order.remains !== undefined ? order.remains : (order.providerResponse?.remains || 0));
+        if (remains > 0 && qty > 0) {
+          exactRefundAmount = Number(((remains / qty) * totalOrderCharge).toFixed(4));
+        } else {
+          exactRefundAmount = 0;
         }
+      } else {
+        // Full cancellation refund
+        exactRefundAmount = totalOrderCharge;
+      }
 
-        // Add refund transaction entry to wallet_transactions
-        await window.supabaseClient
-          .from('wallet_transactions')
-          .insert([{
-            id: `REF-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
-            user_id: 1,
-            type: 'Refund',
-            description: `Order #${orderId} Refund by Admin [${custEmail || 'Customer'}]`,
-            amount: exactRefundAmount,
-            balance_after: 0,
-            status: 'Success',
-            created_at: new Date().toISOString()
-          }]);
+      if (exactRefundAmount <= 0) {
+        console.warn(`[LikeX Refund] Computed refund amount for Order #${orderId} is 0. Skipping.`);
+        this._refundingOrders.delete(lockKey);
+        return false;
+      }
 
-        // If customer exists in users table, credit their balance
-        if (custEmail) {
-          const { data: userData } = await window.supabaseClient
-            .from('users')
-            .select('id, balance')
-            .ilike('email', custEmail.toLowerCase().trim())
+      const custEmail = (order.userEmail || order.customerEmail || this.data.customer?.email || '').trim().toLowerCase();
+      let targetUserId = order.customerUserId || order.userId || (this.data.customer?.email?.toLowerCase() === custEmail ? this.data.customer?.id : null);
+
+      // 4. Cloud Double-Check in Supabase (Idempotency against cloud ledger)
+      if (window.supabaseClient) {
+        try {
+          const { data: existingTxns } = await window.supabaseClient
+            .from('wallet_transactions')
+            .select('id, amount')
+            .or(`order_id.eq.${orderId},description.ilike.%${orderId}%`)
+            .eq('type', 'Refund')
             .limit(1);
-          if (userData && userData.length > 0) {
-            const u = userData[0];
-            const updatedBal = Number(((Number(u.balance) || 0) + exactRefundAmount).toFixed(4));
+
+          if (existingTxns && existingTxns.length > 0) {
+            console.log(`[LikeX Refund] Order #${orderId} already has a cloud refund record in wallet_transactions.`);
+            order.isRefunded = true;
+            order.refundProcessed = true;
+            order.refundAmount = exactRefundAmount;
+            order.status = isPartial ? 'Partial (Refunded)' : 'Refunded';
+            this.updateOrderInAllStorages(order);
+            this._refundingOrders.delete(lockKey);
+            return false;
+          }
+        } catch (chkErr) {
+          console.warn('[LikeX Refund] Cloud double-check notice:', chkErr);
+        }
+      }
+
+      // 5. Stamp Order as Refunded
+      order.isRefunded = true;
+      order.refundProcessed = true;
+      order.refundAmount = exactRefundAmount;
+      order.refundedAt = Date.now();
+      order.status = isPartial ? 'Partial (Refunded)' : 'Refunded';
+      order.isQueued = false;
+      order.refillReason = `${isPartial ? 'Partial' : 'Full'} Refund: ${reason} (₹${exactRefundAmount.toFixed(2)})`;
+
+      // Update in memory and all persistent local storages
+      this.updateOrderInAllStorages(order);
+
+      // 6. Update Customer Local Storage Wallet Balance (if on this device)
+      if (custEmail) {
+        const balKey = this._getUserStorageKey(custEmail, 'balance');
+        const curBal = parseFloat(localStorage.getItem(balKey) || '0');
+        const newBal = Number((curBal + exactRefundAmount).toFixed(4));
+        localStorage.setItem(balKey, newBal.toFixed(4));
+
+        const txnsKey = this._getUserStorageKey(custEmail, 'txns');
+        const uTxns = JSON.parse(localStorage.getItem(txnsKey) || '[]');
+        uTxns.unshift({
+          id: `REF-${Math.floor(1000 + Math.random() * 9000)}`,
+          type: 'Order Refund',
+          description: `Refund for Order #${orderId} (${reason})`,
+          amount: exactRefundAmount,
+          balanceAfter: newBal,
+          orderId: String(orderId),
+          status: 'Success',
+          createdAt: Date.now(),
+          date: this.formatRealDate(Date.now())
+        });
+        localStorage.setItem(txnsKey, JSON.stringify(uTxns));
+      }
+
+      // Update current customer memory balance if logged in as this customer
+      if (this.data.customer && (this.data.customer.email?.toLowerCase() === custEmail || !custEmail)) {
+        this.data.customer.balance = Number(((Number(this.data.customer.balance) || 0) + exactRefundAmount).toFixed(4));
+        this.saveUserData();
+      }
+
+      // Update in cached users list
+      if (Array.isArray(this.data.users)) {
+        const uIdx = this.data.users.findIndex(u => (u.email && u.email.toLowerCase() === custEmail) || (targetUserId && String(u.id) === String(targetUserId)));
+        if (uIdx >= 0) {
+          this.data.users[uIdx].balance = Number(((Number(this.data.users[uIdx].balance) || 0) + exactRefundAmount).toFixed(4));
+        }
+      }
+
+      // 7. Authoritative Supabase Cloud Database Credit
+      if (window.supabaseClient) {
+        try {
+          let userRecord = null;
+          if (custEmail) {
+            const { data: uData } = await window.supabaseClient
+              .from('users')
+              .select('id, balance, email')
+              .ilike('email', custEmail)
+              .limit(1);
+            if (uData && uData.length > 0) userRecord = uData[0];
+          }
+          if (!userRecord && targetUserId) {
+            const { data: uData } = await window.supabaseClient
+              .from('users')
+              .select('id, balance, email')
+              .eq('id', targetUserId)
+              .limit(1);
+            if (uData && uData.length > 0) userRecord = uData[0];
+          }
+
+          let cloudBalAfter = exactRefundAmount;
+          if (userRecord) {
+            targetUserId = userRecord.id;
+            const currentCloudBal = Number(userRecord.balance) || 0;
+            cloudBalAfter = Number((currentCloudBal + exactRefundAmount).toFixed(4));
+
             await window.supabaseClient
               .from('users')
-              .update({ balance: updatedBal })
-              .eq('id', u.id);
+              .update({ balance: cloudBalAfter })
+              .eq('id', userRecord.id);
           }
-        }
-      } catch (err) {
-        console.warn('[LikeX Admin] Supabase cloud refund notice:', err);
-      }
-    }
 
-    this.showToast(`✓ Successfully refunded ${this.formatMoney(exactRefundAmount)} to customer wallet!`, 'success');
-    this.notify();
-    return true;
+          // Insert refund transaction into wallet_transactions
+          const refTxnId = `REF-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`;
+          await window.supabaseClient
+            .from('wallet_transactions')
+            .insert([{
+              id: refTxnId,
+              user_id: targetUserId || 1,
+              type: 'Refund',
+              description: `Refund for Order #${orderId} [${custEmail || 'Customer'}] — ${reason}`,
+              amount: exactRefundAmount,
+              balance_after: cloudBalAfter,
+              order_id: String(orderId),
+              status: 'Success',
+              created_at: new Date().toISOString()
+            }]);
+
+          // Update order status in orders table
+          const orderNum = parseInt(String(orderId).replace(/\D/g, ''), 10);
+          if (orderNum) {
+            await window.supabaseClient
+              .from('orders')
+              .update({
+                status: isPartial ? 'Partial (Refunded)' : 'Refunded',
+                refill_status: `Refunded: ${reason} (₹${exactRefundAmount.toFixed(2)})`
+              })
+              .or(`id.eq.${orderNum},provider_order_id.eq.${order.providerOrderId || -1}`);
+          }
+        } catch (supaErr) {
+          console.warn('[LikeX Refund] Supabase auto-refund error:', supaErr);
+        }
+      }
+
+      this.showToast(`✓ Auto-refunded ${this.formatMoney(exactRefundAmount)} to customer wallet for Order #${orderId}!`, 'success');
+      this.notify();
+      return true;
+    } catch (e) {
+      console.error('[LikeX Refund] Error processing refund:', e);
+      return false;
+    } finally {
+      this._refundingOrders.delete(lockKey);
+    }
+  }
+
+  // Admin-initiated refund directly to customer's LikeX wallet balance (zero loss, exact amount)
+  async adminRefundOrder(orderId, customReason = 'Unfulfilled / Queued Order Refund') {
+    return await this.processOrderRefund(orderId, null, customReason, false);
   }
 
   // Admin-initiated retry dispatch to upstream provider (WorldOfSMM / JAP)

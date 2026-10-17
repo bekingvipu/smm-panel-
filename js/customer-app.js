@@ -3508,12 +3508,14 @@ const CustomerApp = {
       badgeBg = '#FFFBEB';
       badgeColor = '#D97706';
       badgeText = '⚡ High Traffic Queue';
-    } else if (order.status === 'Refunded') {
+    } else if (order.status === 'Refunded' || order.isRefunded || String(order.status).toLowerCase().includes('refund')) {
       badgeBg = '#F3E8FF';
       badgeColor = '#7E22CE';
-    } else if (order.status.includes('Low Provider Balance') || order.status === 'Canceled') {
+      badgeText = String(order.status).toLowerCase().includes('partial') ? '⚡ Partial (Refunded)' : '✓ Refunded';
+    } else if (order.status.includes('Low Provider Balance') || order.status === 'Canceled' || order.status === 'Cancelled' || String(order.status).toLowerCase().includes('cancel')) {
       badgeBg = '#FEE2E2';
       badgeColor = '#B91C1C';
+      badgeText = (order.isRefunded || order.refundProcessed) ? '✓ Cancelled (Refunded)' : 'Cancelled';
     }
 
     const startCount = Number(order.startCount || 0).toLocaleString();
@@ -3586,9 +3588,9 @@ const CustomerApp = {
               <span>Contact Telegram Support to Complete</span>
             </a>
           </div>
-        ` : order.status === 'Refunded' ? `
+        ` : (order.status === 'Refunded' || order.isRefunded || order.refundProcessed || String(order.status).toLowerCase().includes('refund')) ? `
           <div style="text-align: center; padding: 6px 0; font-size: 12.5px; color: #7E22CE; font-weight: 700;">
-            ✓ ${store.formatMoney(order.amount)} refunded to your wallet
+            ✓ ${store.formatMoney(order.refundAmount || order.amount)} refunded to your wallet
           </div>
         ` : isFailedOrLow ? `
           <button class="btn btn-sm btn-block" style="background: rgba(239, 68, 68, 0.1); color: #EF4444; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 700; margin-top: 6px; padding: 8px; border-radius: 8px;" onclick="store.refundOrder('${order.id}', 'Provider Service Unavailable')">
