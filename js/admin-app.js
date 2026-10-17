@@ -4811,7 +4811,7 @@ const AdminApp = {
                   <span style="color: #10B981; font-weight: 800; font-family: var(--font-mono); font-size: 11px; display: inline-flex; align-items: center; gap: 4px;" title="Wallet Balance Before Order → Wallet Balance After Order Deduction">
                     <span>💳</span> <span>Wallet: ${balDisplayStr}</span>
                   </span>
-                  ${isRefundedOrder ? `
+                  ${(Boolean(o.isRefunded) || Boolean(o.refundProcessed) || (stLow === 'refunded' && String(o.refillReason || '').toLowerCase().includes('refund'))) ? `
                     <span style="color: #DC2626; font-weight: 800; font-family: var(--font-mono); font-size: 10.5px; display: inline-flex; align-items: center; gap: 3px;" title="Order amount refunded back to customer LikeX wallet">
                       <span>↩️</span> <span>Refunded: +${store.formatMoney(o.refundAmount || o.amount || 0)}</span>
                     </span>
@@ -4918,9 +4918,9 @@ const AdminApp = {
           <!-- 7. STATUS & LIVE PROGRESS -->
           <td>
             <div style="display: flex; flex-direction: column; gap: 4px;">
-              ${isRefundedOrder ? `
+              ${(Boolean(o.isRefunded) || Boolean(o.refundProcessed) || stLow === 'refunded') ? `
                 <span class="badge" style="background: rgba(239, 68, 68, 0.12); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.25); font-weight: 800; display: inline-flex; align-items: center; gap: 4px;">
-                  ✓ ${stLow.includes('partial') ? 'Partial (Refunded)' : (isCancelledOrder ? 'Cancelled (Refunded)' : 'Refunded')}
+                  ✓ ${stLow.includes('partial') ? 'Partial (Refunded)' : (isCancelledOrder && (o.isRefunded || o.refundProcessed) ? 'Cancelled (Refunded)' : 'Refunded')}
                 </span>
               ` : isCancelledOrder ? `
                 <span class="badge" style="background: rgba(239, 68, 68, 0.15); color: #DC2626; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 800;">
