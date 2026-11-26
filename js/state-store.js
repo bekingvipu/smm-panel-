@@ -1358,37 +1358,7 @@ class SmmStateStore {
             this.notify();
           }
 
-          // Low Balance Threshold Alert Monitoring (WhatsApp & Gmail)
-          const alertCfg = this.getAlertConfig();
-          const thresholdINR = Number(alertCfg.threshold || 100);
-          const thresholdUSD = thresholdINR / 85;
-
-          const now = Date.now();
-          const lastAlertTime = Number(localStorage.getItem('likex_last_low_bal_alert') || 0);
-          if (now - lastAlertTime > 3 * 60 * 60 * 1000) { // 3-hour anti-spam cooldown
-            const wosBalRaw = balData.worldofsmm && balData.worldofsmm.balance !== undefined ? parseFloat(balData.worldofsmm.balance) : NaN;
-            const sfBalRaw = balData.socialfans && balData.socialfans.balance !== undefined ? parseFloat(balData.socialfans.balance) : NaN;
-
-            if (!isNaN(wosBalRaw) && isFinite(wosBalRaw) && wosBalRaw >= 0 && wosBalRaw < thresholdUSD) {
-              localStorage.setItem('likex_last_low_bal_alert', String(now));
-              this.triggerAlert({
-                type: 'low_balance',
-                providerName: 'WorldOfSMM',
-                providerKey: 'worldofsmm',
-                balance: (wosBalRaw * 85).toFixed(2),
-                threshold: thresholdINR.toFixed(2)
-              });
-            } else if (!isNaN(sfBalRaw) && isFinite(sfBalRaw) && sfBalRaw >= 0 && sfBalRaw < thresholdINR) {
-              localStorage.setItem('likex_last_low_bal_alert', String(now));
-              this.triggerAlert({
-                type: 'low_balance',
-                providerName: 'SocialFans',
-                providerKey: 'socialfans',
-                balance: sfBalRaw.toFixed(2),
-                threshold: thresholdINR.toFixed(2)
-              });
-            }
-          }
+          // Low Balance Threshold Alert Monitoring disabled (only order placement alerts remain active)
         }
       }
     } catch (e) {}

@@ -41,19 +41,15 @@ export default async function handler(req, res) {
     telegramChatId = '2057136429'
   } = body;
 
-  // STRICT PROTECTION: If type is 'low_balance', verify balance is actually below threshold
+  // Low provider balance alerts are disabled — keep order alerts (live_order / queued_order) active
   if (type === 'low_balance') {
-    const balNum = parseFloat(balance) || 0.00;
-    const threshNum = parseFloat(threshold) || 100.00;
-    if (balNum >= threshNum) {
-      return res.status(200).json({
-        success: true,
-        type,
-        providerName,
-        suppressed: true,
-        message: `Suppressed false low balance alert: ${providerName} balance (₹${balNum.toFixed(2)}) is sufficient (threshold ₹${threshNum.toFixed(2)}).`
-      });
-    }
+    return res.status(200).json({
+      success: true,
+      type,
+      providerName,
+      suppressed: true,
+      message: `Low provider balance alert suppressed (disabled).`
+    });
   }
 
   const results = {
